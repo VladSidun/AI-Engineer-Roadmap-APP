@@ -1,0 +1,583 @@
+{
+  "id": "SR-W04",
+  "contentVersion": 1,
+  "overview": {
+    "uk": "Перевір scaffold Project A на чистій і оновленій схемі PostgreSQL. Поєднай join, транзакцію, валідацію FastAPI й пагінацію tenant в одній процедурі. Запиши фактичні докази API і БД в короткому підсумку.",
+    "en": "Verify the Project A scaffold against a fresh and upgraded PostgreSQL schema. Combine a join, a transaction, FastAPI validation and tenant-scoped pagination in one procedure. Record actual API and database evidence together in a concise summary."
+  },
+  "theory": {
+    "uk": "### Простеж контракт даних\n\nПознач межі валідації HTTP, правил домену та інваріантів БД. На новій фікстурі порівняй відсутній документ, хибне тіло й заблокований дублікат. Для кожного вкажи статус і чи змінився рядок. Перевір таку саму область доступу в пагінації.",
+    "en": "### Trace the data contract\n\nMark the boundary between HTTP validation, domain rules and database invariants. On a new fixture, compare a missing document, an invalid payload and a blocked duplicate. For each case, include the status and whether any row changed. Check how pagination applies the same permission scope."
+  },
+  "recap": {
+    "uk": "Подай власну трасу, поясни компроміс англійською й відмічай критерій лише за наявності доказу.",
+    "en": "Submit your own trace, explain the trade-off in English, and check each rubric item only when your artifact shows it."
+  },
+  "objectives": [
+    {
+      "id": "O1",
+      "title": {
+        "uk": "Застосувати перші ревізії схеми до синтетичних даних.",
+        "en": "Apply the first schema revisions to synthetic data."
+      },
+      "skill": "systems"
+    },
+    {
+      "id": "O2",
+      "title": {
+        "uk": "Підтвердити CRUD в області й стабільний список на дві сторінки.",
+        "en": "Verify scoped CRUD and a stable two-page list."
+      },
+      "skill": "evaluation"
+    }
+  ],
+  "sources": [
+    {
+      "title": {
+        "uk": "PostgreSQL constraints",
+        "en": "PostgreSQL constraints"
+      },
+      "url": "https://www.postgresql.org/docs/17/ddl-constraints.html",
+      "version": "PostgreSQL 17",
+      "checked": "2026-11-26"
+    },
+    {
+      "title": {
+        "uk": "Alembic autogenerate",
+        "en": "Alembic autogenerate"
+      },
+      "url": "https://alembic.sqlalchemy.org/en/latest/autogenerate.html",
+      "version": "Alembic",
+      "checked": "2026-11-26"
+    }
+  ],
+  "examples": [],
+  "interview": [
+    "Describe the behavior you verified.",
+    "What limitation remains in your solution?"
+  ],
+  "interviewGuide": {
+    "uk": "Скористайся англійським поясненням з рубрики. Назви вхід, результат і обмеження.",
+    "en": "Use the English explanation from the rubric. Name an input, its result, and a limitation."
+  },
+  "exercises": [
+    {
+      "id": "SR-W04-E1",
+      "title": {
+        "uk": "Подати докази scaffold W04",
+        "en": "Submit W04 scaffold evidence"
+      },
+      "kind": "rubric",
+      "objectives": [
+        "O1"
+      ],
+      "estimateMinutes": 115,
+      "criteria": [
+        {
+          "id": "C1",
+          "title": {
+            "uk": "Записано чисту міграцію та збережений попередній рядок.",
+            "en": "Record clean migration and preserved prior row."
+          }
+        },
+        {
+          "id": "C2",
+          "title": {
+            "uk": "Показано успіхи й відмови HTTP разом зі станом сховища.",
+            "en": "Show valid and rejected HTTP cases plus persistent state."
+          }
+        },
+        {
+          "id": "C3",
+          "title": {
+            "uk": "Пояснено транзакцію і доведено відсутність перетину сторінок.",
+            "en": "Explain transaction scope and prove the two pages do not overlap."
+          }
+        }
+      ],
+      "example": {
+        "uk": "Upgrade зберігає попередній ID. Дублікат повертає 409 й обидві таблиці без змін. Сторінки 1 і 2 мають різні дозволені ID.",
+        "en": "Upgrade leaves prior ID intact. A duplicate create returns 409 and neither table grows. List page 1 and 2 contain distinct allowed IDs."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Запусти схему й API Project A з чистої копії та онови попередній синтетичний рядок. Створи три документи в одному tenant та ще один в іншому. Перевір дозволений CRUD, хибний ввід, конфлікт дубліката і дві сторінки. Додай схему й 60–90 слів англійською про інваріант транзакції та точний тест.\n\n**Синтетичні накладні**",
+            "en": "Run the Project A schema and API from a clean workspace and upgrade an earlier synthetic record. Create three documents in one test tenant and another elsewhere. Verify permitted CRUD, invalid input, a duplicate conflict and two pages. Provide a schema diagram and a 60–90 word English explanation of a transaction invariant and the exact test that verifies it.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Розділи чисту й оновлювану БД.",
+              "en": "Keep clean and upgrade databases separate."
+            },
+            {
+              "uk": "Порівняй кількість та ID до і після відмови.",
+              "en": "Compare counts and IDs across expected failure."
+            },
+            {
+              "uk": "Почни англійське пояснення з Both writes commit only if...",
+              "en": "Start the English explanation with Both writes commit only if..."
+            }
+          ],
+          "solution": {
+            "uk": "Підтвердь обидва початкові стани міграції та справжні записи PostgreSQL через API. Запиши відмову без змін, далі прочитай дві сусідні сторінки й поясни курсор.",
+            "en": "Prove both migration starting points and exercise actual PostgreSQL writes through the API. Record a denied or invalid case with no persistent change, then read two adjacent pages and explain the cursor."
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Запусти схему й API Project A з чистої копії та онови попередній синтетичний рядок. Створи три документи в одному tenant та ще один в іншому. Перевір дозволений CRUD, хибний ввід, конфлікт дубліката і дві сторінки. Додай схему й 60–90 слів англійською про інваріант транзакції та точний тест.\n\n**Синтетичні запити підтримки**",
+            "en": "Run the Project A schema and API from a clean workspace and upgrade an earlier synthetic record. Create three documents in one test tenant and another elsewhere. Verify permitted CRUD, invalid input, a duplicate conflict and two pages. Provide a schema diagram and a 60–90 word English explanation of a transaction invariant and the exact test that verifies it.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Розділи чисту й оновлювану БД.",
+              "en": "Keep clean and upgrade databases separate."
+            },
+            {
+              "uk": "Порівняй кількість та ID до і після відмови.",
+              "en": "Compare counts and IDs across expected failure."
+            },
+            {
+              "uk": "Почни англійське пояснення з Both writes commit only if...",
+              "en": "Start the English explanation with Both writes commit only if..."
+            }
+          ],
+          "solution": {
+            "uk": "Підтвердь обидва початкові стани міграції та справжні записи PostgreSQL через API. Запиши відмову без змін, далі прочитай дві сусідні сторінки й поясни курсор.",
+            "en": "Prove both migration starting points and exercise actual PostgreSQL writes through the API. Record a denied or invalid case with no persistent change, then read two adjacent pages and explain the cursor."
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Запусти схему й API Project A з чистої копії та онови попередній синтетичний рядок. Створи три документи в одному tenant та ще один в іншому. Перевір дозволений CRUD, хибний ввід, конфлікт дубліката і дві сторінки. Додай схему й 60–90 слів англійською про інваріант транзакції та точний тест.\n\n**Синтетичні документи політик**",
+            "en": "Run the Project A schema and API from a clean workspace and upgrade an earlier synthetic record. Create three documents in one test tenant and another elsewhere. Verify permitted CRUD, invalid input, a duplicate conflict and two pages. Provide a schema diagram and a 60–90 word English explanation of a transaction invariant and the exact test that verifies it.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Розділи чисту й оновлювану БД.",
+              "en": "Keep clean and upgrade databases separate."
+            },
+            {
+              "uk": "Порівняй кількість та ID до і після відмови.",
+              "en": "Compare counts and IDs across expected failure."
+            },
+            {
+              "uk": "Почни англійське пояснення з Both writes commit only if...",
+              "en": "Start the English explanation with Both writes commit only if..."
+            }
+          ],
+          "solution": {
+            "uk": "Підтвердь обидва початкові стани міграції та справжні записи PostgreSQL через API. Запиши відмову без змін, далі прочитай дві сусідні сторінки й поясни курсор.",
+            "en": "Prove both migration starting points and exercise actual PostgreSQL writes through the API. Record a denied or invalid case with no persistent change, then read two adjacent pages and explain the cursor."
+          }
+        }
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "id": "Q1",
+      "prompt": {
+        "uk": "Умова правої таблиці в WHERE прибирає документи без успішних jobs. Як їх зберегти?",
+        "en": "A right-side condition in WHERE removes documents with no successful jobs. How can the query keep them?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Застосувати умову в ON для LEFT JOIN.",
+            "en": "Apply the condition in the LEFT JOIN ON clause."
+          },
+          "explanation": {
+            "uk": "Батько лишається з дочірнім null.",
+            "en": "The parent remains with a null-extended child."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Використати INNER JOIN.",
+            "en": "Use INNER JOIN."
+          },
+          "explanation": {
+            "uk": "Батьки без збігів зникають.",
+            "en": "Parents without a match are removed."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Прибрати лише ORDER BY.",
+            "en": "Remove ORDER BY only."
+          },
+          "explanation": {
+            "uk": "Порядок не вирішує збереження.",
+            "en": "Ordering does not control retention."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q2",
+      "prompt": {
+        "uk": "Де має працювати унікальність ключа операції?",
+        "en": "Where should an operation-key uniqueness rule be enforced?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "У консольному журналі.",
+            "en": "In console logging."
+          },
+          "explanation": {
+            "uk": "Лог не відхилить дублікат.",
+            "en": "Logging cannot reject a duplicate."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Через обмеження БД і обробку в сервісі.",
+            "en": "Through a database constraint with service-level error handling."
+          },
+          "explanation": {
+            "uk": "Це покриває конкурентні вставки.",
+            "en": "This covers racing inserts."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Лише у формі UI.",
+            "en": "Only in the UI form."
+          },
+          "explanation": {
+            "uk": "Інші джерела запису не використовують форму.",
+            "en": "Other writers bypass that form."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q3",
+      "prompt": {
+        "uk": "Рядок документа пройшов flush, але створення job падає. Що далі?",
+        "en": "A document row is flushed and job creation fails. What should happen?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Зафіксувати документ у будь-якому разі.",
+            "en": "Commit the document regardless."
+          },
+          "explanation": {
+            "uk": "Це порушує спільний контракт.",
+            "en": "That violates the joint operation contract."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Повернути успіх з вигаданим job ID.",
+            "en": "Return success with a fake job ID."
+          },
+          "explanation": {
+            "uk": "Збереженого job немає.",
+            "en": "There is no persisted job."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Відкотити спільну транзакцію.",
+            "en": "Roll back the shared transaction."
+          },
+          "explanation": {
+            "uk": "Flush виконує SQL усередині без commit.",
+            "en": "Flush stages SQL inside, without committing."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q4",
+      "prompt": {
+        "uk": "Який тест підтвердить збереження даних новою обов’язковою колонкою?",
+        "en": "Which test confirms a new required column preserves prior data?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Оновити заповнену ревізію й перевірити ID та backfill.",
+            "en": "Upgrade a populated prior revision and check ID and backfill."
+          },
+          "explanation": {
+            "uk": "Це перевіряє міграцію й сумісність.",
+            "en": "It exercises data migration and compatibility."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Лише переглянути порожню нову схему.",
+            "en": "Only inspect the empty current schema."
+          },
+          "explanation": {
+            "uk": "Вона не покаже втрату чи незаповнені рядки.",
+            "en": "It cannot reveal lost or unfilled prior rows."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Лише повторити старий API-запит.",
+            "en": "Only retry the old API request."
+          },
+          "explanation": {
+            "uk": "Він не містить явної фікстури старих даних.",
+            "en": "It does not preserve an explicit old-data fixture."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q5",
+      "prompt": {
+        "uk": "Як вилучити внутрішній шлях з API-відповідей?",
+        "en": "How should an internal path field be kept out of API results?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Записати поле й повернути весь рядок.",
+            "en": "Log it before returning the whole row."
+          },
+          "explanation": {
+            "uk": "Лог збільшує експозицію й не обмежує вихід.",
+            "en": "Logging adds exposure and does not constrain output."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Серіалізувати через дозволені поля моделі.",
+            "en": "Serialize through an allowlisted response model."
+          },
+          "explanation": {
+            "uk": "Викликач бачить лише контрактні поля.",
+            "en": "Only contract fields reach the caller."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Повернути сирий рядок і сховати поле CSS.",
+            "en": "Return the raw row and hide the field in CSS."
+          },
+          "explanation": {
+            "uk": "Поле все ще передано через API.",
+            "en": "The field still crosses the API boundary."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q6",
+      "prompt": {
+        "uk": "Що потрібне для перевірки валідації, крім статусу?",
+        "en": "What does a failed validation need besides its status assertion?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Лише пізніший успішний запит.",
+            "en": "A later successful request only."
+          },
+          "explanation": {
+            "uk": "Він не виключає попередню зміну.",
+            "en": "It cannot rule out prior mutation."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Жодних інших спостережень.",
+            "en": "No additional observation."
+          },
+          "explanation": {
+            "uk": "Фіксація змін не випливає лише зі статусу.",
+            "en": "Persistent effects are not inferred from status alone."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Перевірити очікуване тіло й незмінне сховище.",
+            "en": "Verify the expected error body and unchanged storage."
+          },
+          "explanation": {
+            "uk": "Статус не показує записи.",
+            "en": "A status alone cannot show what was written."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q7",
+      "prompt": {
+        "uk": "Для трьох рядків області й двох на сторінку який курсор валідний?",
+        "en": "For three scoped rows and page size two, which cursor is valid?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Ключ другого рядка.",
+            "en": "The key of the second row."
+          },
+          "explanation": {
+            "uk": "Третій рядок має лишатися доступним на наступній сторінці.",
+            "en": "The third row must remain reachable on the next page."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Ключ третього рядка.",
+            "en": "The key of the third row."
+          },
+          "explanation": {
+            "uk": "Виключний курсор пропустив би його.",
+            "en": "An exclusive cursor would skip it."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Загальна кількість усіх tenant.",
+            "en": "The total count of every tenant's rows."
+          },
+          "explanation": {
+            "uk": "Курсор є позицією в порядку своєї області.",
+            "en": "A cursor represents a position in scoped order."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q8",
+      "prompt": {
+        "uk": "Що робить тест репозиторію придатним для транзакцій PostgreSQL?",
+        "en": "What makes a repository test meaningful for PostgreSQL transaction behavior?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Перевірити тільки написання HTTP-шляху.",
+            "en": "Assert only HTTP path spelling."
+          },
+          "explanation": {
+            "uk": "Напис маршруту не перевіряє транзакції.",
+            "en": "Routing text does not check transactions."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Запустити його на одноразовій PostgreSQL із міграціями.",
+            "en": "Run it against a disposable PostgreSQL database with migrations."
+          },
+          "explanation": {
+            "uk": "Цільовий рушій виконує обмеження та commit.",
+            "en": "The target engine performs the actual constraints and commit."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Замінити commit завжди успішною функцією.",
+            "en": "Replace commit with a fake always-successful function."
+          },
+          "explanation": {
+            "uk": "Вона не перевірить семантику БД.",
+            "en": "It cannot exercise database semantics."
+          }
+        }
+      ]
+    }
+  ],
+  "crosslinks": [
+    "W04-L01",
+    "W04-L04"
+  ]
+}

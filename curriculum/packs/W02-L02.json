@@ -1,0 +1,510 @@
+{
+  "id": "W02-L02",
+  "contentVersion": 1,
+  "overview": {
+    "uk": "Файл на диску залишається зовнішнім вводом. Анотація типу не підкаже, чи це справжній файл, чи містить він валідний JSON і чи описує документ, який можна обробити. Побудуй межу, що відповідає на ці запитання окремо. Ти використаєш pathlib для шляхів, відрізниш помилку синтаксису від правила предметної області й порівняєш строгі перевірки зі звичайним перетворенням типів у Pydantic. Практика дає змогу відрізнити некоректний запис від недоступного файлу. Зрозумілі типи помилок допоможуть CLI й майбутньому HTTP API повертати узгоджені повідомлення.",
+    "en": "A file on disk is still external input. A type annotation cannot tell you whether it contains valid JSON, points at a file, or describes a document you can safely process. Build a boundary that handles each of these questions separately. You will use pathlib for paths, distinguish malformed syntax from a domain rule, and compare strict checks with Pydantic's normal coercion. The practice lets callers tell a bad record from an inaccessible file without classifying every exception as a validation error. Clear failure types make a CLI actionable and help the HTTP API introduced later return consistent error responses."
+  },
+  "theory": {
+    "uk": "### Від шляху до доменної моделі\n\nPath(path) представляє шлях без склеювання рядків. Читання з явним кодуванням дає змогу відрізнити байти, які неможливо декодувати, від коректного Unicode-тексту. json.loads перевіряє синтаксис і повертає Python-значення. JSON-масив може розібратися успішно, хоча застосунок очікує об’єкт. Перевір форму верхнього рівня, обов’язкові ключі й інваріанти на кшталт невід’ємного цілого count. Далі домен може покладатися на контракт.\n\n### Строгість і перетворення типів\n\nМоделі Pydantic v2 можуть валідувати на межі. Перетворення типів корисне, коли формат представляє кількість текстом, як CSV. Строгий JSON API може вимагати, щоб count був JSON-числом з цілою семантикою. Pydantic підтримує строгість на рівні виклику, поля або моделі. Правила перетворень залежать від вхідного формату й типу, тому перевір і JSON, і вже декодований ввід, якщо підтримуєш обидва. Bool є підкласом int у Python. Перевірка isinstance(count, int) пропустить True. Явно визнач, чи дозволені логічні значення в числовій моделі.\n\n### Хто обробляє помилку\n\nЗалиш FileNotFoundError і PermissionError доступними викликачу. Перехоплюй конкретну помилку там, де змінюється поведінка. CLI може повідомити, що вхідний шлях недоступний, і завершитися ненульовим кодом. Валідатор схеми може повідомити, що count має неправильне значення. Сервіс відобразить це як HTTP-помилку без повторення сирого вводу. Якщо замінюєш виняток, щоб додати контекст запису, збережи причину через raise ... from exc. Уникай читання довільних шляхів із вхідних даних API. У локальній вправі довірений шлях задає оператор. Реальний upload-сервіс формує шлях сам, обмежує байти до повного читання і записує тільки безпечні поля помилок.\n\n### Простеж три відмови межі\n\nПомісти до тимчасової папки відсутній шлях, файл з невалідними байтами й коректний JSON із рядковим count. Перша відмова походить від доступу до файлової системи. Друга виникає при декодуванні. Третя проходить парсинг і падає на числовому контракті. Познач кожну сталим кодом на кшталт unreadable_path, invalid_encoding чи invalid_count. CLI може видати один підсумок у stderr і зберегти вихід без змін. Вміст файла не потрібен для помилки й може містити дані, які команда не повинна показувати.\n\nПодумай про оновлення форми перед ввімкненням конверсії. Клієнт із текстовим count може залежати від старої поведінки. Якщо потрібно її підтримати, перенеси перетворення у версіонований адаптер. Внутрішній count лишається цілим в обох версіях. Задокументуй відсутнє поле, явний null, пробільний рядок, нуль і невідомий ключ. Один адаптер може ігнорувати зайві ключі, інший відхиляти. Контрактні тести мають зазначити вибір, щоб версія бібліотеки не змінила його мовчки.",
+    "en": "### From path to domain object\n\nUse Path(path) to represent a filesystem path without string concatenation. Reading with a known encoding lets you distinguish bytes that cannot be decoded from valid Unicode text. json.loads checks whether the text is JSON and returns a Python value. A JSON array may parse successfully even when the application expects an object. Validate the top-level shape, required keys and invariants such as non-negative integer count. After that point the domain can assume the object fits its contract.\n\n### Strict checks and coercion\n\nPydantic v2 models can validate at the edge. Coercion is useful when a format represents a quantity as text, as CSV does. A strict JSON API can instead require that count be a JSON number with integer semantics. Pydantic supports strict validation on calls, fields or model configuration. The exact conversion policy depends on input and type, so test both JSON and already-decoded input if you support both. In handwritten Python checks, bool is an int subclass. An isinstance(count, int) assertion alone accepts True. Explicitly define whether booleans may enter a numerical model.\n\n### Failure ownership\n\nKeep FileNotFoundError and PermissionError useful to the caller. Catch a specific error only where caller behavior changes. For example, a CLI can print that the input path is unavailable and return a nonzero status. A schema validator can report that count is invalid. A service can map this to an HTTP error without echoing raw input. When you replace an exception to attach record context, preserve the cause with raise ... from exc. Avoid reading arbitrary paths from incoming API data. In a local lab the operator supplies a trusted input path. A real upload service supplies its own storage destination, enforces byte limits before reading everything, and records only safe error fields.\n\n### Trace three boundary failures\n\nPlace a missing path, a file with invalid bytes and a valid JSON file containing a string count in a temporary directory. The first failure comes from filesystem access. The second occurs during decode. The third gets through parsing and fails the numeric contract. Annotate each with a stable label such as unreadable_path, invalid_encoding or invalid_count. The CLI can send one summary to stderr and leave output untouched. Avoid including the original file content, because it can contain data that the current command should never print.\n\nThink through shape upgrades before you enable coercion. A client that sent count as text may rely on that behavior. Move conversion into a versioned input adapter if you must continue supporting it. Keep internal count an integer in both versions. Document what happens for a missing field, explicit null, whitespace string, zero and an unknown key. Keys ignored by one adapter can be rejected by another. Contract tests should state the choice so a library upgrade cannot change it silently."
+  },
+  "recap": {
+    "uk": "Спочатку розбери ввід і перевір доменні правила на межі. Перехоплюй конкретні винятки й зберігай корисність помилок для викликача.",
+    "en": "Parse first and validate domain rules at the boundary. Catch specific exceptions and keep errors useful to their caller."
+  },
+  "objectives": [
+    {
+      "id": "O1",
+      "title": {
+        "uk": "Розрізняти помилки файлової системи, парсингу та схеми.",
+        "en": "Separate filesystem, parsing and schema errors."
+      },
+      "skill": "tooling"
+    },
+    {
+      "id": "O2",
+      "title": {
+        "uk": "Обирати строгу межу для числового інваріанта.",
+        "en": "Choose a strict boundary for a numeric invariant."
+      },
+      "skill": "systems"
+    }
+  ],
+  "sources": [
+    {
+      "title": {
+        "uk": "pathlib",
+        "en": "pathlib"
+      },
+      "url": "https://docs.python.org/3.12/library/pathlib.html",
+      "version": "Python 3.12",
+      "checked": "2026-11-26"
+    },
+    {
+      "title": {
+        "uk": "Строгий режим Pydantic",
+        "en": "Pydantic strict mode"
+      },
+      "url": "https://docs.pydantic.dev/latest/concepts/strict_mode/",
+      "version": "Pydantic 2",
+      "checked": "2026-11-26"
+    }
+  ],
+  "examples": [
+    {
+      "file": "w02_l02_example.py",
+      "expected": "15",
+      "explanation": {
+        "uk": "Розібране значення може бути забороненим із валідним синтаксисом JSON. Python 3.12, без залежностей.",
+        "en": "A parsed value can be disallowed even when its JSON syntax is valid. Python 3.12, no dependencies."
+      },
+      "error": {
+        "uk": "Запусти python w02_l02_example.py true. JSON розбирається, далі правило цілого числа спричиняє ValueError.",
+        "en": "Run python w02_l02_example.py true. JSON parses, then the strict integer rule raises ValueError."
+      }
+    }
+  ],
+  "interview": [
+    "How would you distinguish malformed JSON from a domain validation error?",
+    "When is coercion a deliberate contract choice?"
+  ],
+  "interviewGuide": {
+    "uk": "Назви межу помилки й приклад, що коректно розбирається, проте порушує правило.",
+    "en": "Name the failing boundary and give an example that parses successfully but violates the rules."
+  },
+  "exercises": [
+    {
+      "id": "W02-L02-E1",
+      "title": {
+        "uk": "Валідувати кількість документів у JSON",
+        "en": "Validate a JSON document count"
+      },
+      "kind": "code",
+      "objectives": [
+        "O1"
+      ],
+      "estimateMinutes": 62,
+      "criteria": [],
+      "example": {
+        "uk": "Файл UTF-8 з {\"count\": 0, \"label\": \"example\"} повертає 0.",
+        "en": "A UTF-8 file with {\"count\": 0, \"label\": \"example\"} returns 0."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(path) для pathlib.Path. Прочитай JSON у UTF-8. Верхній рівень має бути об’єктом, а count цілим числом >= 0. Bool, float, рядок числа, відсутній ключ, невалідний JSON або інша верхня форма спричиняють ValueError. Поверни count. Збережи FileNotFoundError для відсутнього шляху. Зайві поля ігноруються.\n\n**Синтетичні накладні**",
+            "en": "Implement solve(path) for a pathlib.Path. Read UTF-8 JSON and require a top-level object whose count value is an integer >= 0. A bool, float, numeric string, missing key, malformed JSON or wrong top-level type raises ValueError. Return the count and preserve FileNotFoundError for a missing path. Extra fields are ignored.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "JSON-парсер визначає синтаксис, а наступний рівень — допустиму форму.",
+              "en": "A JSON parser decides syntax, while the next layer decides the allowed shape."
+            },
+            {
+              "uk": "Використай Path.read_text із явним кодуванням і перевір тип та нижню межу.",
+              "en": "Use Path.read_text with explicit encoding, then validate type and lower bound."
+            },
+            {
+              "uk": "type(count) is int відхиляє False.",
+              "en": "type(count) is int rejects False cleanly."
+            }
+          ],
+          "solution": {
+            "uk": "Залиш винятки читання й парсингу змістовними та перевір декодоване значення один раз.\n\n```python\nimport json\nfrom pathlib import Path\n\ndef solve(path: Path) -> int:\n    data = json.loads(path.read_text(encoding=\"utf-8\"))\n    if not isinstance(data, dict):\n        raise ValueError(\"expected a JSON object\")\n    count = data.get(\"count\")\n    if type(count) is not int or count < 0:\n        raise ValueError(\"expected a non-negative integer count\")\n    return count\n```",
+            "en": "Keep filesystem and parsing exceptions meaningful and validate the decoded value once.\n\n```python\nimport json\nfrom pathlib import Path\n\ndef solve(path: Path) -> int:\n    data = json.loads(path.read_text(encoding=\"utf-8\"))\n    if not isinstance(data, dict):\n        raise ValueError(\"expected a JSON object\")\n    count = data.get(\"count\")\n    if type(count) is not int or count < 0:\n        raise ValueError(\"expected a non-negative integer count\")\n    return count\n```"
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(path) для pathlib.Path. Прочитай JSON у UTF-8. Верхній рівень має бути об’єктом, а count цілим числом >= 0. Bool, float, рядок числа, відсутній ключ, невалідний JSON або інша верхня форма спричиняють ValueError. Поверни count. Збережи FileNotFoundError для відсутнього шляху. Зайві поля ігноруються.\n\n**Синтетичні запити підтримки**",
+            "en": "Implement solve(path) for a pathlib.Path. Read UTF-8 JSON and require a top-level object whose count value is an integer >= 0. A bool, float, numeric string, missing key, malformed JSON or wrong top-level type raises ValueError. Return the count and preserve FileNotFoundError for a missing path. Extra fields are ignored.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "JSON-парсер визначає синтаксис, а наступний рівень — допустиму форму.",
+              "en": "A JSON parser decides syntax, while the next layer decides the allowed shape."
+            },
+            {
+              "uk": "Використай Path.read_text із явним кодуванням і перевір тип та нижню межу.",
+              "en": "Use Path.read_text with explicit encoding, then validate type and lower bound."
+            },
+            {
+              "uk": "type(count) is int відхиляє False.",
+              "en": "type(count) is int rejects False cleanly."
+            }
+          ],
+          "solution": {
+            "uk": "Залиш винятки читання й парсингу змістовними та перевір декодоване значення один раз.\n\n```python\nimport json\nfrom pathlib import Path\n\ndef solve(path: Path) -> int:\n    data = json.loads(path.read_text(encoding=\"utf-8\"))\n    if not isinstance(data, dict):\n        raise ValueError(\"expected a JSON object\")\n    count = data.get(\"count\")\n    if type(count) is not int or count < 0:\n        raise ValueError(\"expected a non-negative integer count\")\n    return count\n```",
+            "en": "Keep filesystem and parsing exceptions meaningful and validate the decoded value once.\n\n```python\nimport json\nfrom pathlib import Path\n\ndef solve(path: Path) -> int:\n    data = json.loads(path.read_text(encoding=\"utf-8\"))\n    if not isinstance(data, dict):\n        raise ValueError(\"expected a JSON object\")\n    count = data.get(\"count\")\n    if type(count) is not int or count < 0:\n        raise ValueError(\"expected a non-negative integer count\")\n    return count\n```"
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(path) для pathlib.Path. Прочитай JSON у UTF-8. Верхній рівень має бути об’єктом, а count цілим числом >= 0. Bool, float, рядок числа, відсутній ключ, невалідний JSON або інша верхня форма спричиняють ValueError. Поверни count. Збережи FileNotFoundError для відсутнього шляху. Зайві поля ігноруються.\n\n**Синтетичні документи політик**",
+            "en": "Implement solve(path) for a pathlib.Path. Read UTF-8 JSON and require a top-level object whose count value is an integer >= 0. A bool, float, numeric string, missing key, malformed JSON or wrong top-level type raises ValueError. Return the count and preserve FileNotFoundError for a missing path. Extra fields are ignored.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "JSON-парсер визначає синтаксис, а наступний рівень — допустиму форму.",
+              "en": "A JSON parser decides syntax, while the next layer decides the allowed shape."
+            },
+            {
+              "uk": "Використай Path.read_text із явним кодуванням і перевір тип та нижню межу.",
+              "en": "Use Path.read_text with explicit encoding, then validate type and lower bound."
+            },
+            {
+              "uk": "type(count) is int відхиляє False.",
+              "en": "type(count) is int rejects False cleanly."
+            }
+          ],
+          "solution": {
+            "uk": "Залиш винятки читання й парсингу змістовними та перевір декодоване значення один раз.\n\n```python\nimport json\nfrom pathlib import Path\n\ndef solve(path: Path) -> int:\n    data = json.loads(path.read_text(encoding=\"utf-8\"))\n    if not isinstance(data, dict):\n        raise ValueError(\"expected a JSON object\")\n    count = data.get(\"count\")\n    if type(count) is not int or count < 0:\n        raise ValueError(\"expected a non-negative integer count\")\n    return count\n```",
+            "en": "Keep filesystem and parsing exceptions meaningful and validate the decoded value once.\n\n```python\nimport json\nfrom pathlib import Path\n\ndef solve(path: Path) -> int:\n    data = json.loads(path.read_text(encoding=\"utf-8\"))\n    if not isinstance(data, dict):\n        raise ValueError(\"expected a JSON object\")\n    count = data.get(\"count\")\n    if type(count) is not int or count < 0:\n        raise ValueError(\"expected a non-negative integer count\")\n    return count\n```"
+          }
+        }
+      ]
+    },
+    {
+      "id": "W02-L02-E2",
+      "title": {
+        "uk": "Описати межу вводу для двох форматів",
+        "en": "Document an input boundary for two formats"
+      },
+      "kind": "rubric",
+      "objectives": [
+        "O2"
+      ],
+      "estimateMinutes": 64,
+      "criteria": [
+        {
+          "id": "C1",
+          "title": {
+            "uk": "Визначено допустимий ввід кожного адаптера й місце перетворення.",
+            "en": "Identify what each adapter accepts and where conversion happens."
+          }
+        },
+        {
+          "id": "C2",
+          "title": {
+            "uk": "Записано три фактичні результати на синтетичних даних.",
+            "en": "Record the three actual outcomes with synthetic inputs."
+          }
+        },
+        {
+          "id": "C3",
+          "title": {
+            "uk": "Повідомлення називають поле без копіювання вмісту джерела.",
+            "en": "Use messages that name the field without copying source contents."
+          }
+        }
+      ],
+      "example": {
+        "uk": "CSV-адаптер явно перетворює '04' на 4. JSON-адаптер приймає 4 й відхиляє true.",
+        "en": "The CSV adapter explicitly parses '04' as 4. The JSON adapter accepts 4 and rejects true."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Створи синтетичний JSON і CSV на один рядок з однаковим count. Зроби модель Pydantic або явний парсер для кожного адаптера. Порівняй нормальний ввід, bool у JSON і порожнє поле CSV. Запиши політику та безпечну помилку для кожної відмови.\n\n**Синтетичні накладні**",
+            "en": "Use a JSON document and a one-row CSV as synthetic inputs holding the same count. Write a Pydantic model or an explicit parser for each adapter, then compare a normal input, a boolean in JSON and a blank field in CSV. Record policy and a safe error message for each failed case.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Поля CSV спочатку є рядками.",
+              "en": "CSV cells begin as strings."
+            },
+            {
+              "uk": "Запиши правила прийняття до перевірки типових параметрів Pydantic.",
+              "en": "Write acceptance rules before looking at Pydantic defaults."
+            },
+            {
+              "uk": "Використай помилку на кшталт count має бути цілим числом від 0.",
+              "en": "Use an error like count must be an integer greater than or equal to 0."
+            }
+          ],
+          "solution": {
+            "uk": "Явно перетворюй CSV-рядки й відхиляй порожнє поле до конверсії. Для JSON вимагай int і приймай нуль. Об’єднай адаптери за спільним контрактом валідованого запису.",
+            "en": "Convert CSV strings explicitly and reject blank before conversion. For JSON compare against an actual int and preserve valid zero. Put both behind the same validated internal record contract."
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Створи синтетичний JSON і CSV на один рядок з однаковим count. Зроби модель Pydantic або явний парсер для кожного адаптера. Порівняй нормальний ввід, bool у JSON і порожнє поле CSV. Запиши політику та безпечну помилку для кожної відмови.\n\n**Синтетичні запити підтримки**",
+            "en": "Use a JSON document and a one-row CSV as synthetic inputs holding the same count. Write a Pydantic model or an explicit parser for each adapter, then compare a normal input, a boolean in JSON and a blank field in CSV. Record policy and a safe error message for each failed case.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Поля CSV спочатку є рядками.",
+              "en": "CSV cells begin as strings."
+            },
+            {
+              "uk": "Запиши правила прийняття до перевірки типових параметрів Pydantic.",
+              "en": "Write acceptance rules before looking at Pydantic defaults."
+            },
+            {
+              "uk": "Використай помилку на кшталт count має бути цілим числом від 0.",
+              "en": "Use an error like count must be an integer greater than or equal to 0."
+            }
+          ],
+          "solution": {
+            "uk": "Явно перетворюй CSV-рядки й відхиляй порожнє поле до конверсії. Для JSON вимагай int і приймай нуль. Об’єднай адаптери за спільним контрактом валідованого запису.",
+            "en": "Convert CSV strings explicitly and reject blank before conversion. For JSON compare against an actual int and preserve valid zero. Put both behind the same validated internal record contract."
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Створи синтетичний JSON і CSV на один рядок з однаковим count. Зроби модель Pydantic або явний парсер для кожного адаптера. Порівняй нормальний ввід, bool у JSON і порожнє поле CSV. Запиши політику та безпечну помилку для кожної відмови.\n\n**Синтетичні документи політик**",
+            "en": "Use a JSON document and a one-row CSV as synthetic inputs holding the same count. Write a Pydantic model or an explicit parser for each adapter, then compare a normal input, a boolean in JSON and a blank field in CSV. Record policy and a safe error message for each failed case.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Поля CSV спочатку є рядками.",
+              "en": "CSV cells begin as strings."
+            },
+            {
+              "uk": "Запиши правила прийняття до перевірки типових параметрів Pydantic.",
+              "en": "Write acceptance rules before looking at Pydantic defaults."
+            },
+            {
+              "uk": "Використай помилку на кшталт count має бути цілим числом від 0.",
+              "en": "Use an error like count must be an integer greater than or equal to 0."
+            }
+          ],
+          "solution": {
+            "uk": "Явно перетворюй CSV-рядки й відхиляй порожнє поле до конверсії. Для JSON вимагай int і приймай нуль. Об’єднай адаптери за спільним контрактом валідованого запису.",
+            "en": "Convert CSV strings explicitly and reject blank before conversion. For JSON compare against an actual int and preserve valid zero. Put both behind the same validated internal record contract."
+          }
+        }
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "id": "Q1",
+      "prompt": {
+        "uk": "Яка перевірка пройде для синтаксично коректного масиву замість об’єкта?",
+        "en": "Which check succeeds for a syntactically valid array that should have been an object?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Перевірка всіх обов’язкових полів.",
+            "en": "Every required field check."
+          },
+          "explanation": {
+            "uk": "Масив має неправильну форму для іменованих полів.",
+            "en": "An array is the wrong shape for named fields."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Розбір синтаксису JSON.",
+            "en": "JSON syntax parsing."
+          },
+          "explanation": {
+            "uk": "Масив є коректним JSON. Вимога об’єкта належить схемі.",
+            "en": "An array is legal JSON. The object constraint belongs to the schema."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Прикладна перевірка об’єкта.",
+            "en": "The application-specific object check."
+          },
+          "explanation": {
+            "uk": "Вона має відхилити масив.",
+            "en": "It should reject an array."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q2",
+      "prompt": {
+        "uk": "Навіщо явно вказувати UTF-8 для спільної фікстури?",
+        "en": "Why use explicit UTF-8 for a shared fixture?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Це валідує схему JSON.",
+            "en": "It validates JSON schema."
+          },
+          "explanation": {
+            "uk": "Кодування описує текст без доменних правил.",
+            "en": "Encoding describes text, without domain rules."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Це гарантує читання будь-яких байтів.",
+            "en": "It ensures any bytes can be read as UTF-8."
+          },
+          "explanation": {
+            "uk": "Невалідний UTF-8 може спричинити UnicodeDecodeError.",
+            "en": "Invalid UTF-8 can still raise UnicodeDecodeError."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Зробити контракт декодування незалежним від типового кодування ОС.",
+            "en": "Make the byte-to-text contract independent of the platform default."
+          },
+          "explanation": {
+            "uk": "Єдине кодування робить поведінку відтворюваною.",
+            "en": "A consistent codec makes the behavior reproducible."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q3",
+      "prompt": {
+        "uk": "Що правда про isinstance(True, int) у Python?",
+        "en": "What is true about isinstance(True, int) in Python?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Воно дає True.",
+            "en": "It evaluates to True."
+          },
+          "explanation": {
+            "uk": "bool є підкласом int.",
+            "en": "bool is a subclass of int."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Воно дає False, бо JSON має окремий bool.",
+            "en": "It returns False because JSON has a separate boolean type."
+          },
+          "explanation": {
+            "uk": "Перевірка стосується ієрархії типів Python.",
+            "en": "The check is about Python's runtime type hierarchy."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Воно піднімає TypeError.",
+            "en": "It raises a TypeError."
+          },
+          "explanation": {
+            "uk": "Обидва аргументи коректні.",
+            "en": "Both arguments are valid."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q4",
+      "prompt": {
+        "uk": "Де відсутній файл має перетворитися на повідомлення CLI?",
+        "en": "Where should a missing file become a human-readable CLI message?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "У загальному обробнику, що мовчки пропускає обробку.",
+            "en": "In a catch-all that silently skips work."
+          },
+          "explanation": {
+            "uk": "Оператор не знатиме, чи відбувся імпорт.",
+            "en": "The operator cannot tell if the import did anything."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "На межі CLI, що керує кодом завершення.",
+            "en": "At the CLI boundary that can choose an exit status."
+          },
+          "explanation": {
+            "uk": "Парсер зберігає помилку, адаптер визначає поведінку для користувача.",
+            "en": "The parser can preserve the failure and the adapter selects user-facing behavior."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "У властивості моделі, що поверне нуль.",
+            "en": "Inside a model property returning zero."
+          },
+          "explanation": {
+            "uk": "Нуль виглядав би як валідні дані.",
+            "en": "Zero would look like valid input."
+          }
+        }
+      ]
+    }
+  ],
+  "crosslinks": [
+    "W02-L01",
+    "W02-L03"
+  ]
+}

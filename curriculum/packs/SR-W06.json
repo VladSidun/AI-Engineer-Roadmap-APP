@@ -1,0 +1,583 @@
+{
+  "id": "SR-W06",
+  "contentVersion": 1,
+  "overview": {
+    "uk": "Продемонструй бекенд Project A з одноразового запуску. Одним синтетичним документом пов’яжи прийняття API, job, повтор доставки, збережений вихід і readiness за недоступної залежності. Збери спостережений локальний протокол без особистих даних.",
+    "en": "Demonstrate the Project A backend from a disposable startup. Use one synthetic document to link API acceptance, job progress, duplicate delivery, persistent output and readiness while a dependency is unavailable. Collect an observable local transcript and keep it independent of personal data."
+  },
+  "theory": {
+    "uk": "### Спостерігай систему після рестарту\n\nЗапиши ID першого job й фінальну кількість рядків. Перезапусти з тим самим томом і перевір обидва. Додай новий job того самого актора, щоб підтвердити незалежну роботу. Повідом чисту команду, результат CI й область вибірки затримок.",
+    "en": "### Observe the system after restart\n\nWrite down the original job identity and the final row count. Restart with the same volume and verify both again. Include a new job from the same actor to show independent work still runs. Report the clean setup command, CI check outcome and scope of any latency sample."
+  },
+  "recap": {
+    "uk": "Подай власну трасу, поясни компроміс англійською й відмічай критерій лише за наявності доказу.",
+    "en": "Submit your own trace, explain the trade-off in English, and check each rubric item only when your artifact shows it."
+  },
+  "objectives": [
+    {
+      "id": "O1",
+      "title": {
+        "uk": "Підтвердити один логічний job після повтору й рестарту.",
+        "en": "Prove one logical job across replay and restart."
+      },
+      "skill": "systems"
+    },
+    {
+      "id": "O2",
+      "title": {
+        "uk": "Продемонструвати відтворювану поставку й готовність.",
+        "en": "Demonstrate reproducible backend delivery and readiness."
+      },
+      "skill": "evaluation"
+    }
+  ],
+  "sources": [
+    {
+      "title": {
+        "uk": "Docker Compose startup order",
+        "en": "Docker Compose startup order"
+      },
+      "url": "https://docs.docker.com/compose/how-tos/startup-order/",
+      "version": "Docker Compose",
+      "checked": "2026-11-26"
+    },
+    {
+      "title": {
+        "uk": "PostgreSQL INSERT",
+        "en": "PostgreSQL INSERT"
+      },
+      "url": "https://www.postgresql.org/docs/17/sql-insert.html",
+      "version": "PostgreSQL 17",
+      "checked": "2026-11-26"
+    }
+  ],
+  "examples": [],
+  "interview": [
+    "Describe the behavior you verified.",
+    "What limitation remains in your solution?"
+  ],
+  "interviewGuide": {
+    "uk": "Скористайся англійським поясненням з рубрики. Назви вхід, результат і обмеження.",
+    "en": "Use the English explanation from the rubric. Name an input, its result, and a limitation."
+  },
+  "exercises": [
+    {
+      "id": "SR-W06-E1",
+      "title": {
+        "uk": "Подати докази демо бекенду W06",
+        "en": "Submit W06 backend demo evidence"
+      },
+      "kind": "rubric",
+      "objectives": [
+        "O1"
+      ],
+      "estimateMinutes": 120,
+      "criteria": [
+        {
+          "id": "C1",
+          "title": {
+            "uk": "Показано чистий запуск і фактичні зміни readiness.",
+            "en": "Show clean startup and real readiness changes."
+          }
+        },
+        {
+          "id": "C2",
+          "title": {
+            "uk": "Показано стабільний ID job і один ефект після повтору й рестарту.",
+            "en": "Show stable job identity and single persisted effect after replay and restart."
+          }
+        },
+        {
+          "id": "C3",
+          "title": {
+            "uk": "Наведено відтворювані артефакти й точне англійське пояснення.",
+            "en": "Provide reproducible artifacts and a precise English explanation."
+          }
+        }
+      ],
+      "example": {
+        "uk": "Job Q має 202/queued, далі succeeded. Повтор ключа повертає Q, кількість результатів після рестарту лишається один.",
+        "en": "Job Q is 202/queued, then succeeded. Replaying the key returns Q, and the result count remains one after restart."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Покажи чистий старт, схему, readiness, синтетичний job, ідемпотентний повтор і збережений вихід після рестарту. Додай один випадок недоступної readiness і дозволений запит після відновлення. Пов’яжи схему, локальний demo script і фактичні результати. Англійською у 60–90 словах поясни одне обмеження поставки та пом’якшення.\n\n**Синтетичні накладні**",
+            "en": "Demonstrate a clean startup, applied schema, readiness, a synthetic processing job, idempotent replay and retained output after restart. Include one unavailable readiness response and one authorized request after recovery. Attach a schema diagram, a local demo script and actual check outcomes. In 60–90 English words explain one delivery limitation and a mitigation.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Записуй ID і кількість на кожному кроці.",
+              "en": "Record IDs and counts at each step."
+            },
+            {
+              "uk": "Перевір рестарт з тим самим іменованим томом.",
+              "en": "Test restarting with the same named volume."
+            },
+            {
+              "uk": "Відрізни відповідь при недоступній БД від збою job.",
+              "en": "Distinguish the database outage response from worker job failure."
+            }
+          ],
+          "solution": {
+            "uk": "Використай одноразовий Compose зі справжнім томом. Перевір готовність, збережи результат фікстури, повтори й перезапусти, далі підтвердь різні логічні ID наявного і нового job. Запиши результати та межі.",
+            "en": "Use disposable Compose with the real DB volume. Confirm readiness, persist a fixture result, replay and restart, and assert existing and new jobs use distinct logical identities. Record the observed outcomes and limits."
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Покажи чистий старт, схему, readiness, синтетичний job, ідемпотентний повтор і збережений вихід після рестарту. Додай один випадок недоступної readiness і дозволений запит після відновлення. Пов’яжи схему, локальний demo script і фактичні результати. Англійською у 60–90 словах поясни одне обмеження поставки та пом’якшення.\n\n**Синтетичні запити підтримки**",
+            "en": "Demonstrate a clean startup, applied schema, readiness, a synthetic processing job, idempotent replay and retained output after restart. Include one unavailable readiness response and one authorized request after recovery. Attach a schema diagram, a local demo script and actual check outcomes. In 60–90 English words explain one delivery limitation and a mitigation.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Записуй ID і кількість на кожному кроці.",
+              "en": "Record IDs and counts at each step."
+            },
+            {
+              "uk": "Перевір рестарт з тим самим іменованим томом.",
+              "en": "Test restarting with the same named volume."
+            },
+            {
+              "uk": "Відрізни відповідь при недоступній БД від збою job.",
+              "en": "Distinguish the database outage response from worker job failure."
+            }
+          ],
+          "solution": {
+            "uk": "Використай одноразовий Compose зі справжнім томом. Перевір готовність, збережи результат фікстури, повтори й перезапусти, далі підтвердь різні логічні ID наявного і нового job. Запиши результати та межі.",
+            "en": "Use disposable Compose with the real DB volume. Confirm readiness, persist a fixture result, replay and restart, and assert existing and new jobs use distinct logical identities. Record the observed outcomes and limits."
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Покажи чистий старт, схему, readiness, синтетичний job, ідемпотентний повтор і збережений вихід після рестарту. Додай один випадок недоступної readiness і дозволений запит після відновлення. Пов’яжи схему, локальний demo script і фактичні результати. Англійською у 60–90 словах поясни одне обмеження поставки та пом’якшення.\n\n**Синтетичні документи політик**",
+            "en": "Demonstrate a clean startup, applied schema, readiness, a synthetic processing job, idempotent replay and retained output after restart. Include one unavailable readiness response and one authorized request after recovery. Attach a schema diagram, a local demo script and actual check outcomes. In 60–90 English words explain one delivery limitation and a mitigation.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Записуй ID і кількість на кожному кроці.",
+              "en": "Record IDs and counts at each step."
+            },
+            {
+              "uk": "Перевір рестарт з тим самим іменованим томом.",
+              "en": "Test restarting with the same named volume."
+            },
+            {
+              "uk": "Відрізни відповідь при недоступній БД від збою job.",
+              "en": "Distinguish the database outage response from worker job failure."
+            }
+          ],
+          "solution": {
+            "uk": "Використай одноразовий Compose зі справжнім томом. Перевір готовність, збережи результат фікстури, повтори й перезапусти, далі підтвердь різні логічні ID наявного і нового job. Запиши результати та межі.",
+            "en": "Use disposable Compose with the real DB volume. Confirm readiness, persist a fixture result, replay and restart, and assert existing and new jobs use distinct logical identities. Record the observed outcomes and limits."
+          }
+        }
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "id": "Q1",
+      "prompt": {
+        "uk": "Сервіс відповідає health, але не читає БД. Що має знати клієнт?",
+        "en": "A service responds to health but cannot query its database. What should clients infer?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Кожен запит має пройти.",
+            "en": "Every request should succeed."
+          },
+          "explanation": {
+            "uk": "Залежні шляхи можуть падати.",
+            "en": "Dependent paths can fail."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Усі рядки БД видалено.",
+            "en": "All database rows were deleted."
+          },
+          "explanation": {
+            "uk": "Недоступність не доводить видалення.",
+            "en": "Unavailability does not prove deletion."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Процес живий, а readiness може бути false.",
+            "en": "The process is alive, and readiness can be false."
+          },
+          "explanation": {
+            "uk": "Життя й здатність обслуговувати мають різні проби.",
+            "en": "Health and ability to serve have separate checks."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q2",
+      "prompt": {
+        "uk": "Що дає один іменований том перевірці рестарту?",
+        "en": "What does one named volume allow a restart test to verify?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Ті самі дані приєднано до відтвореного контейнера.",
+            "en": "The same persistent data remains attached to a recreated container."
+          },
+          "explanation": {
+            "uk": "Монтування переживає шар контейнера.",
+            "en": "The mount outlives the container layer."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Усі образи продовжують працювати.",
+            "en": "Every prior image version remains running."
+          },
+          "explanation": {
+            "uk": "Образи відокремлені від файлів БД.",
+            "en": "Images are separate from stored DB files."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Jobs ніколи не повторюються.",
+            "en": "The jobs never retry."
+          },
+          "explanation": {
+            "uk": "Постійність дозволяє стійкі повтори.",
+            "en": "Persistence permits durable retries."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q3",
+      "prompt": {
+        "uk": "При повторі завершеної доставки воркером який інваріант сховища?",
+        "en": "When a worker repeats one completed delivery, what storage invariant is expected?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Видалити старий вихід до встановлення стану.",
+            "en": "Delete old output before deciding what happened."
+          },
+          "explanation": {
+            "uk": "Це ризик втрати збереженого доказу.",
+            "en": "This risks losing persisted evidence."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Один збережений ефект на логічний job.",
+            "en": "The stored effect remains one per logical job."
+          },
+          "explanation": {
+            "uk": "Сталий ID результату дедуплікує записи.",
+            "en": "Use stable result identity to deduplicate."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Ще один результат на доставку.",
+            "en": "One extra result per delivery."
+          },
+          "explanation": {
+            "uk": "Це дублює задуманий ефект.",
+            "en": "That duplicates the intended effect."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q4",
+      "prompt": {
+        "uk": "Що в тесті повтору відрізняє новий запит від повторного?",
+        "en": "What makes a replay test distinguish a new request from a retry?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Завжди змінювати ключ перед перевіркою.",
+            "en": "Always change a key before checking deduplication."
+          },
+          "explanation": {
+            "uk": "Це оминає очікувану гілку повтору.",
+            "en": "That bypasses the expected replay path."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Порівняти лише час.",
+            "en": "Compare elapsed times only."
+          },
+          "explanation": {
+            "uk": "Час не показує логічний ID.",
+            "en": "Timing does not show logical identity."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Порівняти однаковий ключ у своїй області й навмисно новий.",
+            "en": "Compare identical scoped keys and a deliberately new key."
+          },
+          "explanation": {
+            "uk": "Новий ключ позначає новий логічний job.",
+            "en": "A new key must represent a new logical job."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q5",
+      "prompt": {
+        "uk": "Навіщо читати readiness після відновлення залежності?",
+        "en": "Why read the readiness route after a dependency recovers?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Перевірити, що сервіс знову приймає нормальні запити.",
+            "en": "Verify the service can accept normal requests again."
+          },
+          "explanation": {
+            "uk": "Відновлення є спостереженим переходом.",
+            "en": "Recovery is an observed transition."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Надати всім tenant необмежений доступ.",
+            "en": "Grant any tenant unrestricted access."
+          },
+          "explanation": {
+            "uk": "Readiness не змінює авторизацію.",
+            "en": "Readiness does not change authorization."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Стежити за часом збірки образу БД.",
+            "en": "Track the wall-clock time since the DB image was built."
+          },
+          "explanation": {
+            "uk": "Вік образу не доводить поточну готовність.",
+            "en": "Image age does not prove current readiness."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q6",
+      "prompt": {
+        "uk": "Яке твердження доречне за 20 локальних вимірювань фікстури?",
+        "en": "Which benchmark claim is appropriate from 20 local fixture samples?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Доказ, що найповільніший випадок не повториться.",
+            "en": "Proof the slowest case cannot recur."
+          },
+          "explanation": {
+            "uk": "Вибірка цього не гарантує.",
+            "en": "A sample provides no such guarantee."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Описовий p95 для цієї вибірки й заданих умов.",
+            "en": "A descriptive p95 for that sample under the stated conditions."
+          },
+          "explanation": {
+            "uk": "Локальні виміри не встановлюють SLO production.",
+            "en": "Local observations do not establish a production SLO."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Гарантований p95 за будь-якого навантаження.",
+            "en": "Guaranteed p95 under any workload."
+          },
+          "explanation": {
+            "uk": "Середовище й навантаження мають значення.",
+            "en": "Workload and environment matter."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q7",
+      "prompt": {
+        "uk": "Що підтвердити в демо, крім 202 при створенні job?",
+        "en": "What should a demo confirm besides 202 on a job create?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Лише старт контейнера воркера.",
+            "en": "Only whether the worker container started."
+          },
+          "explanation": {
+            "uk": "Він міг не обробити job.",
+            "en": "It might not have processed the job."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Що будь-який актор може використати ID job.",
+            "en": "That any actor can use the job identifier."
+          },
+          "explanation": {
+            "uk": "Статус має залишатись в області.",
+            "en": "Status must remain scoped."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Фінальний статус і справжній результат, доступний дозволеному актору.",
+            "en": "A final status and an actual result reachable to the authorized actor."
+          },
+          "explanation": {
+            "uk": "Прийняття є лише першою стадією.",
+            "en": "Acceptance is only the first phase."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q8",
+      "prompt": {
+        "uk": "Що належить до доказу чистого клону?",
+        "en": "What belongs in a clean-clone evidence note?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Точні команди, спостережені результати й відомі межі.",
+            "en": "Exact commands, observed outputs and known limits."
+          },
+          "explanation": {
+            "uk": "Інший інженер відтворить і зрозуміє доказ.",
+            "en": "Another engineer can reproduce and interpret the evidence."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Сирі секрети середовища.",
+            "en": "The current environment's raw secrets."
+          },
+          "explanation": {
+            "uk": "Секрети не доводять відтворення.",
+            "en": "Secrets are not reproducibility evidence."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Лише твердження про готовність до production.",
+            "en": "Only a claim that everything is production-ready."
+          },
+          "explanation": {
+            "uk": "Твердження не замінює деталі тестів.",
+            "en": "A claim cannot replace test details."
+          }
+        }
+      ]
+    }
+  ],
+  "crosslinks": [
+    "W06-L01",
+    "W06-L04"
+  ]
+}

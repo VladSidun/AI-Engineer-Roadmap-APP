@@ -1,0 +1,574 @@
+{
+  "id": "SR-W02",
+  "contentVersion": 1,
+  "overview": {
+    "uk": "Повтори шлях від вхідних рядків до надійного CLI. Поєднай рішення про колекції, парсинг, ітерацію та відтворення з W02 на новому синтетичному пакеті. Результат — малий репозиторій або папка з одним виконуваним процесом і доказами ізольованих тестів.",
+    "en": "Review the path from input rows to a reliable CLI. Combine the collection, parsing, iteration and reproduction decisions from W02 in a new synthetic batch. The transfer deliverable is a small repository or folder with one executable workflow and evidence from isolated tests."
+  },
+  "theory": {
+    "uk": "### Перевір трасу меж\n\nПростеж argv → парсер → типізовані рядки → політика дублікатів → вихід. Поясни пропуск порожнього, відмову зламаного рядка й зв’язок exit code зі старим результатом. Перевір нову фікстуру.",
+    "en": "### Review the boundary trace\n\nTrace argv → parser → typed rows → duplicate policy → output. Explain where a blank row is skipped, where a malformed row fails, and how the CLI's exit code relates to a previous output. Check a new fixture, not a repeated screenshot."
+  },
+  "recap": {
+    "uk": "Подай власну трасу, поясни компроміс англійською й відмічай критерій лише за наявності доказу.",
+    "en": "Submit your own trace, explain the trade-off in English, and check each rubric item only when your artifact shows it."
+  },
+  "objectives": [
+    {
+      "id": "O1",
+      "title": {
+        "uk": "Застосувати процес W02 до нового формату.",
+        "en": "Apply the W02 pipeline to a new format."
+      },
+      "skill": "tooling"
+    },
+    {
+      "id": "O2",
+      "title": {
+        "uk": "Пояснити перевірену відмову й компроміс пам’яті.",
+        "en": "Explain a verified failure and a memory trade-off."
+      },
+      "skill": "evaluation"
+    }
+  ],
+  "sources": [
+    {
+      "title": {
+        "uk": "pytest parametrization",
+        "en": "pytest parametrization"
+      },
+      "url": "https://docs.pytest.org/en/stable/how-to/parametrize.html",
+      "version": "pytest 9",
+      "checked": "2026-11-26"
+    }
+  ],
+  "examples": [],
+  "interview": [
+    "Describe the behavior you verified.",
+    "What limitation remains in your solution?"
+  ],
+  "interviewGuide": {
+    "uk": "Скористайся англійським поясненням з рубрики. Назви вхід, результат і обмеження.",
+    "en": "Use the English explanation from the rubric. Name an input, its result, and a limitation."
+  },
+  "exercises": [
+    {
+      "id": "SR-W02-E1",
+      "title": {
+        "uk": "Перенести CLI на нову фікстуру",
+        "en": "Transfer the CLI to a new fixture"
+      },
+      "kind": "rubric",
+      "objectives": [
+        "O1"
+      ],
+      "estimateMinutes": 100,
+      "criteria": [
+        {
+          "id": "C1",
+          "title": {
+            "uk": "Показано нормальний, повторний і невалідний випадки з наявним виходом.",
+            "en": "Show normal, replay and invalid cases with an existing output."
+          }
+        },
+        {
+          "id": "C2",
+          "title": {
+            "uk": "Наведено задокументовану команду й спостережений результат.",
+            "en": "Provide a documented command and observed result."
+          }
+        },
+        {
+          "id": "C3",
+          "title": {
+            "uk": "В англійській вправі є рішення, доказ і обмеження.",
+            "en": "English drill names one decision, evidence and a limitation."
+          }
+        }
+      ],
+      "example": {
+        "uk": "Другий рядок ID A змінює заголовок. Порівняння показує перший заголовок у виході. Поганий третій рядок зберігає старі байти.",
+        "en": "The second row for ID A changes the title. A comparison shows output still has the first title. A bad third row keeps the old output bytes."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Заміни CSV на JSON Lines. Кожен рядок — об’єкт із id і title. Нормалізуй і залиш перший валідний заголовок за ID. Зупинись при зламаному чи неповному записі й збережи попередній вихід. Додай тести дубліката та пізнього збою. Поясни англійською у 60–90 словах межу, правило дубліката й компроміс пам’яті. Збережи безпечний підсумок тестів і пояснення.\n\n**Синтетичні накладні**",
+            "en": "Create a JSON-lines input instead of CSV. Each row is an object with id and title. Normalize and retain first valid title per ID. Abort on a malformed or incomplete record and keep previous output. Add tests for a duplicate and a late bad row. In 60–90 English words explain the boundary, duplicate rule and memory trade-off. Save a safe summary of the tests and explanation.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Передавай валідовані об’єкти у ту саму форму, що й CSV.",
+              "en": "Feed validated objects into the same internal shape as CSV."
+            },
+            {
+              "uk": "Напиши тести політики до під’єднання CLI.",
+              "en": "Write tests for policy before wiring the CLI."
+            },
+            {
+              "uk": "Почни англійську вправу з Our boundary accepts...",
+              "en": "Start the English drill with Our boundary accepts..."
+            }
+          ],
+          "solution": {
+            "uk": "Читай по одному JSON-об’єкту на рядок з явним парсером полів. Перевір кожен рядок до вставки. Пиши після валідації, протестуй наявний вихід і поясни межу пам’яті буфера.",
+            "en": "Read one JSON object per line with an explicit field parser. Validate every row before inserting. Write after successful validation, test an existing destination, and explain the memory bound of the current output buffer."
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Заміни CSV на JSON Lines. Кожен рядок — об’єкт із id і title. Нормалізуй і залиш перший валідний заголовок за ID. Зупинись при зламаному чи неповному записі й збережи попередній вихід. Додай тести дубліката та пізнього збою. Поясни англійською у 60–90 словах межу, правило дубліката й компроміс пам’яті. Збережи безпечний підсумок тестів і пояснення.\n\n**Синтетичні запити підтримки**",
+            "en": "Create a JSON-lines input instead of CSV. Each row is an object with id and title. Normalize and retain first valid title per ID. Abort on a malformed or incomplete record and keep previous output. Add tests for a duplicate and a late bad row. In 60–90 English words explain the boundary, duplicate rule and memory trade-off. Save a safe summary of the tests and explanation.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Передавай валідовані об’єкти у ту саму форму, що й CSV.",
+              "en": "Feed validated objects into the same internal shape as CSV."
+            },
+            {
+              "uk": "Напиши тести політики до під’єднання CLI.",
+              "en": "Write tests for policy before wiring the CLI."
+            },
+            {
+              "uk": "Почни англійську вправу з Our boundary accepts...",
+              "en": "Start the English drill with Our boundary accepts..."
+            }
+          ],
+          "solution": {
+            "uk": "Читай по одному JSON-об’єкту на рядок з явним парсером полів. Перевір кожен рядок до вставки. Пиши після валідації, протестуй наявний вихід і поясни межу пам’яті буфера.",
+            "en": "Read one JSON object per line with an explicit field parser. Validate every row before inserting. Write after successful validation, test an existing destination, and explain the memory bound of the current output buffer."
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Заміни CSV на JSON Lines. Кожен рядок — об’єкт із id і title. Нормалізуй і залиш перший валідний заголовок за ID. Зупинись при зламаному чи неповному записі й збережи попередній вихід. Додай тести дубліката та пізнього збою. Поясни англійською у 60–90 словах межу, правило дубліката й компроміс пам’яті. Збережи безпечний підсумок тестів і пояснення.\n\n**Синтетичні документи політик**",
+            "en": "Create a JSON-lines input instead of CSV. Each row is an object with id and title. Normalize and retain first valid title per ID. Abort on a malformed or incomplete record and keep previous output. Add tests for a duplicate and a late bad row. In 60–90 English words explain the boundary, duplicate rule and memory trade-off. Save a safe summary of the tests and explanation.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Передавай валідовані об’єкти у ту саму форму, що й CSV.",
+              "en": "Feed validated objects into the same internal shape as CSV."
+            },
+            {
+              "uk": "Напиши тести політики до під’єднання CLI.",
+              "en": "Write tests for policy before wiring the CLI."
+            },
+            {
+              "uk": "Почни англійську вправу з Our boundary accepts...",
+              "en": "Start the English drill with Our boundary accepts..."
+            }
+          ],
+          "solution": {
+            "uk": "Читай по одному JSON-об’єкту на рядок з явним парсером полів. Перевір кожен рядок до вставки. Пиши після валідації, протестуй наявний вихід і поясни межу пам’яті буфера.",
+            "en": "Read one JSON object per line with an explicit field parser. Validate every row before inserting. Write after successful validation, test an existing destination, and explain the memory bound of the current output buffer."
+          }
+        }
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "id": "Q1",
+      "prompt": {
+        "uk": "Три рядки мають той самий ID і різні версії. Треба лишити перший за порядком. Яке оновлення підійде?",
+        "en": "An upload contains three records with the same ID but different versions. You must keep the oldest in input order. Which update fits?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Присвоювати на кожній ітерації.",
+            "en": "Assign on every iteration."
+          },
+          "explanation": {
+            "uk": "Остання версія замінить першу.",
+            "en": "The latest version replaces the original."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Сортувати за заголовком до вибору.",
+            "en": "Sort by title before taking the first."
+          },
+          "explanation": {
+            "uk": "Це змінює порядок правила.",
+            "en": "This changes the order used by the rule."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Вставити лише за відсутнього ключа.",
+            "en": "Insert only if the key is absent."
+          },
+          "explanation": {
+            "uk": "Пізніші версії не змінять обраний запис.",
+            "en": "Later versions preserve the selected record."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q2",
+      "prompt": {
+        "uk": "Які перевірки виконати після json.loads для об’єкта з додатним count?",
+        "en": "Which two checks must happen after json.loads for an object with a positive count?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Перевірити форму об’єкта й тип та діапазон count.",
+            "en": "Check object shape and count type/range."
+          },
+          "explanation": {
+            "uk": "Розбір установлює синтаксис, а схема — ці правила.",
+            "en": "Parsing establishes syntax, while schema establishes these rules."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Лише перевірити UTF-8.",
+            "en": "Only check that the text is UTF-8."
+          },
+          "explanation": {
+            "uk": "Валідний текст може містити масиви чи від’ємні значення.",
+            "en": "Valid text also contains arrays or negative values."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Перетворити все через str().",
+            "en": "Convert every value with str()."
+          },
+          "explanation": {
+            "uk": "Це втрачає відмінності типів.",
+            "en": "This destroys the type distinction."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q3",
+      "prompt": {
+        "uk": "Фінальний рядок фікстури спричиняє виняток. Який споживач його виявить?",
+        "en": "A test uses a fixture whose final line raises. Which consumer can detect that error?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Споживач, що бере один валідний рядок і завершує.",
+            "en": "A consumer that takes one valid row and exits."
+          },
+          "explanation": {
+            "uk": "Він зупиняється до пізньої відмови.",
+            "en": "It stops before reaching the late failure."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Споживач, що вичерпує ітератор.",
+            "en": "A consumer that exhausts the iterator."
+          },
+          "explanation": {
+            "uk": "До останнього рядка доходить лише подальша ітерація.",
+            "en": "The last line is reached only by continued iteration."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Імпорт модуля, який містить генератор.",
+            "en": "An import of the module containing the generator."
+          },
+          "explanation": {
+            "uk": "Оголошення функції не споживає рядки.",
+            "en": "Defining the function consumes no rows."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q4",
+      "prompt": {
+        "uk": "Як тест може захистити попередній вихід JSON від регресії?",
+        "en": "How can a test protect a previous JSON output from a future regression?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Лише порахувати рядки успішного виходу.",
+            "en": "Only count rows in a successful output."
+          },
+          "explanation": {
+            "uk": "Це не запускає гілку відмови.",
+            "en": "That never exercises the failure branch."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Лише перевірити існування виходу.",
+            "en": "Only assert that the output path exists."
+          },
+          "explanation": {
+            "uk": "Файл може існувати з неправильними байтами.",
+            "en": "The file could exist with incorrect bytes."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Заповнити вихід, зламати другий рядок і порівняти старі байти.",
+            "en": "Prepopulate the destination, fail the second input row, and compare old bytes."
+          },
+          "explanation": {
+            "uk": "Другий рядок виявляє передчасний запис.",
+            "en": "The second row exposes premature mutation."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q5",
+      "prompt": {
+        "uk": "Яке представлення робить FIFO-чергу дешевою з обох кінців?",
+        "en": "Which representation makes a FIFO backlog cheap at both ends?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "deque з append і popleft.",
+            "en": "deque with append and popleft."
+          },
+          "explanation": {
+            "uk": "Обидві операції ефективні на своїх кінцях.",
+            "en": "Both operations are efficient at their respective ends."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "list з insert(0) і pop(0).",
+            "en": "list with insert(0) and pop(0)."
+          },
+          "explanation": {
+            "uk": "Обидві зміщують наявні елементи.",
+            "en": "Both move existing entries."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "set з pop.",
+            "en": "set with pop."
+          },
+          "explanation": {
+            "uk": "Set не гарантує FIFO.",
+            "en": "Set removal gives no FIFO guarantee."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q6",
+      "prompt": {
+        "uk": "Де помилка локального шляху має стати кодом завершення?",
+        "en": "Where should a local path error become an exit code?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "У lock залежностей.",
+            "en": "In the dependency lock."
+          },
+          "explanation": {
+            "uk": "Розв’язання версій не замінює обробки помилок.",
+            "en": "Version resolution has no error-mapping responsibility."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "У CLI-адаптері.",
+            "en": "In the CLI adapter."
+          },
+          "explanation": {
+            "uk": "Адаптер керує процесом і повідомленнями.",
+            "en": "The adapter owns process behavior and messages."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "У чистому перетворенні запису.",
+            "en": "Inside a pure record transform."
+          },
+          "explanation": {
+            "uk": "Це пов’язало б повторне використання із завершенням процесу.",
+            "en": "That would couple reusable logic to process exit."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q7",
+      "prompt": {
+        "uk": "Навіщо tmp_path у тесті запису?",
+        "en": "Why use tmp_path in an output test?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Робить розбір фікстур лінивим.",
+            "en": "It makes fixture parsing lazy."
+          },
+          "explanation": {
+            "uk": "Розбір залежить від читача.",
+            "en": "Parsing depends on the reader."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Доводить доступність усіх production-шляхів.",
+            "en": "It proves every production path is writable."
+          },
+          "explanation": {
+            "uk": "Ізоляція тесту не надає production-дозволів.",
+            "en": "Test isolation does not grant production permissions."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Кожен тест має окремі файли.",
+            "en": "Each test owns isolated files."
+          },
+          "explanation": {
+            "uk": "Стан інших випадків не визначає цей результат.",
+            "en": "State from other cases cannot determine this test's outcome."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q8",
+      "prompt": {
+        "uk": "Lint і тести пройшли у старому середовищі. Що перевірить чисте налаштування?",
+        "en": "A lint and test check passes on your old environment. What verifies clean setup?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Створи свіжий venv за lock і виконай описані команди.",
+            "en": "Create a fresh venv from the lock and run the documented commands."
+          },
+          "explanation": {
+            "uk": "Це виявляє неописаний стан середовища.",
+            "en": "This makes undeclared environment state visible."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Скопіюй site-packages зі старої папки.",
+            "en": "Copy site-packages from the old workspace."
+          },
+          "explanation": {
+            "uk": "Це відтворює прихований стан.",
+            "en": "This repeats hidden environment state."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Перевір зелений попередній скриншот.",
+            "en": "Check that the last test screenshot is green."
+          },
+          "explanation": {
+            "uk": "Скриншот не запускає поточне налаштування.",
+            "en": "A screenshot doesn't exercise the current setup."
+          }
+        }
+      ]
+    }
+  ],
+  "crosslinks": [
+    "W02-L01",
+    "W02-L04"
+  ]
+}

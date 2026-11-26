@@ -1,0 +1,519 @@
+{
+  "id": "W06-L01",
+  "contentVersion": 1,
+  "overview": {
+    "uk": "Project A має стартувати в новій папці однією командою Compose. Дізнайся, що живе в образі, що потребує постійного тому і як контейнери знаходять один одного. Перевір розв’язану синтетичну конфігурацію Compose й залежність API від БД без читання секретів. Потім запусти справжню перевірку старту й тому в проєкті. Мета — бекенд, що після рестарту зберігає документ і надає доступ до БД лише потрібним клієнтам.",
+    "en": "Project A should start in a new workspace with one documented Compose command. Learn which parts live in an image, which need a persistent volume, and how containers find each other. You will inspect a resolved synthetic Compose configuration and check the API's database dependency without reading secrets. Then you will run an actual volume and startup check in the project. The goal is a backend that can restart and retain a document while keeping the database reachable only where its clients need it."
+  },
+  "theory": {
+    "uk": "### Збірка й запуск\n\nDockerfile будує образ із версіонованих входів. Використай малий runtime-етап і копіюй лише потрібні артефакти. Контейнер запускає образ із конфігурацією та записуваним шаром, що може зникнути після відтворення. Дані PostgreSQL тримай в іменованому томі. Bind mount корисний для локальних правок, але прив’язаний до шляху хоста. Не запікай локальні credentials в образ і не коміть їх. Передавай runtime-конфігурацію окремо й застосовуй контрольовані значення в тестах.\n\n### Мережа й готовність окремо\n\nУ мережі Compose API звертається до БД за ім’ям сервісу та внутрішнім портом. Опублікований порт приймає трафік із хоста й може бути лише loopback. Localhost API — сам контейнер. Він не досягне іншого контейнера через localhost як адресу БД. depends_on керує порядком. Умова service_healthy чекає healthcheck, який може не охоплювати кожну вимогу застосунку. Зберігай повторне підключення та запускай міграції у визначений момент.\n\n### Перевірка моделі запуску\n\nПеревір рендер конфігурації фікстурного середовища для образу, мережі, цілей тому й залежностей старту. Реальні конфігурації можуть розкривати секрети при підстановці. Не поширюй повний вивід. Вправа перевіряє вузьку синтетичну частину. Для сервісу збери Compose, дочекайся готовності, запиши фікстурний рядок, зупини й запусти застосунок і перевір наявність рядка. Використай новий одноразовий проєкт і не вилучай томи інших проєктів.\n\n### Розділи збірку, старт і перевірку стану\n\nНамалюй три об’єкти: образ API, контейнер API й том БД. Нова збірка змінює файли застосунку. Відтворення API змінює процес і записуваний шар. Жодна дія не має замінювати том БД. Запусти Project A з одноразовим іменем Compose та підтвердь, що фактично змонтовано. Запиши URL з боку викликача. Усередині Compose API звертається до db на внутрішньому порті. Браузер хоста використовує loopback-порт API, якщо він опублікований.\n\nReadiness потребує придатної схеми, а не просто відкритого з’єднання. Використай визначену команду міграції й пробу після старту. Перший тест рестарту запускає заново лише API й перевіряє той самий рядок. Другий зупиняє й запускає БД, потім перевіряє готовність і дані. Для міграції почни з чистого тому, а потім онови фікстуру зі старими даними. Запиши, яка перевірка доводить старт, яка — збереження, а яка — сумісність.",
+    "en": "### Build, then run\n\nA Dockerfile builds an image from versioned inputs. Use a small runtime stage and copy only required artifacts. A container runs that image with a configuration and a writable layer that may disappear on recreation. PostgreSQL storage belongs in a named volume. A bind mount can be useful for local source edits but is tied to a host path. Do not bake local credentials into images or commit them to source. Supply runtime configuration separately and use controlled placeholders in tests.\n\n### Describe network and availability separately\n\nOn the Compose network the API can use the database's service name and internal port. A published port is for traffic from the host and can be limited to loopback. The API container's localhost describes that container. It cannot reach another container by using localhost as the database host. depends_on controls ordering. Tying it to service_healthy waits for the defined health check, which still may not cover every application requirement. Keep normal reconnect behavior and run migrations at a defined time.\n\n### Verify the deployment model\n\nInspect a rendered config from a fixture environment to verify image, network, volume targets and startup dependencies. Real configs can expand secrets. Avoid sharing the full output. The exercise checks a narrow synthetic subset. For acceptance of an actual service, build with Compose, wait for readiness, write a fixture row, stop and start the service and confirm the row still exists. Use a fresh disposable project name and avoid removing data volumes belonging to another project.\n\n### Separate build, startup and state checks\n\nDraw three objects: the built API image, the API container and the database's mounted volume. Rebuilding the image changes application files. Recreating the API container changes its process and writable layer. Neither action should replace the database volume. Start the Project A stack with a disposable Compose project identity and verify what its database actually mounts. Record the service URLs from the relevant caller's perspective. Inside Compose, the API reaches db on its internal port. A browser on the host uses the API's published loopback port if configured.\n\nReadiness depends on a usable database schema, not just a process accepting a connection. Use a known migration command and one check after startup. Consider two restart tests. The first restarts only the API and verifies the same database row. The second stops and starts the database and checks both readiness and data after recovery. For a migration test, supply a blank fixture volume first, then test an upgrade fixture containing old data. Record which test proves startup, which proves persistence, and which proves compatibility."
+  },
+  "recap": {
+    "uk": "Збери незмінний runtime, зберігай дані в іменованому томі й застосовуй внутрішню адресу сервісу.",
+    "en": "Build an immutable runtime, keep the DB data in a named volume and use the internal service address."
+  },
+  "objectives": [
+    {
+      "id": "O1",
+      "title": {
+        "uk": "Розрізняти образ, контейнер, том, мережу й публікацію порту.",
+        "en": "Distinguish image, container, volume, network and port mapping."
+      },
+      "skill": "tooling"
+    },
+    {
+      "id": "O2",
+      "title": {
+        "uk": "Перевіряти чистий старт і збереження в Compose.",
+        "en": "Verify clean startup and persistence in Compose."
+      },
+      "skill": "evaluation"
+    }
+  ],
+  "sources": [
+    {
+      "title": {
+        "uk": "Compose startup order",
+        "en": "Compose startup order"
+      },
+      "url": "https://docs.docker.com/compose/how-tos/startup-order/",
+      "version": "Docker Compose",
+      "checked": "2026-11-26"
+    },
+    {
+      "title": {
+        "uk": "Compose networking",
+        "en": "Compose networking"
+      },
+      "url": "https://docs.docker.com/compose/how-tos/networking/",
+      "version": "Docker Compose",
+      "checked": "2026-11-26"
+    },
+    {
+      "title": {
+        "uk": "docker compose config",
+        "en": "docker compose config"
+      },
+      "url": "https://docs.docker.com/reference/cli/docker/compose/config/",
+      "version": "Docker Compose",
+      "checked": "2026-11-26"
+    }
+  ],
+  "examples": [
+    {
+      "file": "w06_l01_example.py",
+      "expected": "db 5432\n127.0.0.1 8000",
+      "explanation": {
+        "uk": "Перевір внутрішню адресу й адресу хоста зі штучних URL без підключення.",
+        "en": "Inspect internal and host addresses from synthetic URLs without connecting."
+      },
+      "error": {
+        "uk": "Заміна db на localhost у контейнері API спрямує в той самий контейнер.",
+        "en": "Replacing db with localhost in the API container would point at that same container."
+      }
+    }
+  ],
+  "interview": [
+    "Why can't the API use localhost to connect to the DB service?",
+    "What does depends_on service_healthy prove at startup?"
+  ],
+  "interviewGuide": {
+    "uk": "Назви тест, який підтвердить збереження даних після рестарту.",
+    "en": "Name which test can prove database persistence across restart."
+  },
+  "exercises": [
+    {
+      "id": "W06-L01-E1",
+      "title": {
+        "uk": "Перевірити синтетичну Compose-конфігурацію",
+        "en": "Validate a synthetic Compose configuration"
+      },
+      "kind": "code",
+      "objectives": [
+        "O1"
+      ],
+      "estimateMinutes": 75,
+      "criteria": [],
+      "example": {
+        "uk": "Оголошений іменований том і залежність від healthy БД без порту хоста проходять політику.",
+        "en": "A declared named data volume and healthy database dependency with no host DB port meet the fixture policy."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(config) для розібраної нормалізованої фікстури Compose JSON. True лише якщо services.api.depends_on.db.condition дорівнює service_healthy, services.db не має непорожніх ports і db має том типу volume, із непорожнім source, визначеним у volumes, та target /var/lib/postgresql/data. Відсутня чи хибна структура дає False. Не логуй конфігурацію.\n\n**Синтетичні накладні**",
+            "en": "Implement solve(config) for a parsed, normalized Compose JSON fixture. Return True only if services.api.depends_on.db.condition is service_healthy, services.db has no nonempty ports, and db has a volume mapping of type volume with a nonempty source defined in top-level volumes and target /var/lib/postgresql/data. Missing or invalid structure returns False. Do not log configured values.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Перевір потрібну структуру до звернення до полів.",
+              "en": "Check required structures before indexing child fields."
+            },
+            {
+              "uk": "Шукай відповідний том незалежно від старту.",
+              "en": "Look for a matching volume independently of startup."
+            },
+            {
+              "uk": "Шукай допустимий source у верхньому volumes.",
+              "en": "Look up each allowed source in top-level volumes."
+            }
+          ],
+          "solution": {
+            "uk": "Перевір структуру, умову старту й посилання на том без друку конфігурації.\n\n```python\ndef solve(config: object) -> bool:\n    if not isinstance(config, dict):\n        return False\n    try:\n        services = config['services']\n        db = services['db']\n        condition = services['api']['depends_on']['db']['condition']\n        volumes, mounts = config['volumes'], db['volumes']\n        if condition != 'service_healthy' or db.get('ports') or not isinstance(volumes, dict):\n            return False\n        return isinstance(mounts, list) and any(\n            isinstance(mount, dict) and mount.get('type') == 'volume'\n            and mount.get('target') == '/var/lib/postgresql/data'\n            and isinstance(mount.get('source'), str) and bool(mount['source'])\n            and mount['source'] in volumes for mount in mounts\n        )\n    except (KeyError, TypeError, AttributeError):\n        return False\n```",
+            "en": "Confirm structure, startup condition and volume reference without printing configuration values.\n\n```python\ndef solve(config: object) -> bool:\n    if not isinstance(config, dict):\n        return False\n    try:\n        services = config['services']\n        db = services['db']\n        condition = services['api']['depends_on']['db']['condition']\n        volumes, mounts = config['volumes'], db['volumes']\n        if condition != 'service_healthy' or db.get('ports') or not isinstance(volumes, dict):\n            return False\n        return isinstance(mounts, list) and any(\n            isinstance(mount, dict) and mount.get('type') == 'volume'\n            and mount.get('target') == '/var/lib/postgresql/data'\n            and isinstance(mount.get('source'), str) and bool(mount['source'])\n            and mount['source'] in volumes for mount in mounts\n        )\n    except (KeyError, TypeError, AttributeError):\n        return False\n```"
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(config) для розібраної нормалізованої фікстури Compose JSON. True лише якщо services.api.depends_on.db.condition дорівнює service_healthy, services.db не має непорожніх ports і db має том типу volume, із непорожнім source, визначеним у volumes, та target /var/lib/postgresql/data. Відсутня чи хибна структура дає False. Не логуй конфігурацію.\n\n**Синтетичні запити підтримки**",
+            "en": "Implement solve(config) for a parsed, normalized Compose JSON fixture. Return True only if services.api.depends_on.db.condition is service_healthy, services.db has no nonempty ports, and db has a volume mapping of type volume with a nonempty source defined in top-level volumes and target /var/lib/postgresql/data. Missing or invalid structure returns False. Do not log configured values.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Перевір потрібну структуру до звернення до полів.",
+              "en": "Check required structures before indexing child fields."
+            },
+            {
+              "uk": "Шукай відповідний том незалежно від старту.",
+              "en": "Look for a matching volume independently of startup."
+            },
+            {
+              "uk": "Шукай допустимий source у верхньому volumes.",
+              "en": "Look up each allowed source in top-level volumes."
+            }
+          ],
+          "solution": {
+            "uk": "Перевір структуру, умову старту й посилання на том без друку конфігурації.\n\n```python\ndef solve(config: object) -> bool:\n    if not isinstance(config, dict):\n        return False\n    try:\n        services = config['services']\n        db = services['db']\n        condition = services['api']['depends_on']['db']['condition']\n        volumes, mounts = config['volumes'], db['volumes']\n        if condition != 'service_healthy' or db.get('ports') or not isinstance(volumes, dict):\n            return False\n        return isinstance(mounts, list) and any(\n            isinstance(mount, dict) and mount.get('type') == 'volume'\n            and mount.get('target') == '/var/lib/postgresql/data'\n            and isinstance(mount.get('source'), str) and bool(mount['source'])\n            and mount['source'] in volumes for mount in mounts\n        )\n    except (KeyError, TypeError, AttributeError):\n        return False\n```",
+            "en": "Confirm structure, startup condition and volume reference without printing configuration values.\n\n```python\ndef solve(config: object) -> bool:\n    if not isinstance(config, dict):\n        return False\n    try:\n        services = config['services']\n        db = services['db']\n        condition = services['api']['depends_on']['db']['condition']\n        volumes, mounts = config['volumes'], db['volumes']\n        if condition != 'service_healthy' or db.get('ports') or not isinstance(volumes, dict):\n            return False\n        return isinstance(mounts, list) and any(\n            isinstance(mount, dict) and mount.get('type') == 'volume'\n            and mount.get('target') == '/var/lib/postgresql/data'\n            and isinstance(mount.get('source'), str) and bool(mount['source'])\n            and mount['source'] in volumes for mount in mounts\n        )\n    except (KeyError, TypeError, AttributeError):\n        return False\n```"
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(config) для розібраної нормалізованої фікстури Compose JSON. True лише якщо services.api.depends_on.db.condition дорівнює service_healthy, services.db не має непорожніх ports і db має том типу volume, із непорожнім source, визначеним у volumes, та target /var/lib/postgresql/data. Відсутня чи хибна структура дає False. Не логуй конфігурацію.\n\n**Синтетичні документи політик**",
+            "en": "Implement solve(config) for a parsed, normalized Compose JSON fixture. Return True only if services.api.depends_on.db.condition is service_healthy, services.db has no nonempty ports, and db has a volume mapping of type volume with a nonempty source defined in top-level volumes and target /var/lib/postgresql/data. Missing or invalid structure returns False. Do not log configured values.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Перевір потрібну структуру до звернення до полів.",
+              "en": "Check required structures before indexing child fields."
+            },
+            {
+              "uk": "Шукай відповідний том незалежно від старту.",
+              "en": "Look for a matching volume independently of startup."
+            },
+            {
+              "uk": "Шукай допустимий source у верхньому volumes.",
+              "en": "Look up each allowed source in top-level volumes."
+            }
+          ],
+          "solution": {
+            "uk": "Перевір структуру, умову старту й посилання на том без друку конфігурації.\n\n```python\ndef solve(config: object) -> bool:\n    if not isinstance(config, dict):\n        return False\n    try:\n        services = config['services']\n        db = services['db']\n        condition = services['api']['depends_on']['db']['condition']\n        volumes, mounts = config['volumes'], db['volumes']\n        if condition != 'service_healthy' or db.get('ports') or not isinstance(volumes, dict):\n            return False\n        return isinstance(mounts, list) and any(\n            isinstance(mount, dict) and mount.get('type') == 'volume'\n            and mount.get('target') == '/var/lib/postgresql/data'\n            and isinstance(mount.get('source'), str) and bool(mount['source'])\n            and mount['source'] in volumes for mount in mounts\n        )\n    except (KeyError, TypeError, AttributeError):\n        return False\n```",
+            "en": "Confirm structure, startup condition and volume reference without printing configuration values.\n\n```python\ndef solve(config: object) -> bool:\n    if not isinstance(config, dict):\n        return False\n    try:\n        services = config['services']\n        db = services['db']\n        condition = services['api']['depends_on']['db']['condition']\n        volumes, mounts = config['volumes'], db['volumes']\n        if condition != 'service_healthy' or db.get('ports') or not isinstance(volumes, dict):\n            return False\n        return isinstance(mounts, list) and any(\n            isinstance(mount, dict) and mount.get('type') == 'volume'\n            and mount.get('target') == '/var/lib/postgresql/data'\n            and isinstance(mount.get('source'), str) and bool(mount['source'])\n            and mount['source'] in volumes for mount in mounts\n        )\n    except (KeyError, TypeError, AttributeError):\n        return False\n```"
+          }
+        }
+      ]
+    },
+    {
+      "id": "W06-L01-E2",
+      "title": {
+        "uk": "Запустити Project A в ізольованому Compose",
+        "en": "Start Project A in isolated Compose"
+      },
+      "kind": "rubric",
+      "objectives": [
+        "O2"
+      ],
+      "estimateMinutes": 70,
+      "criteria": [
+        {
+          "id": "C1",
+          "title": {
+            "uk": "Описано кожен сервіс, адресу й том.",
+            "en": "Document each declared service, address and volume."
+          }
+        },
+        {
+          "id": "C2",
+          "title": {
+            "uk": "Показано готовність і незмінний ID після рестарту.",
+            "en": "Show actual readiness and unchanged document ID after restart."
+          }
+        },
+        {
+          "id": "C3",
+          "title": {
+            "uk": "БД приватна, а credentials поза образом.",
+            "en": "Keep the DB private and credentials outside the image."
+          }
+        }
+      ],
+      "example": {
+        "uk": "Новий проєкт показує здоровий API, створює документ 7 і читає ID 7 після рестарту обох контейнерів.",
+        "en": "A new project shows API healthy, creates document 7, and reads ID 7 after both containers restart."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Додай Dockerfile API, Compose-сервіси API і PostgreSQL, healthcheck та іменований том БД. Налаштуй одноразовий проєкт із синтетичним env. Запусти, запиши документ, перезапусти обидва сервіси й перевір той самий ID. Запиши точні команди та loopback-прив’язки. Прибери розкриті секрети з доказу.\n\n**Синтетичні накладні**",
+            "en": "Add an API Dockerfile, Compose services for API and PostgreSQL, DB healthcheck and a named database volume. Configure a disposable project with synthetic env. Start, write one document, then restart both services and check the same ID. Record exact commands and the loopback bindings. Omit expanded secrets from evidence.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Використай ім’я сервісу БД у мережі Compose.",
+              "en": "Use DB service name inside the Compose network."
+            },
+            {
+              "uk": "Змонтуй том у налаштовану папку даних БД.",
+              "en": "Mount the named volume at the configured database data directory."
+            },
+            {
+              "uk": "Зупини та запусти без видалення томів.",
+              "en": "Stop and start without deleting volumes."
+            }
+          ],
+          "solution": {
+            "uk": "Збери API runtime, застосуй внутрішню адресу, дочекайся healthcheck БД і окремо перевір готовність та збережений стан.",
+            "en": "Build the API runtime, use internal service addressing, wait for the database health check, then verify readiness and persisted state independently."
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Додай Dockerfile API, Compose-сервіси API і PostgreSQL, healthcheck та іменований том БД. Налаштуй одноразовий проєкт із синтетичним env. Запусти, запиши документ, перезапусти обидва сервіси й перевір той самий ID. Запиши точні команди та loopback-прив’язки. Прибери розкриті секрети з доказу.\n\n**Синтетичні запити підтримки**",
+            "en": "Add an API Dockerfile, Compose services for API and PostgreSQL, DB healthcheck and a named database volume. Configure a disposable project with synthetic env. Start, write one document, then restart both services and check the same ID. Record exact commands and the loopback bindings. Omit expanded secrets from evidence.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Використай ім’я сервісу БД у мережі Compose.",
+              "en": "Use DB service name inside the Compose network."
+            },
+            {
+              "uk": "Змонтуй том у налаштовану папку даних БД.",
+              "en": "Mount the named volume at the configured database data directory."
+            },
+            {
+              "uk": "Зупини та запусти без видалення томів.",
+              "en": "Stop and start without deleting volumes."
+            }
+          ],
+          "solution": {
+            "uk": "Збери API runtime, застосуй внутрішню адресу, дочекайся healthcheck БД і окремо перевір готовність та збережений стан.",
+            "en": "Build the API runtime, use internal service addressing, wait for the database health check, then verify readiness and persisted state independently."
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Додай Dockerfile API, Compose-сервіси API і PostgreSQL, healthcheck та іменований том БД. Налаштуй одноразовий проєкт із синтетичним env. Запусти, запиши документ, перезапусти обидва сервіси й перевір той самий ID. Запиши точні команди та loopback-прив’язки. Прибери розкриті секрети з доказу.\n\n**Синтетичні документи політик**",
+            "en": "Add an API Dockerfile, Compose services for API and PostgreSQL, DB healthcheck and a named database volume. Configure a disposable project with synthetic env. Start, write one document, then restart both services and check the same ID. Record exact commands and the loopback bindings. Omit expanded secrets from evidence.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Використай ім’я сервісу БД у мережі Compose.",
+              "en": "Use DB service name inside the Compose network."
+            },
+            {
+              "uk": "Змонтуй том у налаштовану папку даних БД.",
+              "en": "Mount the named volume at the configured database data directory."
+            },
+            {
+              "uk": "Зупини та запусти без видалення томів.",
+              "en": "Stop and start without deleting volumes."
+            }
+          ],
+          "solution": {
+            "uk": "Збери API runtime, застосуй внутрішню адресу, дочекайся healthcheck БД і окремо перевір готовність та збережений стан.",
+            "en": "Build the API runtime, use internal service addressing, wait for the database health check, then verify readiness and persisted state independently."
+          }
+        }
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "id": "Q1",
+      "prompt": {
+        "uk": "Що зберігається при відтворенні контейнера БД із його іменованим томом?",
+        "en": "What persists when the DB container is recreated with its named volume?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Кожен файл видаленого шару контейнера.",
+            "en": "Every file in the deleted container layer."
+          },
+          "explanation": {
+            "uk": "Стан шару контейнера може зникнути.",
+            "en": "Container layer state can disappear."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Лише значення Dockerfile.",
+            "en": "Only values stored in the Dockerfile."
+          },
+          "explanation": {
+            "uk": "Runtime-дані живуть поза визначенням образу.",
+            "en": "Runtime data lives outside the image definition."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Дані, записані в змонтований том.",
+            "en": "Data written to the mounted volume."
+          },
+          "explanation": {
+            "uk": "Новий контейнер під’єднує наявний том.",
+            "en": "The new container attaches the existing data volume."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q2",
+      "prompt": {
+        "uk": "Як сервіс Compose зазвичай звертається до іншого?",
+        "en": "How does one Compose service usually reach another?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "За ім’ям сервісу й портом контейнера в спільній мережі.",
+            "en": "Use its service name and container port on the shared network."
+          },
+          "explanation": {
+            "uk": "Пошук сервісу використовує DNS мережі Compose.",
+            "en": "Service discovery uses Compose network DNS."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Використовувати 127.0.0.1 для всіх сервісів.",
+            "en": "Use 127.0.0.1 for all service connections."
+          },
+          "explanation": {
+            "uk": "Кожен контейнер має свій loopback.",
+            "en": "Each container has its own loopback."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Спершу опублікувати всі порти хоста.",
+            "en": "Publish all service ports on the host first."
+          },
+          "explanation": {
+            "uk": "Внутрішньому трафіку не потрібен доступ з хоста.",
+            "en": "Host exposure is unnecessary for internal traffic."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q3",
+      "prompt": {
+        "uk": "Яка умова запуску чекає healthcheck БД?",
+        "en": "Which startup condition waits for the DB health check?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Лише іменований том.",
+            "en": "A named volume alone."
+          },
+          "explanation": {
+            "uk": "Том не визначає готовність.",
+            "en": "A volume does not define readiness."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "service_healthy.",
+            "en": "service_healthy."
+          },
+          "explanation": {
+            "uk": "Compose чекає налаштовану перевірку.",
+            "en": "Compose waits for the configured health check."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "service_started.",
+            "en": "service_started."
+          },
+          "explanation": {
+            "uk": "Старт не означає проходження перевірки.",
+            "en": "Started does not imply the check passed."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q4",
+      "prompt": {
+        "uk": "Навіщо збирати лише вибрані поля розв’язаної конфігурації?",
+        "en": "Why collect only selected fields from a rendered config?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Це робить томи постійними.",
+            "en": "It makes volumes persistent."
+          },
+          "explanation": {
+            "uk": "Постійність забезпечує монтування.",
+            "en": "Volume persistence comes from the mount."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Compose не може рендерити JSON.",
+            "en": "Compose cannot render JSON."
+          },
+          "explanation": {
+            "uk": "Compose може вивести нормалізовану конфігурацію.",
+            "en": "Compose can render a normalized configuration."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Підстановка може розкрити значення середовища.",
+            "en": "Expansion can reveal environment-provided values."
+          },
+          "explanation": {
+            "uk": "Збирай лише несекретні дані мережі й тому.",
+            "en": "Capture nonsecret network and mount evidence only."
+          }
+        }
+      ]
+    }
+  ],
+  "crosslinks": [
+    "W05-L04",
+    "W06-L02"
+  ]
+}

@@ -1,0 +1,583 @@
+{
+  "id": "SR-W03",
+  "contentVersion": 1,
+  "overview": {
+    "uk": "Поєднай асинхронний клієнт, обмежене планування, правило повторів і безпечні журнали на новій фікстурі. Відтворювана послідовність тестів має показати реакцію GET-пакета на успіх, тайм-аут і зламане тіло. Поясни зміни для запису.",
+    "en": "Combine an asynchronous client, bounded scheduling, retry policy and safe logs on a new service fixture. Use a repeatable test sequence to show how a GET batch reacts to success, timeout and malformed content. Explain how the same design changes for a write."
+  },
+  "theory": {
+    "uk": "### Оціни поведінку на межі клієнта\n\nПобудуй трасу від ключа до метаданих запиту, синтетичної відповіді, рішення про повтор і результату. Спостерігай пік одночасності та кількість спроб. Поясни, чому це різні межі.",
+    "en": "### Evaluate the behavior at the client edge\n\nBuild a trace from input key to request metadata, synthetic response, retry decision and returned result. Observe both peak concurrency and attempt counts. Explain why those numbers constrain different things."
+  },
+  "recap": {
+    "uk": "Подай власну трасу, поясни компроміс англійською й відмічай критерій лише за наявності доказу.",
+    "en": "Submit your own trace, explain the trade-off in English, and check each rubric item only when your artifact shows it."
+  },
+  "objectives": [
+    {
+      "id": "O1",
+      "title": {
+        "uk": "Перенести HTTP-клієнт на нові фікстури.",
+        "en": "Transfer the HTTP client to unseen fixtures."
+      },
+      "skill": "systems"
+    },
+    {
+      "id": "O2",
+      "title": {
+        "uk": "Описати відтворювану async-перевірку англійською.",
+        "en": "Report reproducible async verification in English."
+      },
+      "skill": "evaluation"
+    }
+  ],
+  "sources": [
+    {
+      "title": {
+        "uk": "asyncio tasks",
+        "en": "asyncio tasks"
+      },
+      "url": "https://docs.python.org/3.12/library/asyncio-task.html",
+      "version": "Python 3.12",
+      "checked": "2026-11-26"
+    },
+    {
+      "title": {
+        "uk": "RFC 9110 · HTTP",
+        "en": "RFC 9110 · HTTP"
+      },
+      "url": "https://www.rfc-editor.org/rfc/rfc9110.html",
+      "version": "RFC 9110",
+      "checked": "2026-11-26"
+    }
+  ],
+  "examples": [],
+  "interview": [
+    "Describe the behavior you verified.",
+    "What limitation remains in your solution?"
+  ],
+  "interviewGuide": {
+    "uk": "Скористайся англійським поясненням з рубрики. Назви вхід, результат і обмеження.",
+    "en": "Use the English explanation from the rubric. Name an input, its result, and a limitation."
+  },
+  "exercises": [
+    {
+      "id": "SR-W03-E1",
+      "title": {
+        "uk": "Запустити детерміновану трасу async-клієнта",
+        "en": "Run a deterministic asynchronous client trace"
+      },
+      "kind": "rubric",
+      "objectives": [
+        "O1"
+      ],
+      "estimateMinutes": 100,
+      "criteria": [
+        {
+          "id": "C1",
+          "title": {
+            "uk": "Показано пік активних викликів і кількість спроб.",
+            "en": "Show peak active calls and observed attempt counts."
+          }
+        },
+        {
+          "id": "C2",
+          "title": {
+            "uk": "Показано різні офлайн-результати включно з невалідним JSON і тайм-аутом.",
+            "en": "Show distinct offline outcomes including malformed JSON and timeout."
+          }
+        },
+        {
+          "id": "C3",
+          "title": {
+            "uk": "Англійська вправа пояснює умову повтору та її межу.",
+            "en": "English drill explains one replay assumption and its limitation."
+          }
+        }
+      ],
+      "example": {
+        "uk": "Тест перевірив пік 2, дві спроби для 503 й одну помилку парсингу для неправильного JSON.",
+        "en": "The test asserted peak 2, two attempts for a 503, and one parsing failure for invalid JSON."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Змоделюй три ID синтетичних документів: успіх, 503 перед успіхом і невалідний JSON. Напиши офлайн-тест не більш ніж двох одночасних запитів, максимум двох спроб на елемент і структурованого результату. Додай випадок тайм-ауту. Англійською у 60–90 словах розділи одночасність і бюджет повторів та поясни, коли можна повторити POST.\n\n**Синтетичні накладні**",
+            "en": "Model three synthetic document IDs: one succeeds, one returns 503 then succeeds, and one returns invalid JSON. Write an offline test of at most two concurrent requests, maximum two attempts per item, and a structured outcome for each. Add a timeout case. In 60–90 English words distinguish concurrency from retry budget and say when a POST can be replayed.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Під’єднай послідовність відповідей для кожного ключа.",
+              "en": "Inject the response sequence per key."
+            },
+            {
+              "uk": "Записуй активні виклики на send, спроби на елемент і безпечний результат.",
+              "en": "Record in-flight work at send, attempts per item, and safe outcome fields."
+            },
+            {
+              "uk": "Поясни, чому запис після тайм-ауту міг зробити commit.",
+              "en": "Explain why a timed-out write may have committed."
+            }
+          ],
+          "solution": {
+            "uk": "Використай семафор для активного send, цикл двох спроб на елемент і результат парсингу на межі. Структуруй відмови та збережи порядок. Повторюй POST лише за серверної гарантії ключа.",
+            "en": "Use a semaphore for active send, a per-item loop with two attempts, and a parser result at the boundary. Make errors structured and preserve order. Avoid repeating POST unless the server guarantees scoped key reuse."
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Змоделюй три ID синтетичних документів: успіх, 503 перед успіхом і невалідний JSON. Напиши офлайн-тест не більш ніж двох одночасних запитів, максимум двох спроб на елемент і структурованого результату. Додай випадок тайм-ауту. Англійською у 60–90 словах розділи одночасність і бюджет повторів та поясни, коли можна повторити POST.\n\n**Синтетичні запити підтримки**",
+            "en": "Model three synthetic document IDs: one succeeds, one returns 503 then succeeds, and one returns invalid JSON. Write an offline test of at most two concurrent requests, maximum two attempts per item, and a structured outcome for each. Add a timeout case. In 60–90 English words distinguish concurrency from retry budget and say when a POST can be replayed.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Під’єднай послідовність відповідей для кожного ключа.",
+              "en": "Inject the response sequence per key."
+            },
+            {
+              "uk": "Записуй активні виклики на send, спроби на елемент і безпечний результат.",
+              "en": "Record in-flight work at send, attempts per item, and safe outcome fields."
+            },
+            {
+              "uk": "Поясни, чому запис після тайм-ауту міг зробити commit.",
+              "en": "Explain why a timed-out write may have committed."
+            }
+          ],
+          "solution": {
+            "uk": "Використай семафор для активного send, цикл двох спроб на елемент і результат парсингу на межі. Структуруй відмови та збережи порядок. Повторюй POST лише за серверної гарантії ключа.",
+            "en": "Use a semaphore for active send, a per-item loop with two attempts, and a parser result at the boundary. Make errors structured and preserve order. Avoid repeating POST unless the server guarantees scoped key reuse."
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Змоделюй три ID синтетичних документів: успіх, 503 перед успіхом і невалідний JSON. Напиши офлайн-тест не більш ніж двох одночасних запитів, максимум двох спроб на елемент і структурованого результату. Додай випадок тайм-ауту. Англійською у 60–90 словах розділи одночасність і бюджет повторів та поясни, коли можна повторити POST.\n\n**Синтетичні документи політик**",
+            "en": "Model three synthetic document IDs: one succeeds, one returns 503 then succeeds, and one returns invalid JSON. Write an offline test of at most two concurrent requests, maximum two attempts per item, and a structured outcome for each. Add a timeout case. In 60–90 English words distinguish concurrency from retry budget and say when a POST can be replayed.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Під’єднай послідовність відповідей для кожного ключа.",
+              "en": "Inject the response sequence per key."
+            },
+            {
+              "uk": "Записуй активні виклики на send, спроби на елемент і безпечний результат.",
+              "en": "Record in-flight work at send, attempts per item, and safe outcome fields."
+            },
+            {
+              "uk": "Поясни, чому запис після тайм-ауту міг зробити commit.",
+              "en": "Explain why a timed-out write may have committed."
+            }
+          ],
+          "solution": {
+            "uk": "Використай семафор для активного send, цикл двох спроб на елемент і результат парсингу на межі. Структуруй відмови та збережи порядок. Повторюй POST лише за серверної гарантії ключа.",
+            "en": "Use a semaphore for active send, a per-item loop with two attempts, and a parser result at the boundary. Make errors structured and preserve order. Avoid repeating POST unless the server guarantees scoped key reuse."
+          }
+        }
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "id": "Q1",
+      "prompt": {
+        "uk": "Запит дав 200 з JSON null. API обіцяє об’єкт. Що робити?",
+        "en": "A request returned 200 with JSON null. The API promises an object. What now?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Обробити помилку контракту відповіді.",
+            "en": "Handle a response contract error."
+          },
+          "explanation": {
+            "uk": "Синтаксис JSON сам не вимагає об’єкт.",
+            "en": "JSON syntax alone does not enforce an object."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Автоматично вважати порожнім об’єктом.",
+            "en": "Treat it as an empty object automatically."
+          },
+          "explanation": {
+            "uk": "Це приховує розбіжність і змінює значення.",
+            "en": "That hides a contract mismatch and changes meaning."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Типово повідомити HTTP 404.",
+            "en": "Report HTTP 404 by default."
+          },
+          "explanation": {
+            "uk": "Фактичний статус і семантична помилка різні.",
+            "en": "The actual status and semantic failure should remain distinct."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q2",
+      "prompt": {
+        "uk": "Що буде, коли одна задача чекає на сокет, а інша обчислює без передачі керування?",
+        "en": "What happens if one task awaits a slow socket and another CPU loop never yields?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Обидві операції типово йдуть на окремих ядрах.",
+            "en": "Both operations run on separate cores by default."
+          },
+          "explanation": {
+            "uk": "Корутини одного циклу ділять його потік.",
+            "en": "Coroutines on one loop share the loop thread."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Цикл CPU може затримати результат сокета.",
+            "en": "The CPU loop can delay processing the socket result."
+          },
+          "explanation": {
+            "uk": "Готові задачі мають плануватись у потоці циклу.",
+            "en": "Ready tasks must be scheduled on the event loop thread."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Очікування сокета переводить цикл у новий процес.",
+            "en": "The socket wait forces the CPU loop into a new process."
+          },
+          "explanation": {
+            "uk": "AsyncIO не переносить довільні обчислення в процес.",
+            "en": "AsyncIO cannot move arbitrary computation to a process."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q3",
+      "prompt": {
+        "uk": "Чотири запити іноді перевантажують провайдера. Що виміряти для ліміту два?",
+        "en": "Four parallel requests sometimes overwhelm a provider. Which measurement tests a limit of two?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Кількість рядків наприкінці.",
+            "en": "Number of rows emitted at completion."
+          },
+          "explanation": {
+            "uk": "Кількість може бути правильною за хибної одночасності.",
+            "en": "Output count can be right when concurrency is wrong."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Розмір завантаження після викликів.",
+            "en": "Total download file size after all calls."
+          },
+          "explanation": {
+            "uk": "Розмір не показує перекриття викликів.",
+            "en": "It cannot tell how many calls overlapped."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Пік одночасних викликів на межі транспорту.",
+            "en": "Peak concurrent calls at the transport boundary."
+          },
+          "explanation": {
+            "uk": "Це прямо перевіряє інваріант активних викликів.",
+            "en": "It directly checks the in-flight invariant."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q4",
+      "prompt": {
+        "uk": "Відповідь POST втрачено, сервер не підтримує ключі. Який вибір клієнта безпечний?",
+        "en": "A POST response was lost and the server has no key contract. What is the safe client choice?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Показати невизначений результат і звірити стан до повтору.",
+            "en": "Surface an uncertain result and reconcile state before retrying."
+          },
+          "explanation": {
+            "uk": "Запис міг уже завершитися.",
+            "en": "The write might already have completed."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Повторювати до 201.",
+            "en": "Repeat until a 201 arrives."
+          },
+          "explanation": {
+            "uk": "Кожен повтор може створити ще запис.",
+            "en": "Each repeat can write another record."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Згенерувати новий локальний ключ і припустити дедуплікацію.",
+            "en": "Generate a fresh local key and assume deduplication."
+          },
+          "explanation": {
+            "uk": "Сервер має обробляти ключ для дедуплікації.",
+            "en": "A server must honor the key for deduplication."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q5",
+      "prompt": {
+        "uk": "Що доречно зробити після тайм-ауту останньої дозволеної спроби?",
+        "en": "What is a useful behavior after the last permitted attempt times out?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Підмінити відмову порожнім успіхом.",
+            "en": "Replace the failure with an empty success."
+          },
+          "explanation": {
+            "uk": "Викликач втратить реальний результат.",
+            "en": "The caller loses the outcome."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Одразу повернути чи передати типізовану помилку.",
+            "en": "Return or propagate a typed failure immediately."
+          },
+          "explanation": {
+            "uk": "Більше немає спроби, яку треба відкласти.",
+            "en": "There is no further attempt to delay."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Зачекати ще раз перед передачею.",
+            "en": "Sleep once more before propagating."
+          },
+          "explanation": {
+            "uk": "Затримка збільшує час без повтору.",
+            "en": "The delay adds latency without a retry."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q6",
+      "prompt": {
+        "uk": "Яка подія пов’яже три повтори без показу тіла?",
+        "en": "Which event can connect three retries without exposing the payload?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Повне тіло запиту кожного разу.",
+            "en": "The full request body on each retry."
+          },
+          "explanation": {
+            "uk": "Тіло може показати приватні дані.",
+            "en": "The body can expose private data."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Новий окремий ID журналу без полів.",
+            "en": "A fresh unrelated log identifier with no fields."
+          },
+          "explanation": {
+            "uk": "Незалежні ID не об’єднують одну операцію.",
+            "en": "Independent IDs do not join a single operation."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Стабільний кореляційний ID, номер спроби й результат.",
+            "en": "A stable correlation ID plus attempt number and outcome."
+          },
+          "explanation": {
+            "uk": "Спільний ID дозволяє згрупувати безпечні поля.",
+            "en": "The shared ID lets an engineer group the safe event fields."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q7",
+      "prompt": {
+        "uk": "Який тест найкраще доводить правило двох спроб?",
+        "en": "Which test best proves the client obeys a two-attempt policy?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Підставити повторювані відмови й перевірити два виклики та одну паузу.",
+            "en": "Inject repeatable failures and assert two calls and one delay."
+          },
+          "explanation": {
+            "uk": "Тест бачить логічну поведінку без нестабільного часу.",
+            "en": "The test observes logical behavior without timing flakiness."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Звернутися до публічного API й сподіватися на дві відмови.",
+            "en": "Run against a public API and hope for two failures."
+          },
+          "explanation": {
+            "uk": "Відповіді поза контролем тесту.",
+            "en": "The responses are outside test control."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Перевірити імпорт asyncio.",
+            "en": "Check that the code imports asyncio."
+          },
+          "explanation": {
+            "uk": "Імпорт не перевіряє спроби.",
+            "en": "An import does not verify attempts."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q8",
+      "prompt": {
+        "uk": "Коли обмежена черга воркерів краща за один семафор?",
+        "en": "When would a bounded worker queue improve on a semaphore alone?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Лише коли в Python немає API задач.",
+            "en": "Only when Python has no tasks API."
+          },
+          "explanation": {
+            "uk": "Питання у зворотному тиску незалежно від API задач.",
+            "en": "The issue is backpressure, independent of the task API."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Коли потік великий і важлива кількість задач у черзі.",
+            "en": "When the input stream is large and queued task count matters."
+          },
+          "explanation": {
+            "uk": "Фіксований пул і обмежена черга стримують виділену роботу.",
+            "en": "A fixed pool and capped queue bound allocated work."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Коли всі входи утворюють малий пакет.",
+            "en": "When all inputs fit in a single small batch."
+          },
+          "explanation": {
+            "uk": "Семафора може вистачити для малого пакета.",
+            "en": "A semaphore can suffice in a small bounded batch."
+          }
+        }
+      ]
+    }
+  ],
+  "crosslinks": [
+    "W03-L01",
+    "W03-L04"
+  ]
+}

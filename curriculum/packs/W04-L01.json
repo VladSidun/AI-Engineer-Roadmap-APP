@@ -1,0 +1,501 @@
+{
+  "id": "W04-L01",
+  "contentVersion": 1,
+  "overview": {
+    "uk": "Project A починається з документів і завдань обробки. Змоделюй їх стабільними ID, зовнішніми ключами й запитом, що включає документи без завдання. Реляційна схема фіксує правила навіть при записі двох клієнтів. Ти передбачиш рядки outer join, порівняєш обмеження та індекс і перевіриш агрегат в одноразовій БД. Приклад запиту використовує SQLite, щоб виконуватись офлайн і переносимо. У Project A застосуєш модель у PostgreSQL і окремо перевіриш міграції.",
+    "en": "Project A starts with documents and processing jobs. Model those facts with stable IDs, foreign keys and a query that includes documents without a job. A relational schema records what must remain true even with two clients writing at once. You will predict the rows of an outer join, compare a constraint with an index, and check an aggregate using a disposable database. The query example uses SQLite to make the join portable and offline. In Project A you will apply the model to PostgreSQL and verify its migration behavior separately."
+  },
+  "theory": {
+    "uk": "### Ідентичність та інваріанти\n\nВикористай первинний ключ для стабільної ідентичності рядка. Зовнішній ключ вимагає наявності документа, на який посилається job. UNIQUE може захистити пару document_id і operation_key від дубльованих заявок. NOT NULL є окремим твердженням. У PostgreSQL CHECK із результатом null сам не відхиляє рядок. Тестуй обмеження у свіжій одноразовій БД, щоб схема й дані не переходили між тестами.\n\n### Трасування join і агрегування\n\nДля документів A і B та двох jobs A, INNER JOIN повертає A двічі. LEFT JOIN додає B з null у колонках job. COUNT(*) рахує синтетичний рядок B, тому для нуля потрібен COUNT(job.id). Фільтруй дозволені документи до видачі кількості та задай ORDER BY для стабільного порядку. Умова дочірнього рядка у WHERE може відкинути доповнений null рядок. Помісти дочірню умову до ON, якщо треба зберегти батька без збігу.\n\n### Індексація форми запиту\n\nB-tree індекс може прискорити фільтр чи сортування за додаткової вартості запису та пам’яті. PostgreSQL індексує первинні ключі й унікальні обмеження. Для колонки, що посилається через foreign key, індекс автоматично не створюється. Перевір join і часті фільтри до додавання jobs(document_id, status). Порівнюй плани на репрезентативній кількості рядків. Мала таблиця може мати послідовне читання, хоча велика отримає користь від індексу.\n\n### Проєктуй навколо запиту й інваріанта\n\nПочни з документів з ID 1 і 2 та jobs (1, completed), (1, queued), (1, completed). Звіт потребує завершених jobs на документ. Передбач два та нуль. Перенесення статусу дитини з ON до WHERE вилучає другий документ до агрегації. Tenant-умова для документа відсіює недозволених батьків і зберігає дозволених без дітей. Зміни діють на видимість у різних місцях. Фікстура з іншим tenant, відсутньою дитиною й різними статусами дає спостереження для кожної гілки.\n\nРозглянь jobs(document_id, status) для частого join за документом і статусом. Користь залежить від навантаження, розміру й оцінок планувальника. Якщо статус часто повторюється й рідко фільтрується сам, починай із більш корисного ключа. Використай EXPLAIN на репрезентативних фікстурах і запиши умову, для якої застосовано індекс. Перевір правильність із тюнінговим індексом і без нього. Foreign key, унікальність і допустимий статус лишаються інваріантами за видалення індексу доступу.",
+    "en": "### Identity and assertions\n\nUse a primary key for stable row identity. A foreign key states that each job refers to an existing document. A UNIQUE constraint can protect the pair document_id and operation_key from duplicate processing claims. NOT NULL is a separate assertion. In PostgreSQL, a CHECK predicate that evaluates to null does not reject the row by itself. Test constraints using a fresh disposable database so schemas and data cannot leak between checks.\n\n### Trace the join and aggregation\n\nWith documents A and B and two jobs of A, INNER JOIN returns A twice. LEFT JOIN gives those two rows plus B with null job columns. COUNT(*) counts the synthetic B row, so COUNT(job.id) is what you need for zero jobs. Filter allowed documents before returning counts, and use an explicit ORDER BY when results need stable order. A condition on the child in WHERE can discard the null-extended row. Put a child criterion in ON if you want to keep the parent when no child matches.\n\n### Index the query shape\n\nA B-tree index can help filter or order rows, with added write and storage cost. PostgreSQL creates indexes for primary keys and unique constraints. It does not automatically index each referencing foreign-key column. Check the join and frequent filters before adding an index such as jobs(document_id, status). Compare query plans on representative row counts. A tiny table may use a sequential scan even if a larger one benefits from the index.\n\n### Design around a query and an invariant\n\nStart with a table of document IDs 1 and 2, and job rows (1, completed), (1, queued), (1, completed). The report wants completed jobs per document. Predict two and zero. Changing the child status condition from ON to WHERE drops the second document before aggregation. Adding tenant to the document predicate excludes unauthorized parents while still preserving allowed parents without children. These two changes affect visibility in different places. Write a fixture with a separate tenant, a missing child and mixed statuses so each branch has a concrete observation.\n\nConsider an index on jobs(document_id, status) for a frequent join filtered by document and status. Its usefulness depends on workload, table size and planner estimates. If many rows share a status but you rarely filter just by that status, put the more useful leading search key first. Use EXPLAIN on representative fixtures and record which predicate uses the index. Test correctness with and without the tuning index. The foreign key, unique rule and allowed status are invariants that should remain even if the performance index is removed."
+  },
+  "recap": {
+    "uk": "Ключі та обмеження забезпечують коректність, join формує представлення, а індекси підтримують виміряні способи доступу.",
+    "en": "Use keys and constraints for correctness, joins for representations and indexes for measured access patterns."
+  },
+  "objectives": [
+    {
+      "id": "O1",
+      "title": {
+        "uk": "Проєктувати первинні, зовнішні й унікальні ключі завдань документів.",
+        "en": "Design primary, foreign and unique keys for document jobs."
+      },
+      "skill": "systems"
+    },
+    {
+      "id": "O2",
+      "title": {
+        "uk": "Передбачати вихід join і обирати індекс для запиту.",
+        "en": "Predict join output and choose an index for a query."
+      },
+      "skill": "tooling"
+    }
+  ],
+  "sources": [
+    {
+      "title": {
+        "uk": "PostgreSQL constraints",
+        "en": "PostgreSQL constraints"
+      },
+      "url": "https://www.postgresql.org/docs/17/ddl-constraints.html",
+      "version": "PostgreSQL 17",
+      "checked": "2026-11-26"
+    }
+  ],
+  "examples": [
+    {
+      "file": "w04_l01_example.py",
+      "expected": "[(1, 2), (2, 0)]",
+      "explanation": {
+        "uk": "Переносний SQL-приклад використовує SQLite Python 3.12 із фікстурами.",
+        "en": "The portable SQL example uses Python 3.12 SQLite with fixture data."
+      },
+      "error": {
+        "uk": "Заміна COUNT(j.doc_id) на COUNT(*) дає одиницю замість нуля.",
+        "en": "Replacing COUNT(j.doc_id) with COUNT(*) turns the zero into one."
+      }
+    }
+  ],
+  "interview": [
+    "When does WHERE turn a left join into the effect of an inner join?",
+    "How would you separate a uniqueness rule from an index tuning choice?"
+  ],
+  "interviewGuide": {
+    "uk": "Намалюй рядок із null перед застосуванням фільтра.",
+    "en": "Draw the null-extended row before applying the filter."
+  },
+  "exercises": [
+    {
+      "id": "W04-L01-E1",
+      "title": {
+        "uk": "Порахувати успішні завдання організації",
+        "en": "Query successful jobs per organization"
+      },
+      "kind": "code",
+      "objectives": [
+        "O1"
+      ],
+      "estimateMinutes": 75,
+      "criteria": [],
+      "example": {
+        "uk": "Документи 1 і 2 одного tenant і два успішні jobs для 1 дають [(1,2),(2,0)].",
+        "en": "Documents 1 and 2 in one tenant, two successful jobs for 1, produce [(1,2),(2,0)]."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(db, tenant) для SQLite-з’єднання й рядка tenant. Таблиці documents(id INTEGER PRIMARY KEY, tenant TEXT) і jobs(id INTEGER PRIMARY KEY, document_id INTEGER, state TEXT) вже існують. Поверни список (ID документа, кількість успішних jobs) для tenant, впорядкований за ID. Рахуй лише state 'succeeded', включно з нулями. Використай параметри й не змінюй базу.\n\n**Синтетичні накладні**",
+            "en": "Implement solve(db, tenant) for an SQLite connection and a tenant string. Tables documents(id INTEGER PRIMARY KEY, tenant TEXT) and jobs(id INTEGER PRIMARY KEY, document_id INTEGER, state TEXT) already exist. Return a list of (document ID, successful job count) for the tenant, sorted by document ID. Count only jobs with state 'succeeded', including zero for documents with none. Use parameter binding and make no changes to the database.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Зберігай документи без відповідного job.",
+              "en": "Preserve documents when no job matches."
+            },
+            {
+              "uk": "Фільтруй успішні jobs в умові join.",
+              "en": "Filter successful jobs in the join clause."
+            },
+            {
+              "uk": "Передай tenant як параметр і використай COUNT(j.id).",
+              "en": "Bind tenant as a parameter and use COUNT(j.id)."
+            }
+          ],
+          "solution": {
+            "uk": "Фільтруй батьків за tenant, left join потрібних дітей і агрегуй їхні ID.\n\n```python\nimport sqlite3\n\ndef solve(db: sqlite3.Connection, tenant: str) -> list[tuple[int, int]]:\n    return db.execute(\"\"\"\n        SELECT d.id, COUNT(j.id) FROM documents AS d\n        LEFT JOIN jobs AS j ON j.document_id = d.id AND j.state = 'succeeded'\n        WHERE d.tenant = ? GROUP BY d.id ORDER BY d.id\n    \"\"\", (tenant,)).fetchall()\n```",
+            "en": "Filter the parent by tenant, left-join qualifying children, and aggregate over the child identity.\n\n```python\nimport sqlite3\n\ndef solve(db: sqlite3.Connection, tenant: str) -> list[tuple[int, int]]:\n    return db.execute(\"\"\"\n        SELECT d.id, COUNT(j.id) FROM documents AS d\n        LEFT JOIN jobs AS j ON j.document_id = d.id AND j.state = 'succeeded'\n        WHERE d.tenant = ? GROUP BY d.id ORDER BY d.id\n    \"\"\", (tenant,)).fetchall()\n```"
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(db, tenant) для SQLite-з’єднання й рядка tenant. Таблиці documents(id INTEGER PRIMARY KEY, tenant TEXT) і jobs(id INTEGER PRIMARY KEY, document_id INTEGER, state TEXT) вже існують. Поверни список (ID документа, кількість успішних jobs) для tenant, впорядкований за ID. Рахуй лише state 'succeeded', включно з нулями. Використай параметри й не змінюй базу.\n\n**Синтетичні запити підтримки**",
+            "en": "Implement solve(db, tenant) for an SQLite connection and a tenant string. Tables documents(id INTEGER PRIMARY KEY, tenant TEXT) and jobs(id INTEGER PRIMARY KEY, document_id INTEGER, state TEXT) already exist. Return a list of (document ID, successful job count) for the tenant, sorted by document ID. Count only jobs with state 'succeeded', including zero for documents with none. Use parameter binding and make no changes to the database.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Зберігай документи без відповідного job.",
+              "en": "Preserve documents when no job matches."
+            },
+            {
+              "uk": "Фільтруй успішні jobs в умові join.",
+              "en": "Filter successful jobs in the join clause."
+            },
+            {
+              "uk": "Передай tenant як параметр і використай COUNT(j.id).",
+              "en": "Bind tenant as a parameter and use COUNT(j.id)."
+            }
+          ],
+          "solution": {
+            "uk": "Фільтруй батьків за tenant, left join потрібних дітей і агрегуй їхні ID.\n\n```python\nimport sqlite3\n\ndef solve(db: sqlite3.Connection, tenant: str) -> list[tuple[int, int]]:\n    return db.execute(\"\"\"\n        SELECT d.id, COUNT(j.id) FROM documents AS d\n        LEFT JOIN jobs AS j ON j.document_id = d.id AND j.state = 'succeeded'\n        WHERE d.tenant = ? GROUP BY d.id ORDER BY d.id\n    \"\"\", (tenant,)).fetchall()\n```",
+            "en": "Filter the parent by tenant, left-join qualifying children, and aggregate over the child identity.\n\n```python\nimport sqlite3\n\ndef solve(db: sqlite3.Connection, tenant: str) -> list[tuple[int, int]]:\n    return db.execute(\"\"\"\n        SELECT d.id, COUNT(j.id) FROM documents AS d\n        LEFT JOIN jobs AS j ON j.document_id = d.id AND j.state = 'succeeded'\n        WHERE d.tenant = ? GROUP BY d.id ORDER BY d.id\n    \"\"\", (tenant,)).fetchall()\n```"
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(db, tenant) для SQLite-з’єднання й рядка tenant. Таблиці documents(id INTEGER PRIMARY KEY, tenant TEXT) і jobs(id INTEGER PRIMARY KEY, document_id INTEGER, state TEXT) вже існують. Поверни список (ID документа, кількість успішних jobs) для tenant, впорядкований за ID. Рахуй лише state 'succeeded', включно з нулями. Використай параметри й не змінюй базу.\n\n**Синтетичні документи політик**",
+            "en": "Implement solve(db, tenant) for an SQLite connection and a tenant string. Tables documents(id INTEGER PRIMARY KEY, tenant TEXT) and jobs(id INTEGER PRIMARY KEY, document_id INTEGER, state TEXT) already exist. Return a list of (document ID, successful job count) for the tenant, sorted by document ID. Count only jobs with state 'succeeded', including zero for documents with none. Use parameter binding and make no changes to the database.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Зберігай документи без відповідного job.",
+              "en": "Preserve documents when no job matches."
+            },
+            {
+              "uk": "Фільтруй успішні jobs в умові join.",
+              "en": "Filter successful jobs in the join clause."
+            },
+            {
+              "uk": "Передай tenant як параметр і використай COUNT(j.id).",
+              "en": "Bind tenant as a parameter and use COUNT(j.id)."
+            }
+          ],
+          "solution": {
+            "uk": "Фільтруй батьків за tenant, left join потрібних дітей і агрегуй їхні ID.\n\n```python\nimport sqlite3\n\ndef solve(db: sqlite3.Connection, tenant: str) -> list[tuple[int, int]]:\n    return db.execute(\"\"\"\n        SELECT d.id, COUNT(j.id) FROM documents AS d\n        LEFT JOIN jobs AS j ON j.document_id = d.id AND j.state = 'succeeded'\n        WHERE d.tenant = ? GROUP BY d.id ORDER BY d.id\n    \"\"\", (tenant,)).fetchall()\n```",
+            "en": "Filter the parent by tenant, left-join qualifying children, and aggregate over the child identity.\n\n```python\nimport sqlite3\n\ndef solve(db: sqlite3.Connection, tenant: str) -> list[tuple[int, int]]:\n    return db.execute(\"\"\"\n        SELECT d.id, COUNT(j.id) FROM documents AS d\n        LEFT JOIN jobs AS j ON j.document_id = d.id AND j.state = 'succeeded'\n        WHERE d.tenant = ? GROUP BY d.id ORDER BY d.id\n    \"\"\", (tenant,)).fetchall()\n```"
+          }
+        }
+      ]
+    },
+    {
+      "id": "W04-L01-E2",
+      "title": {
+        "uk": "Змоделювати таблиці Project A",
+        "en": "Model the Project A tables"
+      },
+      "kind": "rubric",
+      "objectives": [
+        "O2"
+      ],
+      "estimateMinutes": 70,
+      "criteria": [
+        {
+          "id": "C1",
+          "title": {
+            "uk": "Описано кратність та одне перевірене обмеження.",
+            "en": "Describe valid cardinality and one enforced constraint."
+          }
+        },
+        {
+          "id": "C2",
+          "title": {
+            "uk": "Показано фактичний успіх і відмову на фікстурі.",
+            "en": "Show actual success and rejected fixture writes."
+          }
+        },
+        {
+          "id": "C3",
+          "title": {
+            "uk": "Пов’язано індекс із реальним фільтром чи join.",
+            "en": "Tie the index to an actual filter or join."
+          }
+        }
+      ],
+      "example": {
+        "uk": "Документ має багато jobs. Унікальна пара забороняє дві заявки з однаковим ключем операції в документі.",
+        "en": "One document has many jobs. A unique pair prevents two claims with the same operation key under one document."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Намалюй зв’язки документа, завдання й tenant або власника для синтетичного upload-сервісу. Додай ключ, зовнішній ключ, унікальність та індекс з обґрунтуванням запитом. Запусти схему у локальній одноразовій PostgreSQL. Запиши відхилений запис і результат із документом без завдання.\n\n**Синтетичні накладні**",
+            "en": "Draw document, job and tenant or owner relations for a synthetic upload service. Include at least one key, foreign key, uniqueness rule and index justified by a query. Run the initial schema against a local disposable PostgreSQL database. Record one rejected write and one result that includes a document with no job.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Спочатку переліч сутності й стабільні ID.",
+              "en": "List entities and stable identities first."
+            },
+            {
+              "uk": "Перевір дитину з відсутнім батьком.",
+              "en": "Test a child referring to an absent parent."
+            },
+            {
+              "uk": "Запусти EXPLAIN частого фільтра document_id.",
+              "en": "Run EXPLAIN for a frequent document_id filter."
+            }
+          ],
+          "solution": {
+            "uk": "Використай реляційні ключі з обмеженнями й індекс під частий запит. Зафіксуй відмову unique або FK і результат left join до під’єднання API.",
+            "en": "Use constrained relational keys and one index matching the frequent query. Capture a uniqueness or FK rejection and a left-join result before integrating the API."
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Намалюй зв’язки документа, завдання й tenant або власника для синтетичного upload-сервісу. Додай ключ, зовнішній ключ, унікальність та індекс з обґрунтуванням запитом. Запусти схему у локальній одноразовій PostgreSQL. Запиши відхилений запис і результат із документом без завдання.\n\n**Синтетичні запити підтримки**",
+            "en": "Draw document, job and tenant or owner relations for a synthetic upload service. Include at least one key, foreign key, uniqueness rule and index justified by a query. Run the initial schema against a local disposable PostgreSQL database. Record one rejected write and one result that includes a document with no job.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Спочатку переліч сутності й стабільні ID.",
+              "en": "List entities and stable identities first."
+            },
+            {
+              "uk": "Перевір дитину з відсутнім батьком.",
+              "en": "Test a child referring to an absent parent."
+            },
+            {
+              "uk": "Запусти EXPLAIN частого фільтра document_id.",
+              "en": "Run EXPLAIN for a frequent document_id filter."
+            }
+          ],
+          "solution": {
+            "uk": "Використай реляційні ключі з обмеженнями й індекс під частий запит. Зафіксуй відмову unique або FK і результат left join до під’єднання API.",
+            "en": "Use constrained relational keys and one index matching the frequent query. Capture a uniqueness or FK rejection and a left-join result before integrating the API."
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Намалюй зв’язки документа, завдання й tenant або власника для синтетичного upload-сервісу. Додай ключ, зовнішній ключ, унікальність та індекс з обґрунтуванням запитом. Запусти схему у локальній одноразовій PostgreSQL. Запиши відхилений запис і результат із документом без завдання.\n\n**Синтетичні документи політик**",
+            "en": "Draw document, job and tenant or owner relations for a synthetic upload service. Include at least one key, foreign key, uniqueness rule and index justified by a query. Run the initial schema against a local disposable PostgreSQL database. Record one rejected write and one result that includes a document with no job.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Спочатку переліч сутності й стабільні ID.",
+              "en": "List entities and stable identities first."
+            },
+            {
+              "uk": "Перевір дитину з відсутнім батьком.",
+              "en": "Test a child referring to an absent parent."
+            },
+            {
+              "uk": "Запусти EXPLAIN частого фільтра document_id.",
+              "en": "Run EXPLAIN for a frequent document_id filter."
+            }
+          ],
+          "solution": {
+            "uk": "Використай реляційні ключі з обмеженнями й індекс під частий запит. Зафіксуй відмову unique або FK і результат left join до під’єднання API.",
+            "en": "Use constrained relational keys and one index matching the frequent query. Capture a uniqueness or FK rejection and a left-join result before integrating the API."
+          }
+        }
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "id": "Q1",
+      "prompt": {
+        "uk": "Що дає COUNT(child.id) для батька без збігу в LEFT JOIN?",
+        "en": "What does COUNT(child.id) report for a parent with no matching child in LEFT JOIN?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "0",
+            "en": "0"
+          },
+          "explanation": {
+            "uk": "NULL дочірнього ID не рахується COUNT(column).",
+            "en": "The null-extended child ID is excluded by COUNT(column)."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "1",
+            "en": "1"
+          },
+          "explanation": {
+            "uk": "COUNT(*) порахував би доповнений рядок.",
+            "en": "COUNT(*) would count the extended row."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Немає рядка батька",
+            "en": "No parent row"
+          },
+          "explanation": {
+            "uk": "Це left join, що зберігає батька.",
+            "en": "This is a left join, which preserves the parent."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q2",
+      "prompt": {
+        "uk": "Що забезпечує належність job до наявного документа на межі БД?",
+        "en": "What enforces valid job ownership by document at the database boundary?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Лише індекс jobs.state.",
+            "en": "An index alone on jobs.state."
+          },
+          "explanation": {
+            "uk": "Він допомагає доступу, проте не задає зв’язок.",
+            "en": "That helps certain access patterns but doesn't assert a relation."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Зовнішній ключ на документ і NOT NULL для обов’язкового зв’язку.",
+            "en": "Foreign key to the document and NOT NULL for required links."
+          },
+          "explanation": {
+            "uk": "Вони забезпечують відповідність і наявність.",
+            "en": "They protect correspondence and presence."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Коментар Python біля signup.",
+            "en": "A Python comment near the signup handler."
+          },
+          "explanation": {
+            "uk": "Він не відхилить запис БД.",
+            "en": "It cannot reject a database write."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q3",
+      "prompt": {
+        "uk": "Де має бути умова лише успішних jobs, щоб зберегти документи без них?",
+        "en": "Where should a successful-jobs-only predicate go to preserve documents without jobs?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "У WHERE з jobs.state = 'succeeded'.",
+            "en": "In WHERE with jobs.state = 'succeeded'."
+          },
+          "explanation": {
+            "uk": "Це видалить рядки з відсутньою дитиною.",
+            "en": "That removes absent child rows."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "В ORDER BY.",
+            "en": "In ORDER BY."
+          },
+          "explanation": {
+            "uk": "Сортування не фільтрує jobs.",
+            "en": "Ordering doesn't filter children."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "В ON виразі LEFT JOIN.",
+            "en": "In the LEFT JOIN ON clause."
+          },
+          "explanation": {
+            "uk": "Це задає збіг до утворення рядків із null.",
+            "en": "It defines eligibility before null-extended rows are formed."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q4",
+      "prompt": {
+        "uk": "Який компроміс додавання індексу?",
+        "en": "What is the trade-off of adding an index?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Потенційно швидші запити за витрат пам’яті та запису.",
+            "en": "Potentially faster queries at storage and write maintenance cost."
+          },
+          "explanation": {
+            "uk": "Індекс потребує місця й оновлень.",
+            "en": "The index has its own storage and updates."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Кожна операція SQL стає сталою за часом.",
+            "en": "Every SQL operation becomes constant time."
+          },
+          "explanation": {
+            "uk": "Робота залежить від даних і плану.",
+            "en": "Query work depends on data and plan."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Усі правила валідації стають зайвими.",
+            "en": "All validation rules become redundant."
+          },
+          "explanation": {
+            "uk": "Індекс доступу не замінює обмежень даних.",
+            "en": "An index tuned for access is not every data constraint."
+          }
+        }
+      ]
+    }
+  ],
+  "crosslinks": [
+    "G-M1",
+    "W04-L02"
+  ]
+}

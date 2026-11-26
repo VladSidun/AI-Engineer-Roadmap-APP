@@ -1,0 +1,510 @@
+{
+  "id": "W06-L02",
+  "contentVersion": 1,
+  "overview": {
+    "uk": "Обробка документа може тривати довше за HTTP-запит. Швидко поверни ID job і дозволь воркеру відновитись після збою. Змоделюй queued, running, succeeded і failed та захисти ID завдання при двох доставках. Локальна вправа реалізує контракт SQLite з унікальним ключем. Окрема практика Project A використовує PostgreSQL, відповіді статусу й примусовий повтор у тестовому середовищі. Розрізни повтор запиту та воркера й визнач, який ефект потребує дедуплікації.",
+    "en": "Document processing can outlast the original HTTP request. Return a job ID quickly and allow a worker to resume after a crash. Learn to model queued, running, succeeded and failed jobs, then protect job identity when the same request is delivered twice. The local exercise implements a persistence contract using SQLite and a unique key. A separate Project A practice uses PostgreSQL, status responses and a forced replay in a dedicated test environment. You will distinguish a request retry from a worker retry and state which effect needs deduplication."
+  },
+  "theory": {
+    "uk": "### Прийняття й обробка окремо\n\nAPI перевіряє ввід, створює або знаходить durable job і може повернути 202 з URL статусу. Воркер отримує queued, змінює стан на running, далі зберігає вихід і succeeded або код відмови. Заявка й переходи стану мають пережити рестарт процесу. Повторювана робота потребує правила, часто з лічильником, timestamps і lease, що спливає. Не тримай транзакцію під час довгої обробки.\n\n### Ідемпотентність логічної операції\n\nТой самий документ і ключ операції відповідають одному job. Унікальний індекс БД забезпечує це й при конкурентних вставках. Повтор ключа зі зміненим входом у повному сервісі визначай відбитком. У вправі ID документа та ключ є повним відбитком. Обробка конфлікту SQL може зберегти рядок і прочитати ID та статус. Повтор створення не скидає завершений job на queued. Окремий запит повторної обробки дозволяє явно почати нову операцію.\n\n### Повторна доставка воркеру очікувана\n\nЗбій після збереження результату до завершення може змусити воркер повторити обробку. Записуй результат ідемпотентно за ID job або зберігай результат і завершення в одній транзакції за можливості. Отримуй рядок атомарно. Блокування PostgreSQL координують воркерів. SKIP LOCKED допомагає споживачам черги не чекати зайняту заявку, але не дає узгодженого загального представлення. Перевір повтор доставки, збій і рестарт на фікстурах.\n\n### Розбери дві межі повтору\n\nНа межі API відповідь прийняття може загубитися після commit job. Той самий документ і ключ мають дати стійкий ID. На межі воркера доставка може повторитися після запису результату. Вихід використовує ID job. Точний повтор має зберегти кількість результатів. Змоделюй обидві перевірки окремо. Повтор API може пройти, хоча воркер дублює вихід після повторної доставки. Запиши рядок job і кількість рядків результату.\n\nЗадай таблицю станів із переходом, актором та ефектом. Воркер отримує queued як running через умовне оновлення чи блокування й звільняє коротку транзакцію на час обробки. Успіх записує вихід і фінальний стан за контрактом. Lease і правило повтору відновлюють застряглий running. Визнач останню спробу й публічні причини відмов. Виконай фікстуру з першим успіхом, точним повтором, іншим ключем та відновлюваним збоєм воркера.",
+    "en": "### Separate accept and process\n\nThe API validates input, creates or finds a durable job, and can return 202 with a status URL. A worker claims a queued job, changes its state to running, and either writes an output and marks succeeded or records a failure code. Claiming and status changes must survive a process restart. Work that can be repeated needs a documented policy, often with a retry count, attempt timestamps and a lease that can expire. Avoid holding a database transaction open during long processing.\n\n### Bind idempotency to a logical operation\n\nThe same document and operation key should map to one job. A unique database index enforces this even across concurrent inserts. A reused operation key with changed inputs should be detected using a fingerprint in a full service. In this practice document ID and the operation key are the complete fingerprint. SQL conflict handling can keep the existing row, then read its ID and status. Replaying creation never resets a finished job to queued. Separate an explicit reprocess request so users can ask for a new operation safely.\n\n### Treat duplicate worker delivery as expected\n\nA crash after storing output and before recording completion can cause the worker to process the job again. Make result writes idempotent by job identity or store an output and completion together when the store supports one transaction. Claim a row atomically. PostgreSQL row locks can coordinate workers. SKIP LOCKED can help queue consumers avoid waiting on another claim, though it does not give a consistent general-purpose view. Test a duplicate delivery, a worker failure and a restart against fixture data.\n\n### Analyze the two retry boundaries\n\nAt the API boundary, an acceptance reply can be lost after the database committed the job. The same document and request key should return the durable ID. At the worker boundary, a delivery can be repeated after the result was persisted. The worker uses the job ID as the output identity. An exact replay should keep the result count unchanged. Model these checks separately. A test may pass the API replay case even though the worker writes two result rows for duplicate deliveries. Record both the job row and the result row count.\n\nDesign a status table specifying allowed transitions, actor and effect. A worker claims queued as running using a guarded update or lock, then releases the short database transaction while handling the payload. Successful completion records an output and terminal state according to the storage contract. A lease and retry policy can recover a stuck running state. Define what happens after the last retry and which failure reasons can be shown publicly. Then execute a fixture with initial success, an exact replay, a distinct operation key and a recoverable worker failure."
+  },
+  "recap": {
+    "uk": "Збережи ID і статус до роботи, забезпеч унікальні логічні запити й безпечний повтор запису результату.",
+    "en": "Persist job identity and status before work, enforce unique logical requests, and make result writes replay-safe."
+  },
+  "objectives": [
+    {
+      "id": "O1",
+      "title": {
+        "uk": "Описувати надійну машину станів і контракт повтору job.",
+        "en": "Describe a durable job state machine and replay contract."
+      },
+      "skill": "systems"
+    },
+    {
+      "id": "O2",
+      "title": {
+        "uk": "Застосовувати унікальність БД для сталого ID завдання при повторі.",
+        "en": "Use database uniqueness to preserve one job identity on replay."
+      },
+      "skill": "tooling"
+    }
+  ],
+  "sources": [
+    {
+      "title": {
+        "uk": "PostgreSQL INSERT and ON CONFLICT",
+        "en": "PostgreSQL INSERT and ON CONFLICT"
+      },
+      "url": "https://www.postgresql.org/docs/17/sql-insert.html",
+      "version": "PostgreSQL 17",
+      "checked": "2026-11-26"
+    },
+    {
+      "title": {
+        "uk": "PostgreSQL SELECT and row locking",
+        "en": "PostgreSQL SELECT and row locking"
+      },
+      "url": "https://www.postgresql.org/docs/17/sql-select.html",
+      "version": "PostgreSQL 17",
+      "checked": "2026-11-26"
+    }
+  ],
+  "examples": [
+    {
+      "file": "w06_l02_example.py",
+      "expected": "202 Accepted\nqueued False\nrunning False\nsucceeded True",
+      "explanation": {
+        "uk": "Простеж успішний цикл. Accepted означає постановку, а succeeded — пізніший стан job.",
+        "en": "Trace a successful lifecycle. Accepted is an enqueue outcome and succeeded is a later job outcome."
+      },
+      "error": {
+        "uk": "Невдалий job завершив спробу без успішного виходу.",
+        "en": "A failed job is terminal for its attempt but does not have a successful output."
+      }
+    }
+  ],
+  "interview": [
+    "What if the worker crashes after writing a result?",
+    "How can you deduplicate a job creation across two concurrent requests?"
+  ],
+  "interviewGuide": {
+    "uk": "Окремо поясни ідентичність запиту API та результату воркера.",
+    "en": "Explain separately the API request identity and worker result identity."
+  },
+  "exercises": [
+    {
+      "id": "W06-L02-E1",
+      "title": {
+        "uk": "Створити чи повторити стабільний ID завдання",
+        "en": "Create or replay a durable job identity"
+      },
+      "kind": "code",
+      "objectives": [
+        "O1"
+      ],
+      "estimateMinutes": 75,
+      "criteria": [],
+      "example": {
+        "uk": "При повторі створення успішного job повертається (old_id, 'succeeded').",
+        "en": "An already succeeded job returns (old_id, 'succeeded') when creation is replayed."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(db, document_id, key) для SQLite jobs(id INTEGER PRIMARY KEY, document_id INTEGER, op_key TEXT, status TEXT, UNIQUE(document_id, op_key)). Вимагай додатний int document_id без bool та непорожній key. При першій заявці зафіксуй queued і поверни (id, status). Повтор повертає той самий id і поточний статус без зміни. Збережи точний key. На вході викликач не має активної транзакції.\n\n**Синтетичні накладні**",
+            "en": "Implement solve(db, document_id, key) for an SQLite database with jobs(id INTEGER PRIMARY KEY, document_id INTEGER, op_key TEXT, status TEXT, UNIQUE(document_id, op_key)). Require document_id to be a positive int excluding bool, and key to be nonblank. Commit a queued job on first submission and return (id, status). Repeat submissions return the same row's id and current status without changing it. Retain the exact key string. Caller has no active transaction on entry.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Забезпеч унікальність під час INSERT.",
+              "en": "Enforce the uniqueness at INSERT."
+            },
+            {
+              "uk": "Застосуй обробку конфлікту, що зберігає рядок.",
+              "en": "Use conflict handling that preserves existing rows."
+            },
+            {
+              "uk": "Прочитай ID і статус за обома ключами.",
+              "en": "Read ID and status by both document ID and operation key."
+            }
+          ],
+          "solution": {
+            "uk": "В одній транзакції встав queued лише за відсутності й прочитай канонічний збережений рядок.\n\n```python\nimport sqlite3\n\ndef solve(db: sqlite3.Connection, document_id: int, key: str) -> tuple[int, str]:\n    if type(document_id) is not int or document_id < 1 or not key.strip():\n        raise ValueError('invalid job identity')\n    with db:\n        db.execute(\"INSERT INTO jobs(document_id,op_key,status) VALUES (?,?,'queued') ON CONFLICT(document_id,op_key) DO NOTHING\", (document_id, key))\n        row = db.execute('SELECT id,status FROM jobs WHERE document_id = ? AND op_key = ?', (document_id, key)).fetchone()\n        if row is None:\n            raise RuntimeError('job missing after insert')\n        return (row[0], row[1])\n```",
+            "en": "In one transaction, insert a queued row only if absent, then read the persisted canonical record.\n\n```python\nimport sqlite3\n\ndef solve(db: sqlite3.Connection, document_id: int, key: str) -> tuple[int, str]:\n    if type(document_id) is not int or document_id < 1 or not key.strip():\n        raise ValueError('invalid job identity')\n    with db:\n        db.execute(\"INSERT INTO jobs(document_id,op_key,status) VALUES (?,?,'queued') ON CONFLICT(document_id,op_key) DO NOTHING\", (document_id, key))\n        row = db.execute('SELECT id,status FROM jobs WHERE document_id = ? AND op_key = ?', (document_id, key)).fetchone()\n        if row is None:\n            raise RuntimeError('job missing after insert')\n        return (row[0], row[1])\n```"
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(db, document_id, key) для SQLite jobs(id INTEGER PRIMARY KEY, document_id INTEGER, op_key TEXT, status TEXT, UNIQUE(document_id, op_key)). Вимагай додатний int document_id без bool та непорожній key. При першій заявці зафіксуй queued і поверни (id, status). Повтор повертає той самий id і поточний статус без зміни. Збережи точний key. На вході викликач не має активної транзакції.\n\n**Синтетичні запити підтримки**",
+            "en": "Implement solve(db, document_id, key) for an SQLite database with jobs(id INTEGER PRIMARY KEY, document_id INTEGER, op_key TEXT, status TEXT, UNIQUE(document_id, op_key)). Require document_id to be a positive int excluding bool, and key to be nonblank. Commit a queued job on first submission and return (id, status). Repeat submissions return the same row's id and current status without changing it. Retain the exact key string. Caller has no active transaction on entry.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Забезпеч унікальність під час INSERT.",
+              "en": "Enforce the uniqueness at INSERT."
+            },
+            {
+              "uk": "Застосуй обробку конфлікту, що зберігає рядок.",
+              "en": "Use conflict handling that preserves existing rows."
+            },
+            {
+              "uk": "Прочитай ID і статус за обома ключами.",
+              "en": "Read ID and status by both document ID and operation key."
+            }
+          ],
+          "solution": {
+            "uk": "В одній транзакції встав queued лише за відсутності й прочитай канонічний збережений рядок.\n\n```python\nimport sqlite3\n\ndef solve(db: sqlite3.Connection, document_id: int, key: str) -> tuple[int, str]:\n    if type(document_id) is not int or document_id < 1 or not key.strip():\n        raise ValueError('invalid job identity')\n    with db:\n        db.execute(\"INSERT INTO jobs(document_id,op_key,status) VALUES (?,?,'queued') ON CONFLICT(document_id,op_key) DO NOTHING\", (document_id, key))\n        row = db.execute('SELECT id,status FROM jobs WHERE document_id = ? AND op_key = ?', (document_id, key)).fetchone()\n        if row is None:\n            raise RuntimeError('job missing after insert')\n        return (row[0], row[1])\n```",
+            "en": "In one transaction, insert a queued row only if absent, then read the persisted canonical record.\n\n```python\nimport sqlite3\n\ndef solve(db: sqlite3.Connection, document_id: int, key: str) -> tuple[int, str]:\n    if type(document_id) is not int or document_id < 1 or not key.strip():\n        raise ValueError('invalid job identity')\n    with db:\n        db.execute(\"INSERT INTO jobs(document_id,op_key,status) VALUES (?,?,'queued') ON CONFLICT(document_id,op_key) DO NOTHING\", (document_id, key))\n        row = db.execute('SELECT id,status FROM jobs WHERE document_id = ? AND op_key = ?', (document_id, key)).fetchone()\n        if row is None:\n            raise RuntimeError('job missing after insert')\n        return (row[0], row[1])\n```"
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(db, document_id, key) для SQLite jobs(id INTEGER PRIMARY KEY, document_id INTEGER, op_key TEXT, status TEXT, UNIQUE(document_id, op_key)). Вимагай додатний int document_id без bool та непорожній key. При першій заявці зафіксуй queued і поверни (id, status). Повтор повертає той самий id і поточний статус без зміни. Збережи точний key. На вході викликач не має активної транзакції.\n\n**Синтетичні документи політик**",
+            "en": "Implement solve(db, document_id, key) for an SQLite database with jobs(id INTEGER PRIMARY KEY, document_id INTEGER, op_key TEXT, status TEXT, UNIQUE(document_id, op_key)). Require document_id to be a positive int excluding bool, and key to be nonblank. Commit a queued job on first submission and return (id, status). Repeat submissions return the same row's id and current status without changing it. Retain the exact key string. Caller has no active transaction on entry.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Забезпеч унікальність під час INSERT.",
+              "en": "Enforce the uniqueness at INSERT."
+            },
+            {
+              "uk": "Застосуй обробку конфлікту, що зберігає рядок.",
+              "en": "Use conflict handling that preserves existing rows."
+            },
+            {
+              "uk": "Прочитай ID і статус за обома ключами.",
+              "en": "Read ID and status by both document ID and operation key."
+            }
+          ],
+          "solution": {
+            "uk": "В одній транзакції встав queued лише за відсутності й прочитай канонічний збережений рядок.\n\n```python\nimport sqlite3\n\ndef solve(db: sqlite3.Connection, document_id: int, key: str) -> tuple[int, str]:\n    if type(document_id) is not int or document_id < 1 or not key.strip():\n        raise ValueError('invalid job identity')\n    with db:\n        db.execute(\"INSERT INTO jobs(document_id,op_key,status) VALUES (?,?,'queued') ON CONFLICT(document_id,op_key) DO NOTHING\", (document_id, key))\n        row = db.execute('SELECT id,status FROM jobs WHERE document_id = ? AND op_key = ?', (document_id, key)).fetchone()\n        if row is None:\n            raise RuntimeError('job missing after insert')\n        return (row[0], row[1])\n```",
+            "en": "In one transaction, insert a queued row only if absent, then read the persisted canonical record.\n\n```python\nimport sqlite3\n\ndef solve(db: sqlite3.Connection, document_id: int, key: str) -> tuple[int, str]:\n    if type(document_id) is not int or document_id < 1 or not key.strip():\n        raise ValueError('invalid job identity')\n    with db:\n        db.execute(\"INSERT INTO jobs(document_id,op_key,status) VALUES (?,?,'queued') ON CONFLICT(document_id,op_key) DO NOTHING\", (document_id, key))\n        row = db.execute('SELECT id,status FROM jobs WHERE document_id = ? AND op_key = ?', (document_id, key)).fetchone()\n        if row is None:\n            raise RuntimeError('job missing after insert')\n        return (row[0], row[1])\n```"
+          }
+        }
+      ]
+    },
+    {
+      "id": "W06-L02-E2",
+      "title": {
+        "uk": "Перевірити повтор і відновлення job Project A",
+        "en": "Test Project A job replay and recovery"
+      },
+      "kind": "rubric",
+      "objectives": [
+        "O2"
+      ],
+      "estimateMinutes": 70,
+      "criteria": [
+        {
+          "id": "C1",
+          "title": {
+            "uk": "Записано один ID у дубльованих заявках.",
+            "en": "Record one ID across duplicate submissions."
+          }
+        },
+        {
+          "id": "C2",
+          "title": {
+            "uk": "Перевірено один результат після повтору в PostgreSQL.",
+            "en": "Assert one result after replay with a real PostgreSQL fixture."
+          }
+        },
+        {
+          "id": "C3",
+          "title": {
+            "uk": "Пояснено спостережені переходи й політику відновлення.",
+            "en": "Explain observed state transitions and recovery policy."
+          }
+        }
+      ],
+      "example": {
+        "uk": "Заявка A і повтор R повертають job 7. Після двох доставок запит результату дає один рядок для job 7.",
+        "en": "Submission A and replay R return job 7. After two worker deliveries the result query still returns one row for job 7."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Додай надійну чергу й endpoint статусу до свого Project A. Використай один синтетичний документ і два запити з однаковим логічним ключем. Заверши обробку, повтори доставку й покажи один job та один збережений результат. Додай примусовий збій і поясни відновлення застарілого running після рестарту.\n\n**Синтетичні накладні**",
+            "en": "Add a durable queue and status endpoint to your own Project A. Use one synthetic document and two calls with the same logical key. Run the worker to completion, rerun the delivery, and show one job and one persisted result. Add a forced failure case and explain how a restart can recover a stale running state.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Збережи job до видачі ID.",
+              "en": "Persist the job before returning its ID."
+            },
+            {
+              "uk": "Дай рядку результату унікальний ключ ефекту.",
+              "en": "Assign a unique effect key to the result row."
+            },
+            {
+              "uk": "Запиши статус до рестарту й після повтору.",
+              "en": "Record status before restart and after the retry."
+            }
+          ],
+          "solution": {
+            "uk": "Записуй стан транзакційними заявками й обмеженням унікальності. Повтор має знаходити наявні результати. Перевір збій та успіх на синтетичних фікстурах.",
+            "en": "Write state using transaction-scoped claims and a uniqueness constraint. Replays should find existing outcomes. Test both failure and success with synthetic fixtures."
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Додай надійну чергу й endpoint статусу до свого Project A. Використай один синтетичний документ і два запити з однаковим логічним ключем. Заверши обробку, повтори доставку й покажи один job та один збережений результат. Додай примусовий збій і поясни відновлення застарілого running після рестарту.\n\n**Синтетичні запити підтримки**",
+            "en": "Add a durable queue and status endpoint to your own Project A. Use one synthetic document and two calls with the same logical key. Run the worker to completion, rerun the delivery, and show one job and one persisted result. Add a forced failure case and explain how a restart can recover a stale running state.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Збережи job до видачі ID.",
+              "en": "Persist the job before returning its ID."
+            },
+            {
+              "uk": "Дай рядку результату унікальний ключ ефекту.",
+              "en": "Assign a unique effect key to the result row."
+            },
+            {
+              "uk": "Запиши статус до рестарту й після повтору.",
+              "en": "Record status before restart and after the retry."
+            }
+          ],
+          "solution": {
+            "uk": "Записуй стан транзакційними заявками й обмеженням унікальності. Повтор має знаходити наявні результати. Перевір збій та успіх на синтетичних фікстурах.",
+            "en": "Write state using transaction-scoped claims and a uniqueness constraint. Replays should find existing outcomes. Test both failure and success with synthetic fixtures."
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Додай надійну чергу й endpoint статусу до свого Project A. Використай один синтетичний документ і два запити з однаковим логічним ключем. Заверши обробку, повтори доставку й покажи один job та один збережений результат. Додай примусовий збій і поясни відновлення застарілого running після рестарту.\n\n**Синтетичні документи політик**",
+            "en": "Add a durable queue and status endpoint to your own Project A. Use one synthetic document and two calls with the same logical key. Run the worker to completion, rerun the delivery, and show one job and one persisted result. Add a forced failure case and explain how a restart can recover a stale running state.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Збережи job до видачі ID.",
+              "en": "Persist the job before returning its ID."
+            },
+            {
+              "uk": "Дай рядку результату унікальний ключ ефекту.",
+              "en": "Assign a unique effect key to the result row."
+            },
+            {
+              "uk": "Запиши статус до рестарту й після повтору.",
+              "en": "Record status before restart and after the retry."
+            }
+          ],
+          "solution": {
+            "uk": "Записуй стан транзакційними заявками й обмеженням унікальності. Повтор має знаходити наявні результати. Перевір збій та успіх на синтетичних фікстурах.",
+            "en": "Write state using transaction-scoped claims and a uniqueness constraint. Replays should find existing outcomes. Test both failure and success with synthetic fixtures."
+          }
+        }
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "id": "Q1",
+      "prompt": {
+        "uk": "Що може означати 202 для завдання обробки?",
+        "en": "What may 202 indicate for a processing job?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Запит прийнято в обробку, завершення очікується.",
+            "en": "The request was accepted for processing, with completion pending."
+          },
+          "explanation": {
+            "uk": "Прийнятий запит ще не дає готового результату.",
+            "en": "An accepted request is not a completed result."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Вихід вже перевірений і збережений.",
+            "en": "The output is already verified and stored."
+          },
+          "explanation": {
+            "uk": "Обробка може лишатись у черзі.",
+            "en": "Processing may still be queued."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Запит невалідний.",
+            "en": "The request is invalid."
+          },
+          "explanation": {
+            "uk": "202 належить до успішних.",
+            "en": "202 is in the success class."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q2",
+      "prompt": {
+        "uk": "Що захищає від одночасних дублікатів job?",
+        "en": "What protects against concurrent duplicate jobs?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Щоразу генерувати новий ключ повтору.",
+            "en": "Always generate a different key for each retry."
+          },
+          "explanation": {
+            "uk": "Це вимагає окремої логічної роботи.",
+            "en": "That asks for distinct logical work."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Унікальність логічного ID на межі БД.",
+            "en": "A unique rule for the logical job identity at the database boundary."
+          },
+          "explanation": {
+            "uk": "Стійке сховище розв’язує записи.",
+            "en": "The durable store arbitrates writes."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Лише перевірка в пам’яті перед INSERT.",
+            "en": "Only checking in memory before each INSERT."
+          },
+          "explanation": {
+            "uk": "Кілька процесів можуть змагатися.",
+            "en": "Multiple instances can race."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q3",
+      "prompt": {
+        "uk": "Заявку повторили після succeeded. Який стан лишається?",
+        "en": "A queued request is replayed after it succeeded. What state should remain?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Автоматично скинути на queued.",
+            "en": "Reset to queued automatically."
+          },
+          "explanation": {
+            "uk": "Це запланує дубльовану обробку.",
+            "en": "That schedules duplicate processing."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Видалити попередні результати.",
+            "en": "Delete every prior result."
+          },
+          "explanation": {
+            "uk": "Повтор прийняття не має стирати докази.",
+            "en": "Replaying acceptance should not erase evidence."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Зберегти succeeded для цього ID.",
+            "en": "Keep succeeded for that job identity."
+          },
+          "explanation": {
+            "uk": "Повтор має зберегти наявний результат.",
+            "en": "Replay must preserve the existing outcome."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q4",
+      "prompt": {
+        "uk": "Коли надійний вихід воркера потребує дедуплікації?",
+        "en": "When can durable worker output need deduplication?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Коли воркер може отримати job повторно після збою.",
+            "en": "When the worker may receive a job again after a crash."
+          },
+          "explanation": {
+            "uk": "Попередній ефект може пережити непідтверджену доставку.",
+            "en": "A persisted prior effect may survive an unacknowledged delivery."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Лише коли БД через localhost.",
+            "en": "Only when database connections use localhost."
+          },
+          "explanation": {
+            "uk": "Адреса не визначає семантику доставки.",
+            "en": "Transport address does not establish delivery semantics."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Ніколи, якщо API валідує ввід.",
+            "en": "Never if the API validates inputs."
+          },
+          "explanation": {
+            "uk": "Валідація не запобігає повтору доставки.",
+            "en": "Input validation does not prevent repeat delivery."
+          }
+        }
+      ]
+    }
+  ],
+  "crosslinks": [
+    "W06-L01",
+    "W06-L03"
+  ]
+}

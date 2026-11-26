@@ -1,0 +1,501 @@
+{
+  "id": "W03-L01",
+  "contentVersion": 1,
+  "overview": {
+    "uk": "Клієнту потрібні два контракти: значення HTTP-відповіді та форма її представлення. Навчися читати метод, статус, заголовки й тіло окремо. Простеж документ від створення до читання й видалення. Потім напиши декодер, який відрізняє відсутність представлення від зламаного JSON і помилки сервісу. Вправа працює локально без зовнішніх сервісів. Наступні уроки використають ці рішення для паралельних запитів і повторів.",
+    "en": "A client needs two contracts to consume an API safely: what the HTTP response means and what shape its representation has. Learn to read method, status, headers and body as separate signals. We will trace one document from creating it to querying it and deleting it. Then you will write a small decoder that distinguishes a response with no representation from malformed JSON or an application failure. You can run it locally without contacting an external provider. The next lessons build concurrency and retries on these same explicit decisions."
+  },
+  "theory": {
+    "uk": "### Рівні контракту\n\nМетод задає намір, URI позначає ресурс, заголовки несуть метадані, а тіло може містити представлення. GET читає поточне представлення. POST передає роботу за правилами ресурсу. PUT замінює представлення цілі за контрактом сервісу. DELETE запитує вилучення відповідності цілі. Ідемпотентний метод при повторі має той самий задуманий ефект. Відповіді можуть відрізнятися. DELETE може спочатку повернути 204, а потім 404, при цьому ціль лишається відсутньою. Безпечні методи мають семантику читання. Супутній серверний журнал усе одно може змінюватися.\n\n### Шлях ресурсу документа\n\nPOST /documents з валідним JSON може повернути 201 і Location нового ресурсу. GET до цього URI повертає 200 і представлення, якщо воно доступне клієнту. DELETE може повернути 204 без вмісту. 400 може означати невалідний синтаксис, 401 вказує на потребу у валідних облікових даних, а 403 означає відмову виконати зрозумілий запит. Сервіс може навмисно дати 404, якщо має приховати існування ресурсу. 409 описує конфлікт зі станом ресурсу. 422 позначає зрозумілий вміст, інструкції з якого неможливо обробити. 503 може сигналізувати про тимчасову недоступність і не визначає безпечність повторного запису.\n\n### Розбір і валідація\n\nУспішний статус не гарантує відповідності тіла схемі. Перевір media type, якщо API його обіцяє, декодуй JSON один раз, перевір форму й нормалізуй поля для домену. Null, масив і об’єкт валідні в JSON, але допустиму форму визначає контракт. Намалюй гілки 204→немає значення, 200/201→розбір об’єкта, помилка→типізована відмова. Не додавай тіло сервера в загальні помилки, бо воно може містити чутливі дані. Окремо протестуй порожній успіх, зламаний успіх і помилку сервера з об’єктом JSON.\n\n### Пройди через зміну контракту\n\nПрипустимо, сервіс спочатку повертає id і title. Далі додає необов’язковий state, зберігаючи обидва поля. Клієнт, що вимагає потрібних полів і дозволяє додаткові, прочитає відповідь. Клієнт із точним набором ключів може її відхилити. Свідомо обери трактування. У запитах строгі правила ловлять помилку назви й попереджають неочікувані зміни. Відповіді можуть допускати нові поля для сумісності. Контрактний тест має окремо перевіряти додаткове поле й відсутнє обов’язкове.\n\nВикористай трасу HTTP для пояснення відмов. 404 для дозволеного ID стає станом відсутнього ресурсу. 409 після оновлення вимагає перевірити поточний стан або передати конфлікт викликачу. 200 із зламаним JSON є помилкою контракту виробника попри завершений HTTP-обмін. Запиши клас HTTP і результат декодування. Розділення покаже, яка частина потребує виправлення: викликач, сервіс чи представлення.",
+    "en": "### A contract has multiple layers\n\nRequest method models intent, URI identifies a resource, headers carry metadata, and a body can carry a representation. GET reads a current representation. POST submits work according to a resource's rules. PUT replaces the target representation as defined by the service. DELETE requests removal from the target mapping. An idempotent method has the same intended effect when repeated. Its responses can differ. DELETE can return 204 first and 404 later while the target stays absent. Safe methods are read-oriented by semantics. Incidental server logs can still change.\n\n### Trace a document resource\n\nPOST /documents with valid JSON may return 201 and a Location for the new resource. GET that URI returns 200 and a representation if available to this client. DELETE can return 204, which has no content. A 400 can indicate invalid request syntax, 401 means credentials are needed or invalid, and 403 means the server refuses a request it understood. A service may deliberately use 404 when it must hide resource existence. A 409 describes conflict with current resource state. A 422 indicates understood content whose instructions cannot be processed. A 503 can indicate temporary unavailability and does not tell you whether rerunning a write is safe.\n\n### Decode once and validate\n\nA success status does not imply the body matches your schema. Check media type when the API promises it, decode JSON once, validate the shape, and normalize fields for the domain. A JSON null, array and object are all legal JSON, but only the contract defines which are accepted. Sketch the branch 204→no value, 200/201→decode object, error→typed failure. Keep server body excerpts out of generic errors because they may include sensitive data. Add separate tests for empty success, malformed success and a server error sending a JSON object.\n\n### Walk through a real contract change\n\nSuppose the document service originally returns id and title. It adds an optional state while preserving both original fields. A client that validates required fields and tolerates additive metadata can still read the reply. A client expecting an exact key set may reject it. Decide explicitly which interpretation is appropriate. Requests often use tighter unknown-field rules to catch a typo or prevent unintended updates. Responses may permit new fields for forward compatibility. A contract test should include an additive field and missing required data as two separate cases.\n\nUse a wire trace for reasoning about error handling. A 404 after reading a permitted ID becomes a missing-resource state in the client. A 409 after an update requires the client to inspect the current state or ask the caller to resolve the conflict. A 200 with invalid JSON is a producer contract failure even though it completed the HTTP exchange. Record both the HTTP class and decode outcome. That separation helps diagnose whether the caller, service or upstream representation needs repair."
+  },
+  "recap": {
+    "uk": "Спочатку поясни метод і статус. Розбирай та перевіряй тіло лише за контрактом API.",
+    "en": "Interpret method and status first. Parse and validate a body only when your API contract provides one."
+  },
+  "objectives": [
+    {
+      "id": "O1",
+      "title": {
+        "uk": "Пояснювати відповіді HTTP за статусом і представленням.",
+        "en": "Interpret common HTTP responses from status and representation."
+      },
+      "skill": "systems"
+    },
+    {
+      "id": "O2",
+      "title": {
+        "uk": "Перевіряти форму відповіді на межі клієнта.",
+        "en": "Validate decoded response shapes at the client boundary."
+      },
+      "skill": "tooling"
+    }
+  ],
+  "sources": [
+    {
+      "title": {
+        "uk": "RFC 9110 · HTTP",
+        "en": "RFC 9110 · HTTP"
+      },
+      "url": "https://www.rfc-editor.org/rfc/rfc9110.html",
+      "version": "RFC 9110",
+      "checked": "2026-11-26"
+    }
+  ],
+  "examples": [
+    {
+      "file": "w03_l01_example.py",
+      "expected": "201 Created\n204 No Content\n409 Conflict",
+      "explanation": {
+        "uk": "Перевір стандартні назви відповідей локально.",
+        "en": "Inspect standard response names offline."
+      },
+      "error": {
+        "uk": "HTTPStatus(999) підніме ValueError, бо цього елемента немає в локальному enum.",
+        "en": "HTTPStatus(999) raises ValueError because the local enumeration has no such member."
+      }
+    }
+  ],
+  "interview": [
+    "When can two idempotent requests return different statuses?",
+    "How does a 204 response change the client's parsing behavior?"
+  ],
+  "interviewGuide": {
+    "uk": "Використай конкретний DELETE і опиши кінцевий стан.",
+    "en": "Use a concrete DELETE example and describe the final state."
+  },
+  "exercises": [
+    {
+      "id": "W03-L01-E1",
+      "title": {
+        "uk": "Декодувати відповідь API документів",
+        "en": "Decode the document API response"
+      },
+      "kind": "code",
+      "objectives": [
+        "O1"
+      ],
+      "estimateMinutes": 75,
+      "criteria": [],
+      "example": {
+        "uk": "201 з байтами об’єкта повертає dict. 204 з b'' повертає None.",
+        "en": "201 with bytes for an object returns a dict. 204 with b'' returns None."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(status, body), де body — bytes. Для 204 вимагай порожнє тіло й поверни None. Для 200 чи 201 декодуй JSON UTF-8 і поверни dict верхнього рівня. Для інших статусів, зламаного або необ’єктного успіху та непорожнього 204 піднімай ValueError. Не додавай тіло до власного повідомлення помилки.\n\n**Синтетичні накладні**",
+            "en": "Implement solve(status, body) where body is bytes. For 204 require an empty body and return None. For 200 or 201 decode UTF-8 JSON and return a top-level dict. For other statuses, malformed or non-object success bodies, and nonempty 204 raise ValueError. Do not include the body in the exception message you raise.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Почни з гілок статусів.",
+              "en": "Start with the status branches."
+            },
+            {
+              "uk": "Декодуй представлення лише для 200 і 201.",
+              "en": "Decode a representation only for 200 and 201."
+            },
+            {
+              "uk": "Використай isinstance(value, dict) після json.loads.",
+              "en": "Use isinstance(value, dict) after json.loads."
+            }
+          ],
+          "solution": {
+            "uk": "Відокрем гілку без вмісту від декодера. JSON-парсер сам приймає масиви й скаляри.\n\n```python\nimport json\n\ndef solve(status: int, body: bytes) -> dict[str, object] | None:\n    if status == 204 and not body:\n        return None\n    if status not in (200, 201):\n        raise ValueError('unsupported response status')\n    result = json.loads(body.decode('utf-8'))\n    if not isinstance(result, dict):\n        raise ValueError('expected a JSON object')\n    return result\n```",
+            "en": "Separate the no-content branch from the decoder. A JSON parser alone accepts arrays and scalars.\n\n```python\nimport json\n\ndef solve(status: int, body: bytes) -> dict[str, object] | None:\n    if status == 204 and not body:\n        return None\n    if status not in (200, 201):\n        raise ValueError('unsupported response status')\n    result = json.loads(body.decode('utf-8'))\n    if not isinstance(result, dict):\n        raise ValueError('expected a JSON object')\n    return result\n```"
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(status, body), де body — bytes. Для 204 вимагай порожнє тіло й поверни None. Для 200 чи 201 декодуй JSON UTF-8 і поверни dict верхнього рівня. Для інших статусів, зламаного або необ’єктного успіху та непорожнього 204 піднімай ValueError. Не додавай тіло до власного повідомлення помилки.\n\n**Синтетичні запити підтримки**",
+            "en": "Implement solve(status, body) where body is bytes. For 204 require an empty body and return None. For 200 or 201 decode UTF-8 JSON and return a top-level dict. For other statuses, malformed or non-object success bodies, and nonempty 204 raise ValueError. Do not include the body in the exception message you raise.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Почни з гілок статусів.",
+              "en": "Start with the status branches."
+            },
+            {
+              "uk": "Декодуй представлення лише для 200 і 201.",
+              "en": "Decode a representation only for 200 and 201."
+            },
+            {
+              "uk": "Використай isinstance(value, dict) після json.loads.",
+              "en": "Use isinstance(value, dict) after json.loads."
+            }
+          ],
+          "solution": {
+            "uk": "Відокрем гілку без вмісту від декодера. JSON-парсер сам приймає масиви й скаляри.\n\n```python\nimport json\n\ndef solve(status: int, body: bytes) -> dict[str, object] | None:\n    if status == 204 and not body:\n        return None\n    if status not in (200, 201):\n        raise ValueError('unsupported response status')\n    result = json.loads(body.decode('utf-8'))\n    if not isinstance(result, dict):\n        raise ValueError('expected a JSON object')\n    return result\n```",
+            "en": "Separate the no-content branch from the decoder. A JSON parser alone accepts arrays and scalars.\n\n```python\nimport json\n\ndef solve(status: int, body: bytes) -> dict[str, object] | None:\n    if status == 204 and not body:\n        return None\n    if status not in (200, 201):\n        raise ValueError('unsupported response status')\n    result = json.loads(body.decode('utf-8'))\n    if not isinstance(result, dict):\n        raise ValueError('expected a JSON object')\n    return result\n```"
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(status, body), де body — bytes. Для 204 вимагай порожнє тіло й поверни None. Для 200 чи 201 декодуй JSON UTF-8 і поверни dict верхнього рівня. Для інших статусів, зламаного або необ’єктного успіху та непорожнього 204 піднімай ValueError. Не додавай тіло до власного повідомлення помилки.\n\n**Синтетичні документи політик**",
+            "en": "Implement solve(status, body) where body is bytes. For 204 require an empty body and return None. For 200 or 201 decode UTF-8 JSON and return a top-level dict. For other statuses, malformed or non-object success bodies, and nonempty 204 raise ValueError. Do not include the body in the exception message you raise.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Почни з гілок статусів.",
+              "en": "Start with the status branches."
+            },
+            {
+              "uk": "Декодуй представлення лише для 200 і 201.",
+              "en": "Decode a representation only for 200 and 201."
+            },
+            {
+              "uk": "Використай isinstance(value, dict) після json.loads.",
+              "en": "Use isinstance(value, dict) after json.loads."
+            }
+          ],
+          "solution": {
+            "uk": "Відокрем гілку без вмісту від декодера. JSON-парсер сам приймає масиви й скаляри.\n\n```python\nimport json\n\ndef solve(status: int, body: bytes) -> dict[str, object] | None:\n    if status == 204 and not body:\n        return None\n    if status not in (200, 201):\n        raise ValueError('unsupported response status')\n    result = json.loads(body.decode('utf-8'))\n    if not isinstance(result, dict):\n        raise ValueError('expected a JSON object')\n    return result\n```",
+            "en": "Separate the no-content branch from the decoder. A JSON parser alone accepts arrays and scalars.\n\n```python\nimport json\n\ndef solve(status: int, body: bytes) -> dict[str, object] | None:\n    if status == 204 and not body:\n        return None\n    if status not in (200, 201):\n        raise ValueError('unsupported response status')\n    result = json.loads(body.decode('utf-8'))\n    if not isinstance(result, dict):\n        raise ValueError('expected a JSON object')\n    return result\n```"
+          }
+        }
+      ]
+    },
+    {
+      "id": "W03-L01-E2",
+      "title": {
+        "uk": "Описати контракт endpoint документа",
+        "en": "Specify a document endpoint"
+      },
+      "kind": "rubric",
+      "objectives": [
+        "O2"
+      ],
+      "estimateMinutes": 70,
+      "criteria": [
+        {
+          "id": "C1",
+          "title": {
+            "uk": "Задано явні контракти вводу й відповіді.",
+            "en": "Give explicit payload and response contracts."
+          }
+        },
+        {
+          "id": "C2",
+          "title": {
+            "uk": "Пояснено статус, де повтор змінює тільки відповідь.",
+            "en": "Explain a status where repeat changes the response only."
+          }
+        },
+        {
+          "id": "C3",
+          "title": {
+            "uk": "Показано дію клієнта при конфлікті.",
+            "en": "Show an actionable client response to a conflict."
+          }
+        }
+      ],
+      "example": {
+        "uk": "DELETE дає 204 при першому успіху й 404 при повторі, ціль в обох випадках відсутня.",
+        "en": "DELETE returns 204 on first success and 404 on repeat, both yielding an absent target."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Склади таблицю методу, шляху, форми запиту, статусу успіху та двох спостережуваних відмов для синтетичного сервісу. Поясни реакцію на 409 і 404, наведи повторний запит і зміну ресурсу.\n\n**Синтетичні накладні**",
+            "en": "Write a table of method, path, request shape, success status and two observable failure cases for a synthetic document service. Include how a client reacts to 409 and 404, with an example of a repeated request and how the resource changes.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Опиши стан ресурсу до запиту.",
+              "en": "Describe the resource state before the request."
+            },
+            {
+              "uk": "Свідомо обери статуси для кожної гілки.",
+              "en": "Choose statuses deliberately for each branch."
+            },
+            {
+              "uk": "Задокументуй, чи 409 потребує оновити ресурс.",
+              "en": "Document whether 409 requires refreshing the resource."
+            }
+          ],
+          "solution": {
+            "uk": "Зафіксуй представлення й результат. При конфлікті версій прочитай дозволене поточне представлення та узгодь зміни з викликачем.",
+            "en": "Capture both representation and outcome. On a version conflict fetch the current allowed representation and ask the caller to reconcile changes."
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Склади таблицю методу, шляху, форми запиту, статусу успіху та двох спостережуваних відмов для синтетичного сервісу. Поясни реакцію на 409 і 404, наведи повторний запит і зміну ресурсу.\n\n**Синтетичні запити підтримки**",
+            "en": "Write a table of method, path, request shape, success status and two observable failure cases for a synthetic document service. Include how a client reacts to 409 and 404, with an example of a repeated request and how the resource changes.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Опиши стан ресурсу до запиту.",
+              "en": "Describe the resource state before the request."
+            },
+            {
+              "uk": "Свідомо обери статуси для кожної гілки.",
+              "en": "Choose statuses deliberately for each branch."
+            },
+            {
+              "uk": "Задокументуй, чи 409 потребує оновити ресурс.",
+              "en": "Document whether 409 requires refreshing the resource."
+            }
+          ],
+          "solution": {
+            "uk": "Зафіксуй представлення й результат. При конфлікті версій прочитай дозволене поточне представлення та узгодь зміни з викликачем.",
+            "en": "Capture both representation and outcome. On a version conflict fetch the current allowed representation and ask the caller to reconcile changes."
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Склади таблицю методу, шляху, форми запиту, статусу успіху та двох спостережуваних відмов для синтетичного сервісу. Поясни реакцію на 409 і 404, наведи повторний запит і зміну ресурсу.\n\n**Синтетичні документи політик**",
+            "en": "Write a table of method, path, request shape, success status and two observable failure cases for a synthetic document service. Include how a client reacts to 409 and 404, with an example of a repeated request and how the resource changes.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Опиши стан ресурсу до запиту.",
+              "en": "Describe the resource state before the request."
+            },
+            {
+              "uk": "Свідомо обери статуси для кожної гілки.",
+              "en": "Choose statuses deliberately for each branch."
+            },
+            {
+              "uk": "Задокументуй, чи 409 потребує оновити ресурс.",
+              "en": "Document whether 409 requires refreshing the resource."
+            }
+          ],
+          "solution": {
+            "uk": "Зафіксуй представлення й результат. При конфлікті версій прочитай дозволене поточне представлення та узгодь зміни з викликачем.",
+            "en": "Capture both representation and outcome. On a version conflict fetch the current allowed representation and ask the caller to reconcile changes."
+          }
+        }
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "id": "Q1",
+      "prompt": {
+        "uk": "Яка відповідь підходить для успішного видалення без тіла?",
+        "en": "What is an appropriate response to a successful delete with no content?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "409",
+            "en": "409"
+          },
+          "explanation": {
+            "uk": "409 повідомляє конфлікт.",
+            "en": "409 reports a conflict, not success."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "204",
+            "en": "204"
+          },
+          "explanation": {
+            "uk": "Статус означає успіх і відсутність вмісту.",
+            "en": "The status communicates success and the absence of content."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "401",
+            "en": "401"
+          },
+          "explanation": {
+            "uk": "401 вимагає валідної автентифікації.",
+            "en": "401 asks for valid authentication."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q2",
+      "prompt": {
+        "uk": "Що ідемпотентне в повторному DELETE?",
+        "en": "What is idempotent about repeated DELETE?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Байти кожної відповіді.",
+            "en": "The byte pattern of every response."
+          },
+          "explanation": {
+            "uk": "Пізніша відповідь може бути 404.",
+            "en": "The later response can be 404."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Кількість рядків журналу.",
+            "en": "The number of server log lines."
+          },
+          "explanation": {
+            "uk": "Супутні записи можуть накопичуватися.",
+            "en": "Incidental observations can grow."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Задуманий стан ресурсу.",
+            "en": "The intended resource state."
+          },
+          "explanation": {
+            "uk": "Ціль відсутня після застосування ефекту.",
+            "en": "The target is absent after either successful effect."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q3",
+      "prompt": {
+        "uk": "Що робити з JSON-масивом від endpoint, що повертає лише об’єкт?",
+        "en": "What should a client do with a JSON array from an object-only endpoint?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Повідомити помилку валідації відповіді.",
+            "en": "Signal a response validation failure."
+          },
+          "explanation": {
+            "uk": "Синтаксис валідний, форма порушує контракт.",
+            "en": "The parser accepts the syntax, but the shape violates the contract."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Вважати об’єктом через 200.",
+            "en": "Treat it as an object because status is 200."
+          },
+          "explanation": {
+            "uk": "Статус не змінює тип.",
+            "en": "Status cannot change the parsed type."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Завжди негайно повторити запис.",
+            "en": "Always retry the write immediately."
+          },
+          "explanation": {
+            "uk": "Повтор може дублювати ефекти й не усуне проблему форми.",
+            "en": "Repeating can duplicate effects and the response problem remains."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q4",
+      "prompt": {
+        "uk": "Який статус описує конфлікт версій?",
+        "en": "Which status describes a version conflict?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "204",
+            "en": "204"
+          },
+          "explanation": {
+            "uk": "Він сигналізує успіх без тіла.",
+            "en": "It signals success with no content."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "409",
+            "en": "409"
+          },
+          "explanation": {
+            "uk": "Він сигналізує конфлікт із поточним станом.",
+            "en": "It signals conflict with current resource state."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "201",
+            "en": "201"
+          },
+          "explanation": {
+            "uk": "Він сигналізує створення.",
+            "en": "It signals creation."
+          }
+        }
+      ]
+    }
+  ],
+  "crosslinks": [
+    "W02-L02",
+    "W03-L02"
+  ]
+}

@@ -1,0 +1,501 @@
+{
+  "id": "W02-L03",
+  "contentVersion": 1,
+  "overview": {
+    "uk": "Потоковий парсер може прочитати мільйон рядків без збереження всіх у пам’яті. Викликачу все одно потрібно знати, коли відкривається файл, де може впасти парсинг і як закрити ресурс при ранньому виході. Урок розрізняє iterable та ітератор зі станом, а потім поміщає генератор у контекст, що володіє файлом. Ти порахуєш читання синтетичного потоку й зупинишся до останнього рядка. Важливі й межі пакетів. Імпортована бібліотека має оголошувати функції, а роботу виконувати за явним викликом. Окремий CLI-адаптер визначить шляхи й повідомлення.",
+    "en": "A streaming parser can read a million input lines without holding all lines in memory. Its caller still needs to know when the file opens, when parsing can fail and how to close resources on early exit. This lesson distinguishes the iterable protocol from its stateful iterator, then puts a generator inside a scope that owns the file. You will count reads on a finite synthetic stream and use a cursor to stop before the last line. Package boundaries matter too. Your imported library should declare functions and perform no work until a caller invokes one. A separate command-line adapter decides paths and user-facing messages."
+  },
+  "theory": {
+    "uk": "### Де міститься стан ітерації\n\nIterable надає ітератор через iter(). Список створює новий ітератор кожного разу. Ітератор рухається через next() і піднімає StopIteration, коли елементи вичерпано. Виклик iter() на ітераторі повертає той самий об’єкт. Функція-генератор створює ітератор із локальними змінними та позицією. Тіло починає працювати під час споживання, а yield повертає елемент і призупиняє виконання до наступного запиту. Генераторний вираз може зменшити пікову пам’ять, але list(expression) знову матеріалізує всі елементи.\n\n### Явна область життя ресурсу\n\nКонтекстний менеджер входить в область дії і виходить при успішному завершенні чи винятку. Відкрий файл через with і споживай потік у цій області. Генератор із with тримає контекст відкритим під час призупинення. Викликач, що бере один елемент, має забезпечити закриття або застосувати контекстний менеджер, який володіє файлом. Не покладайся на час роботи збирача сміття. Простий шаблон — чиста функція-ітератор з уже відкритим потоком. Той, хто відкрив файл, визначає момент закриття.\n\n### Трасування часткового читання\n\nДля рядків порожній, alpha, beta виклик next(valid_lines) читає два рядки й повертає alpha. Другий next читає beta. Якщо викликач зупинився після alpha, він не дізнається про невалідний третій рядок. Завдання, яке заявляє перевірку кожного рядка, має вичерпати потік. Тримай парсер у модулі пакета з оголошеннями на рівні модуля. Розбір аргументів лиши main, яку викликає умова імені або встановлена точка входу. Тоді імпорт пакета з тестів не читає реальні шляхи.\n\n### Визнач, які операції ліниві\n\nПарсер, який видає валідовані рядки по одному, тримає пам’ять близько розміру одного рядка. Подальші операції змінюють межу. Set дедуплікації росте з кількістю ключів, сортування потребує всі потрібні рядки, а list у споживача матеріалізує весь вихід. Намалюй потік і познач, де росте кожен буфер. Пакет можна потоково писати в тимчасовий файл і замінити вихід після повної валідації. Це зберігає старий результат за пізньої помилки без утримання нового в пам’яті. На диску ще потрібне місце для обох версій.\n\nРозглянь два тести генератора. Один коректний рядок і контрольна помилка після нього показують, що next бере лише потрібний рядок. Коректний рядок і неправильний роздільник далі показують появу помилки при запиті наступного. Окремо перевір закриття справжнього тимчасового файла менеджером після помилки споживача. Це різні гарантії: порядок обчислення та володіння файлом. Тримай відкриття й закриття разом, щоб область була видимою у коді.",
+    "en": "### Locate the iterator state\n\nAn iterable supplies an iterator through iter(). A list makes a new iterator each time. An iterator advances through next() and raises StopIteration at exhaustion. Calling iter() on an iterator returns the same iterator. A generator function creates an iterator carrying its local variables and current position. The body starts when consumed. Each yield returns one item and suspends execution before resuming on the next request. A generator expression can reduce peak memory, but list(expression) materializes every item again.\n\n### Scope resources explicitly\n\nA context manager enters a scope and exits it on normal return or raised error. Open a file using with and consume it within that scope. A generator containing with keeps the scope open while suspended. A caller that only takes one element must ensure the iterator is closed or adopt a context manager that owns both opening and closing. Do not depend on garbage collection timing. A simple reusable pattern uses a pure iterator function that receives an existing stream. Whoever opened the file then decides when to close it.\n\n### Follow a partial read\n\nFor the lines blank, alpha, beta, next(valid_lines) reads two lines and yields alpha. A second next reads beta. If the caller stops after alpha, it never discovers an invalid third line. A job that claims every row was checked must exhaust the stream. Keep the parser in a package module, with declarations at module scope. Put argument parsing in a main function, then call it under the name guard or from an installed entry point. Importing the package from a test then touches no real input paths.\n\n### Decide which operations are lazy\n\nA parser that yields each validated row can keep memory near the size of one row. Subsequent operations change that bound. A deduplication set grows with the number of keys, sorting requires all relevant rows, and a downstream list materializes the full output. Draw the data flow and mark where each buffer grows. A batch handler can stream to a temporary file and replace the destination after full validation. That preserves old output on late malformed input without holding the new output in memory. It still may require disk space for both versions.\n\nConsider two tests for generator behavior. An input with one good row followed by a sentinel that raises can show that next observes only the first needed row. An input with a valid row followed by a bad delimiter can show the error emerges when the next row is requested. Separately, let the context manager close a real temporary file after the consumer raises. These tests pin distinct guarantees. One checks evaluation order; the other checks file ownership. Keep resource opening and closure together so callers can see the scope in the code."
+  },
+  "recap": {
+    "uk": "Ітератор має один стан із рухом уперед. Явно визнач, хто володіє файлом, і перевір, чи споживач вичерпує потік.",
+    "en": "An iterator has a single advancing state. Keep file ownership explicit and measure whether consumers exhaust the stream."
+  },
+  "objectives": [
+    {
+      "id": "O1",
+      "title": {
+        "uk": "Простежувати ітерацію, призупинення та закриття ресурсу.",
+        "en": "Trace iteration, suspension, and resource closure."
+      },
+      "skill": "tooling"
+    },
+    {
+      "id": "O2",
+      "title": {
+        "uk": "Винести ввід-вивід та CLI з коду часу імпорту.",
+        "en": "Keep IO and CLI behavior outside import-time code."
+      },
+      "skill": "systems"
+    }
+  ],
+  "sources": [
+    {
+      "title": {
+        "uk": "contextlib",
+        "en": "contextlib"
+      },
+      "url": "https://docs.python.org/3.12/library/contextlib.html",
+      "version": "Python 3.12",
+      "checked": "2026-11-26"
+    }
+  ],
+  "examples": [
+    {
+      "file": "w02_l03_example.py",
+      "expected": "draft\nlater",
+      "explanation": {
+        "uk": "Генератор споживає тільки до першого збереженого рядка. Python 3.12, стандартна бібліотека.",
+        "en": "The generator consumes only through the first retained row. Python 3.12, standard library."
+      },
+      "error": {
+        "uk": "Виклич next для labels лише з порожніми рядками без типового значення. Очікуй StopIteration.",
+        "en": "Call next on labels with only blank rows and no default. Expect StopIteration."
+      }
+    }
+  ],
+  "interview": [
+    "When is generating items lazily useful?",
+    "Who should close the stream after an early return?"
+  ],
+  "interviewGuide": {
+    "uk": "Наведи приклад раннього виходу й поясни, хто володіє потоком.",
+    "en": "Give an example of early exit and explain who owns the stream."
+  },
+  "exercises": [
+    {
+      "id": "W02-L03-E1",
+      "title": {
+        "uk": "Видавати записи на запит",
+        "en": "Yield records as they are requested"
+      },
+      "kind": "code",
+      "objectives": [
+        "O1"
+      ],
+      "estimateMinutes": 55,
+      "criteria": [],
+      "example": {
+        "uk": "list(solve(['  a | draft ', ' ', 'b|x|y'])) дає [('a', 'draft'), ('b', 'x|y')].",
+        "en": "list(solve(['  a | draft ', ' ', 'b|x|y'])) yields [('a', 'draft'), ('b', 'x|y')]."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(lines), яка повертає ітератор. Обріж пробіли та пропусти порожні рядки. У непорожніх рядках ключ і заголовок розділено першою вертикальною рискою. Повертай кортеж очищених полів у порядку вводу. За відсутності роздільника чи порожнього поля піднімай ValueError під час читання цього рядка. Не читай пізніші рядки завчасно.\n\n**Синтетичні накладні**",
+            "en": "Implement solve(lines) returning an iterator. Strip whitespace and skip blank lines. Each nonblank line has a key and title separated by the first vertical bar. Yield a tuple of the trimmed fields in input order. Raise ValueError on missing separator or empty field when that row is requested. Do not read later rows before they are requested.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Використай yield у циклі for.",
+              "en": "Yield inside a for loop."
+            },
+            {
+              "uk": "Оброби порожні рядки до поділу.",
+              "en": "Handle blank lines before splitting."
+            },
+            {
+              "uk": "partition('|') дає обидва поля й ознаку роздільника.",
+              "en": "partition('|') gives you both fields and proof of the separator."
+            }
+          ],
+          "solution": {
+            "uk": "Один цикл зупиняється на кожному прийнятому рядку й не завантажує потік заздалегідь.\n\n```python\nfrom collections.abc import Iterable, Iterator\n\ndef solve(lines: Iterable[str]) -> Iterator[tuple[str, str]]:\n    for line in lines:\n        if not line.strip():\n            continue\n        key, separator, title = line.partition(\"|\")\n        if not separator or not key.strip() or not title.strip():\n            raise ValueError(\"expected key|title\")\n        yield key.strip(), title.strip()\n```",
+            "en": "A single loop suspends at each accepted row and never preloads the stream.\n\n```python\nfrom collections.abc import Iterable, Iterator\n\ndef solve(lines: Iterable[str]) -> Iterator[tuple[str, str]]:\n    for line in lines:\n        if not line.strip():\n            continue\n        key, separator, title = line.partition(\"|\")\n        if not separator or not key.strip() or not title.strip():\n            raise ValueError(\"expected key|title\")\n        yield key.strip(), title.strip()\n```"
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(lines), яка повертає ітератор. Обріж пробіли та пропусти порожні рядки. У непорожніх рядках ключ і заголовок розділено першою вертикальною рискою. Повертай кортеж очищених полів у порядку вводу. За відсутності роздільника чи порожнього поля піднімай ValueError під час читання цього рядка. Не читай пізніші рядки завчасно.\n\n**Синтетичні запити підтримки**",
+            "en": "Implement solve(lines) returning an iterator. Strip whitespace and skip blank lines. Each nonblank line has a key and title separated by the first vertical bar. Yield a tuple of the trimmed fields in input order. Raise ValueError on missing separator or empty field when that row is requested. Do not read later rows before they are requested.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Використай yield у циклі for.",
+              "en": "Yield inside a for loop."
+            },
+            {
+              "uk": "Оброби порожні рядки до поділу.",
+              "en": "Handle blank lines before splitting."
+            },
+            {
+              "uk": "partition('|') дає обидва поля й ознаку роздільника.",
+              "en": "partition('|') gives you both fields and proof of the separator."
+            }
+          ],
+          "solution": {
+            "uk": "Один цикл зупиняється на кожному прийнятому рядку й не завантажує потік заздалегідь.\n\n```python\nfrom collections.abc import Iterable, Iterator\n\ndef solve(lines: Iterable[str]) -> Iterator[tuple[str, str]]:\n    for line in lines:\n        if not line.strip():\n            continue\n        key, separator, title = line.partition(\"|\")\n        if not separator or not key.strip() or not title.strip():\n            raise ValueError(\"expected key|title\")\n        yield key.strip(), title.strip()\n```",
+            "en": "A single loop suspends at each accepted row and never preloads the stream.\n\n```python\nfrom collections.abc import Iterable, Iterator\n\ndef solve(lines: Iterable[str]) -> Iterator[tuple[str, str]]:\n    for line in lines:\n        if not line.strip():\n            continue\n        key, separator, title = line.partition(\"|\")\n        if not separator or not key.strip() or not title.strip():\n            raise ValueError(\"expected key|title\")\n        yield key.strip(), title.strip()\n```"
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(lines), яка повертає ітератор. Обріж пробіли та пропусти порожні рядки. У непорожніх рядках ключ і заголовок розділено першою вертикальною рискою. Повертай кортеж очищених полів у порядку вводу. За відсутності роздільника чи порожнього поля піднімай ValueError під час читання цього рядка. Не читай пізніші рядки завчасно.\n\n**Синтетичні документи політик**",
+            "en": "Implement solve(lines) returning an iterator. Strip whitespace and skip blank lines. Each nonblank line has a key and title separated by the first vertical bar. Yield a tuple of the trimmed fields in input order. Raise ValueError on missing separator or empty field when that row is requested. Do not read later rows before they are requested.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Використай yield у циклі for.",
+              "en": "Yield inside a for loop."
+            },
+            {
+              "uk": "Оброби порожні рядки до поділу.",
+              "en": "Handle blank lines before splitting."
+            },
+            {
+              "uk": "partition('|') дає обидва поля й ознаку роздільника.",
+              "en": "partition('|') gives you both fields and proof of the separator."
+            }
+          ],
+          "solution": {
+            "uk": "Один цикл зупиняється на кожному прийнятому рядку й не завантажує потік заздалегідь.\n\n```python\nfrom collections.abc import Iterable, Iterator\n\ndef solve(lines: Iterable[str]) -> Iterator[tuple[str, str]]:\n    for line in lines:\n        if not line.strip():\n            continue\n        key, separator, title = line.partition(\"|\")\n        if not separator or not key.strip() or not title.strip():\n            raise ValueError(\"expected key|title\")\n        yield key.strip(), title.strip()\n```",
+            "en": "A single loop suspends at each accepted row and never preloads the stream.\n\n```python\nfrom collections.abc import Iterable, Iterator\n\ndef solve(lines: Iterable[str]) -> Iterator[tuple[str, str]]:\n    for line in lines:\n        if not line.strip():\n            continue\n        key, separator, title = line.partition(\"|\")\n        if not separator or not key.strip() or not title.strip():\n            raise ValueError(\"expected key|title\")\n        yield key.strip(), title.strip()\n```"
+          }
+        }
+      ]
+    },
+    {
+      "id": "W02-L03-E2",
+      "title": {
+        "uk": "Довести закриття файлу при частковому читанні",
+        "en": "Prove a partial read closes its file"
+      },
+      "kind": "rubric",
+      "objectives": [
+        "O2"
+      ],
+      "estimateMinutes": 58,
+      "criteria": [
+        {
+          "id": "C1",
+          "title": {
+            "uk": "Показано життя потоку при частковому читанні й помилці.",
+            "en": "Show a stream lifetime across a partial read and a failure."
+          }
+        },
+        {
+          "id": "C2",
+          "title": {
+            "uk": "Розділено імпорт, CLI та перетворення даних.",
+            "en": "Separate import, CLI entry point and data transform."
+          }
+        },
+        {
+          "id": "C3",
+          "title": {
+            "uk": "Пояснено, що залишається неперевіреним після часткового читання.",
+            "en": "Explain what a partial read leaves unchecked."
+          }
+        }
+      ],
+      "example": {
+        "uk": "Після виходу з with маємо stream.closed == True навіть за винятку конвертації.",
+        "en": "After leaving with, stream.closed is True even if conversion of the next row raises."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Обгорни багаторазовий ітератор програмою з with. Зупинись після першого коректного запису з двох. Іншу фікстуру проведи через виняток парсингу. Запиши, чи закрито потік в обох гілках і як перевірено, що імпорт його не відкриває.\n\n**Синтетичні накладні**",
+            "en": "Write a with-scoped program around a reusable iterator. Stop after the first valid record of a two-record fixture. Then run another fixture through a parsing exception. Record whether the stream is closed in both paths and how you tested that an import does not open it.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Тримай ітератор у блоці власника потоку.",
+              "en": "Keep the iterator inside the stream owner's block."
+            },
+            {
+              "uk": "Перевір stream.closed після кожної гілки.",
+              "en": "Assert stream.closed after each exit."
+            },
+            {
+              "uk": "Модуль може оголосити main і викликати її лише під умовою імені.",
+              "en": "A module can declare main and call it only under the name guard."
+            }
+          ],
+          "solution": {
+            "uk": "У main відкрий файл у with, передай парсеру й прочитай перший елемент у цій області. Перехопи помилку парсера зовні й перевір закриття.",
+            "en": "Open the file in main within with, pass it to the parser, and consume the first item in that scope. Catch the parser exception outside the block and assert closure."
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Обгорни багаторазовий ітератор програмою з with. Зупинись після першого коректного запису з двох. Іншу фікстуру проведи через виняток парсингу. Запиши, чи закрито потік в обох гілках і як перевірено, що імпорт його не відкриває.\n\n**Синтетичні запити підтримки**",
+            "en": "Write a with-scoped program around a reusable iterator. Stop after the first valid record of a two-record fixture. Then run another fixture through a parsing exception. Record whether the stream is closed in both paths and how you tested that an import does not open it.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Тримай ітератор у блоці власника потоку.",
+              "en": "Keep the iterator inside the stream owner's block."
+            },
+            {
+              "uk": "Перевір stream.closed після кожної гілки.",
+              "en": "Assert stream.closed after each exit."
+            },
+            {
+              "uk": "Модуль може оголосити main і викликати її лише під умовою імені.",
+              "en": "A module can declare main and call it only under the name guard."
+            }
+          ],
+          "solution": {
+            "uk": "У main відкрий файл у with, передай парсеру й прочитай перший елемент у цій області. Перехопи помилку парсера зовні й перевір закриття.",
+            "en": "Open the file in main within with, pass it to the parser, and consume the first item in that scope. Catch the parser exception outside the block and assert closure."
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Обгорни багаторазовий ітератор програмою з with. Зупинись після першого коректного запису з двох. Іншу фікстуру проведи через виняток парсингу. Запиши, чи закрито потік в обох гілках і як перевірено, що імпорт його не відкриває.\n\n**Синтетичні документи політик**",
+            "en": "Write a with-scoped program around a reusable iterator. Stop after the first valid record of a two-record fixture. Then run another fixture through a parsing exception. Record whether the stream is closed in both paths and how you tested that an import does not open it.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Тримай ітератор у блоці власника потоку.",
+              "en": "Keep the iterator inside the stream owner's block."
+            },
+            {
+              "uk": "Перевір stream.closed після кожної гілки.",
+              "en": "Assert stream.closed after each exit."
+            },
+            {
+              "uk": "Модуль може оголосити main і викликати її лише під умовою імені.",
+              "en": "A module can declare main and call it only under the name guard."
+            }
+          ],
+          "solution": {
+            "uk": "У main відкрий файл у with, передай парсеру й прочитай перший елемент у цій області. Перехопи помилку парсера зовні й перевір закриття.",
+            "en": "Open the file in main within with, pass it to the parser, and consume the first item in that scope. Catch the parser exception outside the block and assert closure."
+          }
+        }
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "id": "Q1",
+      "prompt": {
+        "uk": "Коли починає виконуватися тіло функції-генератора?",
+        "en": "Where does a generator function begin executing its body?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Відразу при імпорті.",
+            "en": "Immediately at import."
+          },
+          "explanation": {
+            "uk": "Імпорт оголошує функцію.",
+            "en": "An import defines the function."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Після повернення iter(generator).",
+            "en": "At the return of iter(generator)."
+          },
+          "explanation": {
+            "uk": "iter повертає той самий об’єкт без просування.",
+            "en": "iter returns the same object without advancing it."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Коли генератор уперше просувають.",
+            "en": "When the generator is first advanced."
+          },
+          "explanation": {
+            "uk": "Перший виклик лише створює об’єкт генератора.",
+            "en": "Calling the function first constructs the generator object."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q2",
+      "prompt": {
+        "uk": "Що стається з файлом, якщо with-блок піднімає виняток?",
+        "en": "What happens to a file when a with block raises?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Його метод виходу закриває файл.",
+            "en": "Its exit method closes it."
+          },
+          "explanation": {
+            "uk": "Контекстний менеджер файлу закриває його за винятку й успішного виходу.",
+            "en": "A file context manager closes on exception and normal exit."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Він лишається відкритим до явного закриття в catch.",
+            "en": "It stays open until the catch block explicitly closes it."
+          },
+          "explanation": {
+            "uk": "Прибирання виконує контекстний менеджер.",
+            "en": "Cleanup is the context manager's responsibility."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Python замінює помилку на StopIteration.",
+            "en": "Python converts the error to StopIteration."
+          },
+          "explanation": {
+            "uk": "Менеджер файлу не підміняє помилку вичерпанням ітератора.",
+            "en": "The file manager does not turn exceptions into iterator exhaustion."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q3",
+      "prompt": {
+        "uk": "Що можна стверджувати після next для першого валідного рядка?",
+        "en": "What can be inferred after next returns the first valid row?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Потік обов’язково закритий.",
+            "en": "The input stream must already be closed."
+          },
+          "explanation": {
+            "uk": "Закриттям керує зовнішній власник.",
+            "en": "The outer owner controls closure."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Рядки після yield ще можуть бути непрочитані.",
+            "en": "Rows beyond the yield may still be unread."
+          },
+          "explanation": {
+            "uk": "Генератор призупинено на цьому місці.",
+            "en": "The generator is suspended there."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Усі наступні рядки валідні.",
+            "en": "All later rows passed validation."
+          },
+          "explanation": {
+            "uk": "Генератор ці рядки ще не спожив.",
+            "en": "The generator has not consumed those rows."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q4",
+      "prompt": {
+        "uk": "Де розмістити парсер, щоб безпечно імпортувати його в unit-тесті?",
+        "en": "Which placement makes a parser safe to import in a unit test?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Прочитай типову фікстуру в тілі модуля.",
+            "en": "Read the default fixture in the module body."
+          },
+          "explanation": {
+            "uk": "Імпорт спричинить читання.",
+            "en": "Importing would trigger that read."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Розбери CLI-аргументи у виразі типового параметра.",
+            "en": "Parse CLI arguments in a default parameter expression."
+          },
+          "explanation": {
+            "uk": "Вирази типових параметрів виконуються при оголошенні функцій.",
+            "en": "Default expressions run when functions are defined."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Оголоси функції при імпорті, а ввід-вивід помісти до точки входу.",
+            "en": "Declare functions at import time and put IO inside the entry point."
+          },
+          "explanation": {
+            "uk": "Ввід-вивід запускає явний виклик.",
+            "en": "Only a deliberate call triggers IO."
+          }
+        }
+      ]
+    }
+  ],
+  "crosslinks": [
+    "W02-L02",
+    "W02-L04"
+  ]
+}

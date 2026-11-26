@@ -1,0 +1,510 @@
+{
+  "id": "W05-L01",
+  "contentVersion": 1,
+  "overview": {
+    "uk": "Успішний вхід установлює актора. Доступ до документа далі залежить від авторизації. Змоделюй межу автентифікації для Project A, виріши, чи делегувати ідентичність провайдеру, й відділи облікові дані від актора домену. Детермінована вправа використовує під’єднаний verifier і синтетичних акторів. Вона тренує керування потоком без реалізації сховища паролів. У вправі на дизайн поясниш відповідальність сервісу й довіреного провайдера або бібліотеки хешування.",
+    "en": "A successful login identifies an actor. Access to a document still depends on authorization. Model the authentication boundary for Project A, decide whether to delegate identity to a provider, and separate credentials from the domain actor used by services. The deterministic exercise uses an injected credential verifier and fake actors. It practices the control flow without implementing a password store. You will use a small design exercise to explain which responsibility belongs to your service and which belongs to a trusted provider or password-hashing library."
+  },
+  "theory": {
+    "uk": "### Установлення актора\n\nАвтентифікація визначає, який принципал подав валідний доказ. Авторизація перевіряє можливість дії з ресурсом у поточному контексті. Не використовуй оголошеного власника чи роль із тіла як доказ. Verifier отримує актора з перевіреної сесії чи токена. Сервіс далі застосовує політику до ресурсу. Відсутні або невалідні облікові дані зазвичай дають 401 з відповідною вимогою автентифікації. Перевірений актор без прав — окремий випадок.\n\n### Перевірка через усталені компоненти\n\nЯкщо зберігаєш паролі, використай підтримувану реалізацію хешування із сіллю та навмисною обчислювальною вартістю. Argon2id часто рекомендують за доступності. Налаштуй вартість під бюджет сервісу й зберігай формат і параметри для оновлення. Швидкий некерований хеш пароля дешево підбирати офлайн. Унікальна сіль заважає використати одну передобчислену таблицю для багатьох хешів. З провайдером ідентичності перевіряй токени бібліотекою та перевір issuer, audience, expiry і підпис за обраним протоколом. Відділяй секрети конфігурації від коду й тестів.\n\n### Гілки відмови\n\nПростеж credential → verifier → actor → policy → data. Збій verifier зупиняє запит до політики чи мутації БД. Поверни однакову відмову без розкриття існування акаунта. Записуй сталі коди подій і кількість без паролів, bearer token чи сирих помилок провайдера. Надай відновлення через систему ідентичності. У тестах використовуй синтетичні дані, які приймає тільки підставлена фікстура. Production-дані не мають потрапляти у фікстури.\n\n### Простеж життєвий цикл credentials\n\nІнтеграція ідентичності починається з реєстрації, далі видає credential для сервісу. Verifier окремо перевіряє доказ, стан актора й членство. Уяви валідний токен актора, виключеного з організації. Залежно від архітектури підпис може залишатися математично валідним до expiry, а доступ має задавати довірений стан членства. Визнач допустиму затримку відкликання. Короткі докази, серверні сесії й синхронізація стану відповідають різним умовам поставки.\n\nПорівняй межі тестів. Unit-тест із синтетичним verifier показує зупинку хибного credential до пошуку ресурсу. Інтеграція провайдера перевіряє реальні claims з контрольованими акторами. Перегляд поставки перевіряє приватну конфігурацію й можливість ротації. Тестові паролі не мають бути у вихідному коді. У локальному проєкті задокументуй підтриманий шлях і заміни фікстури. Так захист перевіряти легше, ніж список криптографічних термінів без спостереженої поведінки.",
+    "en": "### Establish an actor\n\nAuthentication answers which principal is presenting valid proof. Authorization checks whether that principal may perform an action on a resource in the current context. Never accept a claimed owner or role from a request body as proof. A credential verifier derives an actor from a verified session or token. The service can then apply policy to a resource. An absent or invalid credential generally yields 401, with the appropriate authentication challenge where applicable. A verified actor with insufficient privileges is a different case.\n\n### Verify credentials through established components\n\nIf you maintain passwords, use a maintained implementation of a salted, deliberately costly password hash. Argon2id is commonly recommended when available. Tune cost to the service budget and keep format and parameters for upgrade. A fast unkeyed hash of a password is cheap to guess offline. A unique salt prevents one precomputed table from serving many stored hashes. If using an identity provider, validate tokens using a maintained library and check issuer, audience, expiry and signature as required by the chosen protocol. Separate configuration secrets from source and tests.\n\n### Review failure paths\n\nTrace credential → verifier → actor → policy → data. A failed verifier stops before the policy or database mutation. Return a generic rejection that does not reveal whether an account exists. Record stable event codes and counts without passwords, bearer tokens or raw provider errors. Provide a recovery path through the identity system. In tests use synthetic credentials accepted only by an injected fixture. Production credentials must never be placed in a fixture.\n\n### Reason through the lifetime of a credential\n\nAn identity integration begins with enrollment, then issues a credential the actor presents to your service. The verifier treats proof validity as a separate check from actor status and tenant membership. Consider a valid token for an actor whose organization membership has been removed. Depending on your architecture, the token may remain mathematically valid until expiry, but trusted membership state should control whether the request has access. Decide the acceptable delay for revocation. Short-lived proofs, server-side session checks and synchronized user status address different deployment constraints.\n\nCompare the test boundaries. A unit test with a synthetic verifier can show that an invalid credential never reaches a resource lookup. A provider-integration test would verify actual claims checks with controlled test identities. A deployment review verifies credentials are configured privately and that rotation is operationally possible. Store no shared testing passwords in source. In a local project, document the supported identity path and what a fixture replaces. That distinction makes a secure design easier to review than a list of cryptographic terms without demonstrable behavior."
+  },
+  "recap": {
+    "uk": "Установи перевіреного актора на межі, далі окремо авторизуй кожну запитану дію.",
+    "en": "Derive a verified actor at the boundary, then authorize each requested action independently."
+  },
+  "objectives": [
+    {
+      "id": "O1",
+      "title": {
+        "uk": "Пояснювати автентифікацію та авторизацію як різні рішення.",
+        "en": "Explain authentication and authorization as separate decisions."
+      },
+      "skill": "systems"
+    },
+    {
+      "id": "O2",
+      "title": {
+        "uk": "Обирати межу перевірки пароля або провайдера ідентичності.",
+        "en": "Choose a password verification or identity-provider boundary."
+      },
+      "skill": "tooling"
+    }
+  ],
+  "sources": [
+    {
+      "title": {
+        "uk": "NIST SP 800-63B-4",
+        "en": "NIST SP 800-63B-4"
+      },
+      "url": "https://pages.nist.gov/800-63-4/sp800-63b.html",
+      "version": "SP 800-63B-4",
+      "checked": "2026-11-26"
+    },
+    {
+      "title": {
+        "uk": "OWASP Password Storage",
+        "en": "OWASP Password Storage"
+      },
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html",
+      "version": "OWASP",
+      "checked": "2026-11-26"
+    }
+  ],
+  "examples": [
+    {
+      "file": "w05_l01_example.py",
+      "expected": "[401, 403, 200]",
+      "explanation": {
+        "uk": "Ця офлайн-траса показує три результати на синтетичних акторах.",
+        "en": "This offline trace shows three boundary outcomes using synthetic actors."
+      },
+      "error": {
+        "uk": "Неавтентифікований актор отримує 401 і не проходить гілку власника.",
+        "en": "An unauthenticated actor gets 401 and never reaches the ownership success case."
+      }
+    }
+  ],
+  "interview": [
+    "What changes after authentication succeeds?",
+    "What responsibilities remain when an external identity provider issues your tokens?"
+  ],
+  "interviewGuide": {
+    "uk": "Розділи перевірку облікових даних і перевірку дії з ресурсом.",
+    "en": "Separate the credential check from the resource and action checks."
+  },
+  "exercises": [
+    {
+      "id": "W05-L01-E1",
+      "title": {
+        "uk": "Відділити перевірену ідентичність від права",
+        "en": "Separate verified identity from permission"
+      },
+      "kind": "code",
+      "objectives": [
+        "O1"
+      ],
+      "estimateMinutes": 75,
+      "criteria": [],
+      "example": {
+        "uk": "verify('example') → 'actor-1' і allow('actor-1') → False дають 403.",
+        "en": "verify('example') → 'actor-1' and allow('actor-1') → False gives 403."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(credential, verify, allow). Відсутні або пробільні дані дають 401 без verify. Інакше один раз verify(credential), де None — невалідні дані, а рядок — ID актора. Невалідні дають 401 без allow. Для валідного актора виклич allow(actor_id) один раз. Поверни 200 для True, інакше 403. Неочікувані винятки передавай. Тестові функції синтетичні.\n\n**Синтетичні накладні**",
+            "en": "Implement solve(credential, verify, allow). Missing or whitespace-only credential gives 401 without calling verify. Otherwise call verify(credential) once, where None means invalid and a string is an actor ID. Invalid gives 401 without calling allow. Call allow(actor_id) once for valid actors. Return 200 if True, otherwise 403. Unexpected exceptions propagate. The functions in tests are synthetic.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Облікові дані не є ID актора.",
+              "en": "A credential is not the actor ID."
+            },
+            {
+              "uk": "Оброби відсутні й відхилені дані до політики.",
+              "en": "Handle missing and rejected credentials before asking policy."
+            },
+            {
+              "uk": "Передай до allow результат verify.",
+              "en": "Pass the output of verify to allow."
+            }
+          ],
+          "solution": {
+            "uk": "Одразу завершуй гілки відсутніх і невалідних даних. Передавай у політику лише перевірену ідентичність від довіреного verifier.\n\n```python\nfrom collections.abc import Callable\n\ndef solve(credential: str | None, verify: Callable[[str], str | None], allow: Callable[[str], bool]) -> int:\n    if credential is None or not credential.strip():\n        return 401\n    actor = verify(credential)\n    if actor is None:\n        return 401\n    return 200 if allow(actor) else 403\n```",
+            "en": "Short-circuit missing and invalid credentials. Give authorization only the verified identity from the trusted verifier.\n\n```python\nfrom collections.abc import Callable\n\ndef solve(credential: str | None, verify: Callable[[str], str | None], allow: Callable[[str], bool]) -> int:\n    if credential is None or not credential.strip():\n        return 401\n    actor = verify(credential)\n    if actor is None:\n        return 401\n    return 200 if allow(actor) else 403\n```"
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(credential, verify, allow). Відсутні або пробільні дані дають 401 без verify. Інакше один раз verify(credential), де None — невалідні дані, а рядок — ID актора. Невалідні дають 401 без allow. Для валідного актора виклич allow(actor_id) один раз. Поверни 200 для True, інакше 403. Неочікувані винятки передавай. Тестові функції синтетичні.\n\n**Синтетичні запити підтримки**",
+            "en": "Implement solve(credential, verify, allow). Missing or whitespace-only credential gives 401 without calling verify. Otherwise call verify(credential) once, where None means invalid and a string is an actor ID. Invalid gives 401 without calling allow. Call allow(actor_id) once for valid actors. Return 200 if True, otherwise 403. Unexpected exceptions propagate. The functions in tests are synthetic.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Облікові дані не є ID актора.",
+              "en": "A credential is not the actor ID."
+            },
+            {
+              "uk": "Оброби відсутні й відхилені дані до політики.",
+              "en": "Handle missing and rejected credentials before asking policy."
+            },
+            {
+              "uk": "Передай до allow результат verify.",
+              "en": "Pass the output of verify to allow."
+            }
+          ],
+          "solution": {
+            "uk": "Одразу завершуй гілки відсутніх і невалідних даних. Передавай у політику лише перевірену ідентичність від довіреного verifier.\n\n```python\nfrom collections.abc import Callable\n\ndef solve(credential: str | None, verify: Callable[[str], str | None], allow: Callable[[str], bool]) -> int:\n    if credential is None or not credential.strip():\n        return 401\n    actor = verify(credential)\n    if actor is None:\n        return 401\n    return 200 if allow(actor) else 403\n```",
+            "en": "Short-circuit missing and invalid credentials. Give authorization only the verified identity from the trusted verifier.\n\n```python\nfrom collections.abc import Callable\n\ndef solve(credential: str | None, verify: Callable[[str], str | None], allow: Callable[[str], bool]) -> int:\n    if credential is None or not credential.strip():\n        return 401\n    actor = verify(credential)\n    if actor is None:\n        return 401\n    return 200 if allow(actor) else 403\n```"
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(credential, verify, allow). Відсутні або пробільні дані дають 401 без verify. Інакше один раз verify(credential), де None — невалідні дані, а рядок — ID актора. Невалідні дають 401 без allow. Для валідного актора виклич allow(actor_id) один раз. Поверни 200 для True, інакше 403. Неочікувані винятки передавай. Тестові функції синтетичні.\n\n**Синтетичні документи політик**",
+            "en": "Implement solve(credential, verify, allow). Missing or whitespace-only credential gives 401 without calling verify. Otherwise call verify(credential) once, where None means invalid and a string is an actor ID. Invalid gives 401 without calling allow. Call allow(actor_id) once for valid actors. Return 200 if True, otherwise 403. Unexpected exceptions propagate. The functions in tests are synthetic.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Облікові дані не є ID актора.",
+              "en": "A credential is not the actor ID."
+            },
+            {
+              "uk": "Оброби відсутні й відхилені дані до політики.",
+              "en": "Handle missing and rejected credentials before asking policy."
+            },
+            {
+              "uk": "Передай до allow результат verify.",
+              "en": "Pass the output of verify to allow."
+            }
+          ],
+          "solution": {
+            "uk": "Одразу завершуй гілки відсутніх і невалідних даних. Передавай у політику лише перевірену ідентичність від довіреного verifier.\n\n```python\nfrom collections.abc import Callable\n\ndef solve(credential: str | None, verify: Callable[[str], str | None], allow: Callable[[str], bool]) -> int:\n    if credential is None or not credential.strip():\n        return 401\n    actor = verify(credential)\n    if actor is None:\n        return 401\n    return 200 if allow(actor) else 403\n```",
+            "en": "Short-circuit missing and invalid credentials. Give authorization only the verified identity from the trusted verifier.\n\n```python\nfrom collections.abc import Callable\n\ndef solve(credential: str | None, verify: Callable[[str], str | None], allow: Callable[[str], bool]) -> int:\n    if credential is None or not credential.strip():\n        return 401\n    actor = verify(credential)\n    if actor is None:\n        return 401\n    return 200 if allow(actor) else 403\n```"
+          }
+        }
+      ]
+    },
+    {
+      "id": "W05-L01-E2",
+      "title": {
+        "uk": "Задокументувати ідентичність Project A",
+        "en": "Document Project A identity"
+      },
+      "kind": "rubric",
+      "objectives": [
+        "O2"
+      ],
+      "estimateMinutes": 70,
+      "criteria": [
+        {
+          "id": "C1",
+          "title": {
+            "uk": "Пояснено обидва рішення та їхніх власників.",
+            "en": "Explain both decisions and which component owns each."
+          }
+        },
+        {
+          "id": "C2",
+          "title": {
+            "uk": "Описано валідний і відхилені синтетичні виклики.",
+            "en": "Describe valid and rejected synthetic calls."
+          }
+        },
+        {
+          "id": "C3",
+          "title": {
+            "uk": "Визначено політику секретів та відновлення.",
+            "en": "Name the secret and recovery policy."
+          }
+        }
+      ],
+      "example": {
+        "uk": "Перевірена сесія дає ID актора. Політика документа все одно перевіряє актора й tenant. Тіло помилки має лише стабільний код.",
+        "en": "The verified session yields an actor ID. The document policy still checks actor and tenant. The error body has a stable code only."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Обери делеговану ідентичність або локальну перевірку пароля підтримуваною бібліотекою в Project A. Покажи на схемі місце автентифікації й авторизації. Використай синтетичних акторів і запиши дві відмови без даних credentials. Порівняй підходи за секретами й відновленням акаунта.\n\n**Синтетичні накладні**",
+            "en": "Choose delegated identity or a local password verifier using a maintained library for Project A. Diagram where identity is established and where authorization occurs. Use synthetic identities and record two rejection cases with no credential fields. Compare your choice with the alternative in terms of secret handling and account recovery.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Визнач межу довіри ідентичності.",
+              "en": "Identify the identity trust boundary."
+            },
+            {
+              "uk": "Відділи відсутні credentials від нестачі прав.",
+              "en": "Separate missing credential from insufficient access."
+            },
+            {
+              "uk": "Розділяй тестові й сервісні credentials.",
+              "en": "Keep test and service credentials separate."
+            }
+          ],
+          "solution": {
+            "uk": "Використай один перевірений адаптер ідентичності й політику за ресурсом. Повідомляй помилки стабільними публічними кодами. Запиши, чому рішення підходить локальній роботі проєкту.",
+            "en": "Use one verified identity adapter and a resource-based policy. Report errors with stable public codes. Record why the identity choice fits the project's local operation."
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Обери делеговану ідентичність або локальну перевірку пароля підтримуваною бібліотекою в Project A. Покажи на схемі місце автентифікації й авторизації. Використай синтетичних акторів і запиши дві відмови без даних credentials. Порівняй підходи за секретами й відновленням акаунта.\n\n**Синтетичні запити підтримки**",
+            "en": "Choose delegated identity or a local password verifier using a maintained library for Project A. Diagram where identity is established and where authorization occurs. Use synthetic identities and record two rejection cases with no credential fields. Compare your choice with the alternative in terms of secret handling and account recovery.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Визнач межу довіри ідентичності.",
+              "en": "Identify the identity trust boundary."
+            },
+            {
+              "uk": "Відділи відсутні credentials від нестачі прав.",
+              "en": "Separate missing credential from insufficient access."
+            },
+            {
+              "uk": "Розділяй тестові й сервісні credentials.",
+              "en": "Keep test and service credentials separate."
+            }
+          ],
+          "solution": {
+            "uk": "Використай один перевірений адаптер ідентичності й політику за ресурсом. Повідомляй помилки стабільними публічними кодами. Запиши, чому рішення підходить локальній роботі проєкту.",
+            "en": "Use one verified identity adapter and a resource-based policy. Report errors with stable public codes. Record why the identity choice fits the project's local operation."
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Обери делеговану ідентичність або локальну перевірку пароля підтримуваною бібліотекою в Project A. Покажи на схемі місце автентифікації й авторизації. Використай синтетичних акторів і запиши дві відмови без даних credentials. Порівняй підходи за секретами й відновленням акаунта.\n\n**Синтетичні документи політик**",
+            "en": "Choose delegated identity or a local password verifier using a maintained library for Project A. Diagram where identity is established and where authorization occurs. Use synthetic identities and record two rejection cases with no credential fields. Compare your choice with the alternative in terms of secret handling and account recovery.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Визнач межу довіри ідентичності.",
+              "en": "Identify the identity trust boundary."
+            },
+            {
+              "uk": "Відділи відсутні credentials від нестачі прав.",
+              "en": "Separate missing credential from insufficient access."
+            },
+            {
+              "uk": "Розділяй тестові й сервісні credentials.",
+              "en": "Keep test and service credentials separate."
+            }
+          ],
+          "solution": {
+            "uk": "Використай один перевірений адаптер ідентичності й політику за ресурсом. Повідомляй помилки стабільними публічними кодами. Запиши, чому рішення підходить локальній роботі проєкту.",
+            "en": "Use one verified identity adapter and a resource-based policy. Report errors with stable public codes. Record why the identity choice fits the project's local operation."
+          }
+        }
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "id": "Q1",
+      "prompt": {
+        "uk": "Що сервіс знає після валідного входу?",
+        "en": "What can a service infer from a valid login?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Будь-яка роль у запиті довірена.",
+            "en": "Any role in the request is trusted."
+          },
+          "explanation": {
+            "uk": "Ролі мають бути з довіреного стану.",
+            "en": "Roles must come from trusted state."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Можна визначити перевіреного актора.",
+            "en": "A verified actor can be identified."
+          },
+          "explanation": {
+            "uk": "Доступ до ресурсу ще потребує політики.",
+            "en": "Resource access still needs policy."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Актор володіє всіма документами.",
+            "en": "The actor owns every document."
+          },
+          "explanation": {
+            "uk": "Вхід доводить ідентичність без володіння.",
+            "en": "Login proves identity, not ownership."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q2",
+      "prompt": {
+        "uk": "Чому корисний дорогий хеш пароля із сіллю?",
+        "en": "Why is a salted costly password hash useful?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Робить логування паролів безпечним.",
+            "en": "It makes logging passwords safe."
+          },
+          "explanation": {
+            "uk": "Сирі credentials не можна логувати.",
+            "en": "Never log plaintext credentials."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Доводить права на файли.",
+            "en": "It proves permissions on files."
+          },
+          "explanation": {
+            "uk": "Перевірка хешу не перевіряє політику файлів.",
+            "en": "Hash verification does not check file policy."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Підвищує вартість підбору й відділяє однакові паролі.",
+            "en": "It raises offline guessing cost and separates identical plaintext records."
+          },
+          "explanation": {
+            "uk": "Сіль і вартість відповідають різним частинам загрози.",
+            "en": "Salt and cost handle different parts of the threat."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q3",
+      "prompt": {
+        "uk": "Які властивості важливі для токена провайдера?",
+        "en": "Which properties matter for a provider token?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Підпис, очікуваний issuer, audience й expiry.",
+            "en": "Signature, expected issuer, audience and expiry."
+          },
+          "explanation": {
+            "uk": "Сервіс приймає лише поточні докази своєї області.",
+            "en": "The service must accept only proofs scoped to itself and currently valid."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Лише читабельні JSON claims.",
+            "en": "Only readable JSON claims."
+          },
+          "explanation": {
+            "uk": "Декодування не дає доказу.",
+            "en": "Decoding supplies no proof."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Лише довжина токена.",
+            "en": "Only token length."
+          },
+          "explanation": {
+            "uk": "Довжина не підтверджує походження.",
+            "en": "Length does not establish origin."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q4",
+      "prompt": {
+        "uk": "Як хибні credentials впливають на виконання політики ресурсу?",
+        "en": "How should a bad credential affect resource policy execution?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Вважати адміністративним для відновлення.",
+            "en": "Treat the request as an administrator for recovery."
+          },
+          "explanation": {
+            "uk": "Відновлення потребує своєї перевіреної процедури.",
+            "en": "Recovery should go through its own verified flow."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Відхилити до авторизації ресурсу.",
+            "en": "Reject before invoking resource authorization."
+          },
+          "explanation": {
+            "uk": "Для політики немає довіреного актора.",
+            "en": "No trusted actor exists for the policy."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Застосувати роль із запиту.",
+            "en": "Apply the user's requested role."
+          },
+          "explanation": {
+            "uk": "Роль із запиту недовірена.",
+            "en": "That role is untrusted."
+          }
+        }
+      ]
+    }
+  ],
+  "crosslinks": [
+    "W04-L04",
+    "W05-L02"
+  ]
+}

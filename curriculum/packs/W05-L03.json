@@ -1,0 +1,501 @@
+{
+  "id": "W05-L03",
+  "contentVersion": 1,
+  "overview": {
+    "uk": "Завантаження одночасно перетинає межі довіри, сховища й ресурсів. Побудуй вузький allowlist для синтетичних даних і обмеж читання до парсингу. Порівняй заявлені імена й типи з тілом, використай незалежні ID сховища й обери безпечну діагностику. Локальна вправа приймає малий JSON і перевіряє обмежене читання, зокрема потік із меншими блоками за запитані. Далі застосуй обмеження в upload Project A із перевіркою HTTP-відповідей і сховища.",
+    "en": "An upload crosses trust, storage and resource boundaries at the same time. Build a narrow allowlist for synthetic data and limit how much you read before parsing. You will compare submitted names and media types with the actual body, use independent storage identifiers, and decide what to record in a safe diagnostic. The local exercise accepts a tiny JSON upload and verifies bounded reading, including a stream that supplies smaller chunks than requested. Then you will apply the constraints to Project A's upload route with actual response and storage assertions."
+  },
+  "theory": {
+    "uk": "### Назви, байти й парсинг\n\nНазва завантаження й заявлений media type — клієнтський ввід. Вони допомагають повідомленню, але не доводять відповідність вмісту. Перевір дозволені типи й парсер, придатний для кожного формату. Сигнатура допомагає попередній перевірці, проте сама не гарантує безпечність вмісту. Використовуй згенеровані ключі сховища без зв’язку зі шляхами користувача й тримай дані поза публічним шляхом. Відділяй відображувану назву від ідентичності сховища.\n\n### Обмеження до роботи\n\nЗаявлений розмір може бути відсутнім або непослідовним. Забезпеч серверний ліміт body й інкрементні межі читання. Рахуй байти до декодування. Для ліміту 8 читання максимум 9 розрізняє точну межу й перевищення. Потік може дати менше байтів за запит без кінця. Продовжуй при непорожніх блоках, обмежуючи кожне читання залишком. Одночасність і квоти актора — окремий захист.\n\n### Мінімізація збережених і виданих даних\n\nProject A використовує синтетичні документи. Зберігай лише поля для обробки й статусу, опиши строк збереження та прибери сирі назви і вміст зі звичайних логів. Для credentials використовуй env або кероване сховище. Після валідації сховище все ще може відмовити. Очищуй тимчасові файли й фіксуй збереження після успіху. У threat model перевір недовірений ввід, приватні активи й відмови без показу реальних записів.\n\n### Простеж обмежене завантаження\n\nНехай сервіс приймає синтетичний об’єкт до 1 024 байтів. Перше читання дає 400, друге 624. Ще один байт розрізняє точну межу й перевищення. Лише після чистого кінця декодуй і валідуй об’єкт. Далі сервіс генерує ключ сховища й фіксує метадані. Завелике тіло зупиняй рано зі сталим кодом розміру. Перевір відсутність нового рядка й об’єкта. Один і той самий валідний вміст із різними розмірами блоків має отримати однаковий результат.\n\nBlob-сховище й PostgreSQL часто фіксуються незалежно. Обери порядок і відновлення. Один дизайн пише тимчасовий об’єкт, перевіряє його й фіксує метадані після успішного стійкого запису. За збою транзакції прибери осиротілий об’єкт і запиши очищений результат. Інший дизайн фіксує staged-метадані й показує їх після готовності blob. Визнач стан у кожній точці падіння та перевір відновлення. Вправа зосереджується на прийнятті до сховища. Проєкт додає підтвердження збереження й очищення у справжніх адаптерах.",
+    "en": "### Labels, bytes and parsing\n\nThe uploaded name and advertised media type are client input. They can assist a useful error but cannot prove the content fits your policy. Validate allowed types and verify content with a parser that is appropriate for each format. File signatures can support screening, though a signature alone is not proof that the full contents are safe. Use generated storage keys unrelated to user paths and store data outside public paths. Separate original display labels from storage identity.\n\n### Bound work before doing it\n\nA declared size may be absent or inconsistent. Enforce a server request-body cap and enforce incremental limits when reading the file. Count bytes before decoding. For a limit of eight bytes, reading at most nine distinguishes exact length from oversized input. A stream can return fewer bytes than the requested number without reaching end. Continue while nonempty chunks arrive, but cap each read by remaining allowance. Apply concurrency and per-actor quotas as separate protections.\n\n### Minimize stored and exported data\n\nProject A uses synthetic documents. Store only the fields needed to process and show status, document retention, and redact raw filenames and contents from ordinary logs. Use environment or a managed secret store for credentials. A successful validation can still be followed by a storage failure. Make temporary files cleanup-safe and record persistence only after it completes. Use a threat model to review attacker-controlled inputs, private assets and denied outcomes without exposing actual personal records.\n\n### Work through a bounded upload\n\nAssume the service accepts a 1,024-byte synthetic object. The first read gives 400 bytes and the second gives 624. A read of one more byte distinguishes exact-length success from overflow. Only after reaching a clean end of input do you decode and validate the object. The service can then generate a storage key and commit its metadata. If the body is oversized, stop early and record a stable size failure. Test that no new database row or persistent blob exists. Test the same valid object using different chunk sizes, since chunking must not change acceptance.\n\nBlob storage and PostgreSQL often commit independently. Choose an order and failure strategy. One design writes a temporary object, validates it and records its metadata only after the durable write succeeds. If the database transaction fails, remove the orphan and record a redacted cleanup outcome. Another design records staged metadata and exposes it only after the blob is ready. Identify the state at each crash point and test reopening the workflow. The lab focuses on acceptance before storage. The project exercise adds checks for persistence and cleanup in the actual adapters."
+  },
+  "recap": {
+    "uk": "Приймай вузький набір форматів, вимірюй справжні байти, розділяй імена й сховище, мінімізуй діагностику.",
+    "en": "Accept a narrow set of formats, measure actual bytes, separate naming and storage, and keep diagnostics minimal."
+  },
+  "objectives": [
+    {
+      "id": "O1",
+      "title": {
+        "uk": "Перевіряти дозволене завантаження в межах бюджету байтів.",
+        "en": "Validate an allowlisted upload within a byte budget."
+      },
+      "skill": "systems"
+    },
+    {
+      "id": "O2",
+      "title": {
+        "uk": "Зменшувати експозицію сховища, логів і даних.",
+        "en": "Reduce storage, logging and privacy exposure."
+      },
+      "skill": "tooling"
+    }
+  ],
+  "sources": [
+    {
+      "title": {
+        "uk": "OWASP File Upload",
+        "en": "OWASP File Upload"
+      },
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html",
+      "version": "OWASP",
+      "checked": "2026-11-26"
+    }
+  ],
+  "examples": [
+    {
+      "file": "w05_l03_example.py",
+      "expected": "accepted\ntoo large",
+      "explanation": {
+        "uk": "Обмежене читання розрізняє точний ліміт і перевищення в буферній фікстурі.",
+        "en": "A bounded read distinguishes an exact limit from excess in a buffered in-memory fixture."
+      },
+      "error": {
+        "uk": "Адаптери сирих потоків можуть давати короткі читання. Вправа обробляє їх обмеженим циклом.",
+        "en": "Raw stream adapters can yield short reads. The lab handles them through repeated bounded reads."
+      }
+    }
+  ],
+  "interview": [
+    "How do you enforce an upload budget without trusting Content-Length?",
+    "What is the difference between a display name and a storage key?"
+  ],
+  "interviewGuide": {
+    "uk": "Покажи випадок точного ліміту й одного зайвого байта.",
+    "en": "Show an exact-limit and one-byte-over case."
+  },
+  "exercises": [
+    {
+      "id": "W05-L03-E1",
+      "title": {
+        "uk": "Прочитати й перевірити обмежений JSON upload",
+        "en": "Read and validate a bounded JSON upload"
+      },
+      "kind": "code",
+      "objectives": [
+        "O1"
+      ],
+      "estimateMinutes": 75,
+      "criteria": [],
+      "example": {
+        "uk": "Валідний об’єкт рівно limit байтів приймається, ті самі байти плюс один дають ValueError.",
+        "en": "A valid object at exactly limit bytes is accepted, the same bytes plus one yields ValueError."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(stream, media_type, limit). Приймай точний application/json і цілий limit >= 1 без bool. stream.read(n) може дати короткі непорожні байти. Прочитай максимум limit + 1 байт; перевищення дає ValueError. Декодуй JSON у строгому UTF-8. Вимагай об’єкт рівно з одним полем title, непорожнім рядком. Поверни обрізаний title. Інші помилки вводу дають ValueError. Відхиляй неприйнятний тип чи limit до читання.\n\n**Синтетичні накладні**",
+            "en": "Implement solve(stream, media_type, limit). Accept only the exact media type application/json and an integer limit >= 1, excluding bool. stream.read(n) may return short nonempty bytes. Read at most limit + 1 bytes in total; oversize raises ValueError. Decode strict UTF-8 JSON. Require a top-level object with exactly one field title, a nonblank string. Return the trimmed title. Other input failures raise ValueError. Reject an unsolicited media type or invalid limit before reading.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Спочатку перевір бюджет і дозволений тип.",
+              "en": "Check the budget and allowed type first."
+            },
+            {
+              "uk": "Використай bytearray і передавай залишок при кожному читанні.",
+              "en": "Use a bytearray and pass only the remainder to each read."
+            },
+            {
+              "uk": "Парси лише після перевірки len(data) <= limit.",
+              "en": "Parse only after checking len(data) <= limit."
+            }
+          ],
+          "solution": {
+            "uk": "Застосуй цикл до limit + 1 і перевір форму після парсингу. Потік і сховище належать викликачу.\n\n```python\nimport json\nfrom typing import BinaryIO\n\ndef solve(stream: BinaryIO, media_type: str, limit: int) -> str:\n    if media_type != 'application/json' or type(limit) is not int or limit < 1:\n        raise ValueError('unsupported upload boundary')\n    data = bytearray()\n    while len(data) <= limit:\n        chunk = stream.read(min(4096, limit + 1 - len(data)))\n        if not chunk:\n            break\n        data.extend(chunk)\n    if len(data) > limit:\n        raise ValueError('upload too large')\n    value = json.loads(data.decode('utf-8'))\n    if not isinstance(value, dict) or set(value) != {'title'}:\n        raise ValueError('expected title object')\n    title = value['title']\n    if not isinstance(title, str) or not title.strip():\n        raise ValueError('expected nonblank title')\n    return title.strip()\n```",
+            "en": "Use a limit-plus-one read loop and validate shape after parsing. The caller owns the stream and storage.\n\n```python\nimport json\nfrom typing import BinaryIO\n\ndef solve(stream: BinaryIO, media_type: str, limit: int) -> str:\n    if media_type != 'application/json' or type(limit) is not int or limit < 1:\n        raise ValueError('unsupported upload boundary')\n    data = bytearray()\n    while len(data) <= limit:\n        chunk = stream.read(min(4096, limit + 1 - len(data)))\n        if not chunk:\n            break\n        data.extend(chunk)\n    if len(data) > limit:\n        raise ValueError('upload too large')\n    value = json.loads(data.decode('utf-8'))\n    if not isinstance(value, dict) or set(value) != {'title'}:\n        raise ValueError('expected title object')\n    title = value['title']\n    if not isinstance(title, str) or not title.strip():\n        raise ValueError('expected nonblank title')\n    return title.strip()\n```"
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(stream, media_type, limit). Приймай точний application/json і цілий limit >= 1 без bool. stream.read(n) може дати короткі непорожні байти. Прочитай максимум limit + 1 байт; перевищення дає ValueError. Декодуй JSON у строгому UTF-8. Вимагай об’єкт рівно з одним полем title, непорожнім рядком. Поверни обрізаний title. Інші помилки вводу дають ValueError. Відхиляй неприйнятний тип чи limit до читання.\n\n**Синтетичні запити підтримки**",
+            "en": "Implement solve(stream, media_type, limit). Accept only the exact media type application/json and an integer limit >= 1, excluding bool. stream.read(n) may return short nonempty bytes. Read at most limit + 1 bytes in total; oversize raises ValueError. Decode strict UTF-8 JSON. Require a top-level object with exactly one field title, a nonblank string. Return the trimmed title. Other input failures raise ValueError. Reject an unsolicited media type or invalid limit before reading.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Спочатку перевір бюджет і дозволений тип.",
+              "en": "Check the budget and allowed type first."
+            },
+            {
+              "uk": "Використай bytearray і передавай залишок при кожному читанні.",
+              "en": "Use a bytearray and pass only the remainder to each read."
+            },
+            {
+              "uk": "Парси лише після перевірки len(data) <= limit.",
+              "en": "Parse only after checking len(data) <= limit."
+            }
+          ],
+          "solution": {
+            "uk": "Застосуй цикл до limit + 1 і перевір форму після парсингу. Потік і сховище належать викликачу.\n\n```python\nimport json\nfrom typing import BinaryIO\n\ndef solve(stream: BinaryIO, media_type: str, limit: int) -> str:\n    if media_type != 'application/json' or type(limit) is not int or limit < 1:\n        raise ValueError('unsupported upload boundary')\n    data = bytearray()\n    while len(data) <= limit:\n        chunk = stream.read(min(4096, limit + 1 - len(data)))\n        if not chunk:\n            break\n        data.extend(chunk)\n    if len(data) > limit:\n        raise ValueError('upload too large')\n    value = json.loads(data.decode('utf-8'))\n    if not isinstance(value, dict) or set(value) != {'title'}:\n        raise ValueError('expected title object')\n    title = value['title']\n    if not isinstance(title, str) or not title.strip():\n        raise ValueError('expected nonblank title')\n    return title.strip()\n```",
+            "en": "Use a limit-plus-one read loop and validate shape after parsing. The caller owns the stream and storage.\n\n```python\nimport json\nfrom typing import BinaryIO\n\ndef solve(stream: BinaryIO, media_type: str, limit: int) -> str:\n    if media_type != 'application/json' or type(limit) is not int or limit < 1:\n        raise ValueError('unsupported upload boundary')\n    data = bytearray()\n    while len(data) <= limit:\n        chunk = stream.read(min(4096, limit + 1 - len(data)))\n        if not chunk:\n            break\n        data.extend(chunk)\n    if len(data) > limit:\n        raise ValueError('upload too large')\n    value = json.loads(data.decode('utf-8'))\n    if not isinstance(value, dict) or set(value) != {'title'}:\n        raise ValueError('expected title object')\n    title = value['title']\n    if not isinstance(title, str) or not title.strip():\n        raise ValueError('expected nonblank title')\n    return title.strip()\n```"
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(stream, media_type, limit). Приймай точний application/json і цілий limit >= 1 без bool. stream.read(n) може дати короткі непорожні байти. Прочитай максимум limit + 1 байт; перевищення дає ValueError. Декодуй JSON у строгому UTF-8. Вимагай об’єкт рівно з одним полем title, непорожнім рядком. Поверни обрізаний title. Інші помилки вводу дають ValueError. Відхиляй неприйнятний тип чи limit до читання.\n\n**Синтетичні документи політик**",
+            "en": "Implement solve(stream, media_type, limit). Accept only the exact media type application/json and an integer limit >= 1, excluding bool. stream.read(n) may return short nonempty bytes. Read at most limit + 1 bytes in total; oversize raises ValueError. Decode strict UTF-8 JSON. Require a top-level object with exactly one field title, a nonblank string. Return the trimmed title. Other input failures raise ValueError. Reject an unsolicited media type or invalid limit before reading.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Спочатку перевір бюджет і дозволений тип.",
+              "en": "Check the budget and allowed type first."
+            },
+            {
+              "uk": "Використай bytearray і передавай залишок при кожному читанні.",
+              "en": "Use a bytearray and pass only the remainder to each read."
+            },
+            {
+              "uk": "Парси лише після перевірки len(data) <= limit.",
+              "en": "Parse only after checking len(data) <= limit."
+            }
+          ],
+          "solution": {
+            "uk": "Застосуй цикл до limit + 1 і перевір форму після парсингу. Потік і сховище належать викликачу.\n\n```python\nimport json\nfrom typing import BinaryIO\n\ndef solve(stream: BinaryIO, media_type: str, limit: int) -> str:\n    if media_type != 'application/json' or type(limit) is not int or limit < 1:\n        raise ValueError('unsupported upload boundary')\n    data = bytearray()\n    while len(data) <= limit:\n        chunk = stream.read(min(4096, limit + 1 - len(data)))\n        if not chunk:\n            break\n        data.extend(chunk)\n    if len(data) > limit:\n        raise ValueError('upload too large')\n    value = json.loads(data.decode('utf-8'))\n    if not isinstance(value, dict) or set(value) != {'title'}:\n        raise ValueError('expected title object')\n    title = value['title']\n    if not isinstance(title, str) or not title.strip():\n        raise ValueError('expected nonblank title')\n    return title.strip()\n```",
+            "en": "Use a limit-plus-one read loop and validate shape after parsing. The caller owns the stream and storage.\n\n```python\nimport json\nfrom typing import BinaryIO\n\ndef solve(stream: BinaryIO, media_type: str, limit: int) -> str:\n    if media_type != 'application/json' or type(limit) is not int or limit < 1:\n        raise ValueError('unsupported upload boundary')\n    data = bytearray()\n    while len(data) <= limit:\n        chunk = stream.read(min(4096, limit + 1 - len(data)))\n        if not chunk:\n            break\n        data.extend(chunk)\n    if len(data) > limit:\n        raise ValueError('upload too large')\n    value = json.loads(data.decode('utf-8'))\n    if not isinstance(value, dict) or set(value) != {'title'}:\n        raise ValueError('expected title object')\n    title = value['title']\n    if not isinstance(title, str) or not title.strip():\n        raise ValueError('expected nonblank title')\n    return title.strip()\n```"
+          }
+        }
+      ]
+    },
+    {
+      "id": "W05-L03-E2",
+      "title": {
+        "uk": "Перевірити ліміти upload і сховище Project A",
+        "en": "Verify Project A upload limits and storage"
+      },
+      "kind": "rubric",
+      "objectives": [
+        "O2"
+      ],
+      "estimateMinutes": 70,
+      "criteria": [
+        {
+          "id": "C1",
+          "title": {
+            "uk": "Перевірено межу розміру й незалежно невалідний вміст.",
+            "en": "Test boundary size and independently invalid content."
+          }
+        },
+        {
+          "id": "C2",
+          "title": {
+            "uk": "Показано відсутність побічного ефекту за відмови.",
+            "en": "Show no persistent side effect on rejected inputs."
+          }
+        },
+        {
+          "id": "C3",
+          "title": {
+            "uk": "Є згенеровані ключі й очищені логи; описано квоту.",
+            "en": "Use generated keys and redacted logs; describe quota."
+          }
+        }
+      ],
+      "example": {
+        "uk": "Фікстура з одним зайвим байтом дає 413, БД і сховище незмінні.",
+        "en": "A one-byte-over fixture gets 413 and leaves both database and blob storage unchanged."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Створи upload для дозволених малих синтетичних документів. Задай ліміт байтів, правило ключа сховища, конфіденційні поля логів і політику швидкості для актора. Запусти прийнятий, точний, завеликий і невалідний ввід. Покажи, що відмови не лишають об’єкта й відповіді не показують шлях.\n\n**Синтетичні накладні**",
+            "en": "Build an allowlisted upload endpoint for small synthetic documents. Declare a byte limit, storage-key rule, confidential log fields and one per-actor rate policy. Run allowed, exact-limit, oversized and invalid-content cases. Show that rejected uploads leave no persistent object and response details never expose the storage path.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Обери формат, який реально перевіриш локально.",
+              "en": "Use a format you can actually validate locally."
+            },
+            {
+              "uk": "Рахуй байти у читанні й до парсингу.",
+              "en": "Count bytes during reads and before parsing."
+            },
+            {
+              "uk": "Порівняй обидва сховища після кожної відмови.",
+              "en": "Compare evidence on both persistent stores after each rejection."
+            }
+          ],
+          "solution": {
+            "uk": "Застосуй область і ліміт до парсингу, далі тимчасово збережи валідований вміст під згенерованим ключем. Підтвердь rollback чи очищення й очисть відповідь та події.",
+            "en": "Apply scope and a byte limit before parsing, then stage validated content under a generated key. Confirm rollback or cleanup and redact the response and events."
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Створи upload для дозволених малих синтетичних документів. Задай ліміт байтів, правило ключа сховища, конфіденційні поля логів і політику швидкості для актора. Запусти прийнятий, точний, завеликий і невалідний ввід. Покажи, що відмови не лишають об’єкта й відповіді не показують шлях.\n\n**Синтетичні запити підтримки**",
+            "en": "Build an allowlisted upload endpoint for small synthetic documents. Declare a byte limit, storage-key rule, confidential log fields and one per-actor rate policy. Run allowed, exact-limit, oversized and invalid-content cases. Show that rejected uploads leave no persistent object and response details never expose the storage path.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Обери формат, який реально перевіриш локально.",
+              "en": "Use a format you can actually validate locally."
+            },
+            {
+              "uk": "Рахуй байти у читанні й до парсингу.",
+              "en": "Count bytes during reads and before parsing."
+            },
+            {
+              "uk": "Порівняй обидва сховища після кожної відмови.",
+              "en": "Compare evidence on both persistent stores after each rejection."
+            }
+          ],
+          "solution": {
+            "uk": "Застосуй область і ліміт до парсингу, далі тимчасово збережи валідований вміст під згенерованим ключем. Підтвердь rollback чи очищення й очисть відповідь та події.",
+            "en": "Apply scope and a byte limit before parsing, then stage validated content under a generated key. Confirm rollback or cleanup and redact the response and events."
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Створи upload для дозволених малих синтетичних документів. Задай ліміт байтів, правило ключа сховища, конфіденційні поля логів і політику швидкості для актора. Запусти прийнятий, точний, завеликий і невалідний ввід. Покажи, що відмови не лишають об’єкта й відповіді не показують шлях.\n\n**Синтетичні документи політик**",
+            "en": "Build an allowlisted upload endpoint for small synthetic documents. Declare a byte limit, storage-key rule, confidential log fields and one per-actor rate policy. Run allowed, exact-limit, oversized and invalid-content cases. Show that rejected uploads leave no persistent object and response details never expose the storage path.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Обери формат, який реально перевіриш локально.",
+              "en": "Use a format you can actually validate locally."
+            },
+            {
+              "uk": "Рахуй байти у читанні й до парсингу.",
+              "en": "Count bytes during reads and before parsing."
+            },
+            {
+              "uk": "Порівняй обидва сховища після кожної відмови.",
+              "en": "Compare evidence on both persistent stores after each rejection."
+            }
+          ],
+          "solution": {
+            "uk": "Застосуй область і ліміт до парсингу, далі тимчасово збережи валідований вміст під згенерованим ключем. Підтвердь rollback чи очищення й очисть відповідь та події.",
+            "en": "Apply scope and a byte limit before parsing, then stage validated content under a generated key. Confirm rollback or cleanup and redact the response and events."
+          }
+        }
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "id": "Q1",
+      "prompt": {
+        "uk": "Який доказ підтвердить відповідність малого upload контракту?",
+        "en": "Which evidence can establish that an upload fits a small format contract?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Розібрати обмежені байти й перевірити форму.",
+            "en": "Parse bounded bytes and validate the resulting shape."
+          },
+          "explanation": {
+            "uk": "Правила вмісту діють до спожитого представлення.",
+            "en": "Content rules apply to the consumed representation."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Довіритись лише Content-Type.",
+            "en": "Trust Content-Type alone."
+          },
+          "explanation": {
+            "uk": "Метаданими керує клієнт.",
+            "en": "The client controls that metadata."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Довіритись імені з .json.",
+            "en": "Trust a filename ending in .json."
+          },
+          "explanation": {
+            "uk": "Суфікс не доводить валідність.",
+            "en": "The suffix does not prove content validity."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q2",
+      "prompt": {
+        "uk": "Чому читати максимум limit + 1 байт?",
+        "en": "Why read at most limit + 1 bytes?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Щоб дістати фіксовану кількість Unicode-символів.",
+            "en": "To turn bytes into a fixed number of Unicode characters."
+          },
+          "explanation": {
+            "uk": "Ширина закодованих символів різна.",
+            "en": "Encoded character widths vary."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Відрізнити точну межу від перевищення.",
+            "en": "Distinguish an exact-limit body from an over-limit stream."
+          },
+          "explanation": {
+            "uk": "Ще один байт установлює перевищення.",
+            "en": "One additional byte establishes overflow."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Щоб завжди зберегти зайвий байт.",
+            "en": "To always persist the extra byte."
+          },
+          "explanation": {
+            "uk": "Перевищення треба відхиляти.",
+            "en": "An oversize body must be rejected."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q3",
+      "prompt": {
+        "uk": "Звідки має походити шлях прийнятого об’єкта?",
+        "en": "Where should an accepted object's storage path come from?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Сира назва із запиту.",
+            "en": "A raw filename in the request."
+          },
+          "explanation": {
+            "uk": "Назви користувача недовірені.",
+            "en": "User filenames are untrusted."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Секрет у query parameter.",
+            "en": "A secret placed in a query parameter."
+          },
+          "explanation": {
+            "uk": "Секрети й ID ресурсу мають різні цілі.",
+            "en": "Secrets and resource identifiers have different purposes."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Згенерований ключ сервісу.",
+            "en": "A generated key controlled by the service."
+          },
+          "explanation": {
+            "uk": "Назва й повноваження на зберігання різні.",
+            "en": "Keep naming and storage authority separate."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q4",
+      "prompt": {
+        "uk": "Що має залишити невдалий upload?",
+        "en": "What should a failed upload leave behind?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Безпечний результат відмови й очищені тимчасові артефакти.",
+            "en": "A safe failure outcome and cleaned-up transient artifacts."
+          },
+          "explanation": {
+            "uk": "Стан не має показувати файл, якого не можна видати.",
+            "en": "Persistent state should not report a file it cannot deliver."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Публічну копію для діагностики.",
+            "en": "A publicly reachable copy for debugging."
+          },
+          "explanation": {
+            "uk": "Це розкриває відхилений вміст.",
+            "en": "That leaks rejected content."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Прийнятий рядок БД без blob.",
+            "en": "An accepted database row with a missing blob."
+          },
+          "explanation": {
+            "uk": "Це частковий непослідовний стан.",
+            "en": "That is partial inconsistent state."
+          }
+        }
+      ]
+    }
+  ],
+  "crosslinks": [
+    "W05-L02",
+    "W05-L04"
+  ]
+}

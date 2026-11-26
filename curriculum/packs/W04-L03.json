@@ -1,0 +1,510 @@
+{
+  "id": "W04-L03",
+  "contentVersion": 1,
+  "overview": {
+    "uk": "Огорни сервіс документів стабільним HTTP-контрактом. Відділи валідацію вводу, пошук документа поточного актора й побудову публічного представлення. FastAPI використовує анотації та Pydantic-моделі на межі. Система залежностей визначає актора й сесію на запит, а доменна поведінка може лишатися у звичайних функціях. Приклад запускає FastAPI в процесі й перевіряє публічну відповідь і випадок відсутності. Самостійна практика переносить структуру у Project A і перевіряє приховування внутрішнього поля.",
+    "en": "Put a stable HTTP contract around the document service. You will separate input validation, locating the correct actor's document, and constructing the public representation. FastAPI uses type annotations and Pydantic models at the boundary. Its dependency system resolves actor and session per request, while plain Python functions can hold domain behavior. The example starts a FastAPI app in process and checks its public response and not-found branch. The independent practice brings the same structure into Project A and checks that the public schema hides an internal field."
+  },
+  "theory": {
+    "uk": "### Межа як відображення\n\nВикористовуй окремі моделі для вводу, внутрішніх даних і відповіді. Вхідні поля можуть вимагати мітку, межу довжини й цілий ID. Внутрішній рядок містить метадані на кшталт шляху зберігання. Публічна модель перераховує лише потрібні клієнту поля. FastAPI використовує її для валідації, документації, серіалізації й фільтрації. Передбачувана валідація клієнта відбувається на боці запиту, а збій моделі відповіді означає помилку серверного контракту. Перевір форму OpenAPI й стабільні помилки в тестах.\n\n### Область залежностей запиту\n\nDepends може отримати сесію або визначити актора з облікових даних. Окрема залежність дозволяє тесту замінити її без зміни маршруту чи спільної production БД. Залежність із yield може закрити сесію після використання. Визнач межу commit свідомо, зазвичай у сервісі маршруту запису. Тримай SQL і низькорівневі винятки за адаптером. Обробник може перетворити відомі доменні помилки на невелику машиночитану відповідь. Не показуй шляхи зберігання чи SQL клієнту.\n\n### Три шляхи вводу\n\nДодатний ID вибирає дозволений рядок і повертає 200. Відсутній дозволений рядок дає 404. Хибний ID відхиляється до доступу до сховища. FastAPI зазвичай дає 422 для валідації запиту, а сервіс може застосувати 400 для некоректного бізнес-запиту за контрактом. Зберігай стабільні публічні коди окремо від діагностики. Перевір доменний пошук напряму й зібраний маршрут через клієнт у процесі, зокрема форму представлення.\n\n### Простеж запит і публічний результат\n\nВізьми запит створення документа. Межа валідує заголовок і видає задокументовану помилку для хибної форми. Залежність актора дає перевірену ідентичність. Сервіс визначає власника, відкриває транзакцію й перетворює вставлений рядок на відповідь. За успіху 201 може дати Location документа. При дублікаті перетвори виняток БД на сталий конфлікт і відкотись. Модель відповіді розкриває лише публічні поля. Тримай фікстуру з внутрішнім полем для перевірки фільтра.\n\nТест може запускати валідацію Pydantic через endpoint замість створення моделі. Тоді видно, де FastAPI шукає поля шляху, query й тіла. Перевір, що хибний ввід не доходить до мутації домену. Якщо залежність створює сесію до маршруту, саме отримання сесії все ще можливе під час запиту. Точно назви гарантію тесту. Заміни залежності для одноразового репозиторію й залиш окрему інтеграцію з міграціями й обмеженнями PostgreSQL.",
+    "en": "### A boundary is a mapping\n\nUse separate models for incoming data, internal data and outgoing data. Incoming fields can require a label, a length range and an integer ID. An internal row includes metadata such as storage location. The public response model lists only fields a caller needs. FastAPI uses its response model for validation, documentation, serialization and filtering. Keep predictable validation of client input on the request side, while a response model failure signals a server contract bug. Review the generated OpenAPI shape and stable error examples in tests.\n\n### Keep request dependencies scoped\n\nDepends can acquire a session or derive an actor from credentials. Defining a dependency lets a test replace it without changing the route or sharing a production database. A dependency yielding a session can close it after use. Choose the transaction's commit boundary intentionally, typically in the service used by a write route. Keep SQL and lower-level exceptions behind an adapter. An exception handler can convert known domain failures into a small machine-readable error. Avoid exposing storage paths or SQL in responses.\n\n### Trace three input paths\n\nA positive ID selects an allowed row and returns 200. A missing allowed row returns 404. An invalid ID is rejected before storage logic runs. FastAPI commonly uses 422 for request model validation, while a service might use 400 for a malformed business request under its documented contract. Store stable public error codes separately from diagnostic text. Test your domain lookup directly and the composed route through an in-process client, including the shape of the returned representation.\n\n### Follow a request and its public result\n\nTake a request to create a document. The boundary validates the submitted title and returns documented validation information for a bad shape. The actor dependency provides a verified identity. The service derives ownership, opens one transaction, and turns the inserted row into a response representation. On success, 201 can include a Location pointing to the new document. In a duplicate conflict, map the database exception to a stable conflict outcome and roll back the transaction. The response model should disclose only public fields. Keep a real fixture row with an internal field to test that filtering.\n\nA test can exercise Pydantic validation by calling the endpoint rather than constructing the model itself. This also observes where FastAPI looks for path, query and body values. Assert that invalid input does not reach the domain mutation. If the dependency creates a session before the route, acquiring that session can still happen during request handling. Be precise about the guarantee your test observes. Use dependency overrides to provide a disposable repository and keep a separate integration scenario with migrations and PostgreSQL constraints."
+  },
+  "recap": {
+    "uk": "Керуй зовнішнім контрактом на межі, під’єднуй джерело даних і видавай лише дозволені поля.",
+    "en": "Own the wire contract at the boundary, inject the data source and publish only allowlisted fields."
+  },
+  "objectives": [
+    {
+      "id": "O1",
+      "title": {
+        "uk": "Спроєктувати контракт запиту й відповіді з відображенням HTTP-помилок.",
+        "en": "Design a request and response contract with HTTP error mapping."
+      },
+      "skill": "systems"
+    },
+    {
+      "id": "O2",
+      "title": {
+        "uk": "Під’єднати залежність даних і забезпечити форму відповіді.",
+        "en": "Inject a data dependency and enforce response shape."
+      },
+      "skill": "tooling"
+    }
+  ],
+  "sources": [
+    {
+      "title": {
+        "uk": "FastAPI dependency injection",
+        "en": "FastAPI dependency injection"
+      },
+      "url": "https://fastapi.tiangolo.com/tutorial/dependencies/",
+      "version": "FastAPI",
+      "checked": "2026-11-26"
+    },
+    {
+      "title": {
+        "uk": "FastAPI response models",
+        "en": "FastAPI response models"
+      },
+      "url": "https://fastapi.tiangolo.com/tutorial/response-model/",
+      "version": "FastAPI",
+      "checked": "2026-11-26"
+    }
+  ],
+  "examples": [
+    {
+      "file": "w04_l03_example.py",
+      "expected": "200 ['id', 'title']\n404",
+      "explanation": {
+        "uk": "Використай FastAPI, Pydantic і TestClient з backend dev lock цього репозиторію. Приклад не відкриває порт і не потребує зовнішньої БД.",
+        "en": "Use FastAPI, Pydantic and TestClient from the backend dev lock in this repository. The example uses no server port or external database."
+      },
+      "error": {
+        "uk": "Другий запит показує відсутній документ. Спробуй /documents/bad, щоб побачити 422 від типу шляху.",
+        "en": "The second request shows a missing document. Try /documents/bad to observe 422 from the path type."
+      }
+    }
+  ],
+  "interview": [
+    "What belongs in an input model versus a response model?",
+    "How would you test a route without a production database?"
+  ],
+  "interviewGuide": {
+    "uk": "Назви приховане поле й залежність, яку можна замінити.",
+    "en": "Name one hidden field and one overridable dependency."
+  },
+  "exercises": [
+    {
+      "id": "W04-L03-E1",
+      "title": {
+        "uk": "Перетворити пошук на результат для HTTP",
+        "en": "Map a lookup into an HTTP-facing result"
+      },
+      "kind": "code",
+      "objectives": [
+        "O1"
+      ],
+      "estimateMinutes": 75,
+      "criteria": [],
+      "example": {
+        "uk": "Рядок з id, title і private_path повертає лише id та title.",
+        "en": "A row with id, title and private_path returns id and title only."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(document_id, fetch). Для додатного int Python без bool один раз виклич fetch(document_id). Для None поверни (404, {'code':'not_found'}). Інакше поверни (200, {'id': row['id'], 'title': row['title']}) рівно з цими полями. При хибному document_id не викликай fetch і поверни (422, {'code':'invalid_id'}). Неочікувані винятки залежності передавай.\n\n**Синтетичні накладні**",
+            "en": "Implement solve(document_id, fetch). For a positive Python int (excluding bool), call fetch(document_id) once. If it returns None, return (404, {'code':'not_found'}). Otherwise return (200, {'id': row['id'], 'title': row['title']}) with exactly those two fields. If document_id is invalid, do not call fetch and return (422, {'code':'invalid_id'}). An unexpected dependency exception propagates.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Перевір ввід до пошуку.",
+              "en": "Validate before looking anything up."
+            },
+            {
+              "uk": "Розрізняй відсутній рядок і збій залежності.",
+              "en": "Distinguish a missing row from a dependency failure."
+            },
+            {
+              "uk": "Створи новий dict рівно з публічними ключами.",
+              "en": "Construct exactly the public keys as a fresh mapping."
+            }
+          ],
+          "solution": {
+            "uk": "Відображай очікувані результати явно. Дай викликачу окремо обробляти збої залежності.\n\n```python\nfrom collections.abc import Callable, Mapping\n\ndef solve(document_id: object, fetch: Callable[[int], Mapping[str, object] | None]) -> tuple[int, dict[str, object]]:\n    if type(document_id) is not int or document_id < 1:\n        return 422, {'code': 'invalid_id'}\n    row = fetch(document_id)\n    if row is None:\n        return 404, {'code': 'not_found'}\n    return 200, {'id': row['id'], 'title': row['title']}\n```",
+            "en": "Map expected outcomes explicitly. Let the caller handle dependency failures separately.\n\n```python\nfrom collections.abc import Callable, Mapping\n\ndef solve(document_id: object, fetch: Callable[[int], Mapping[str, object] | None]) -> tuple[int, dict[str, object]]:\n    if type(document_id) is not int or document_id < 1:\n        return 422, {'code': 'invalid_id'}\n    row = fetch(document_id)\n    if row is None:\n        return 404, {'code': 'not_found'}\n    return 200, {'id': row['id'], 'title': row['title']}\n```"
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(document_id, fetch). Для додатного int Python без bool один раз виклич fetch(document_id). Для None поверни (404, {'code':'not_found'}). Інакше поверни (200, {'id': row['id'], 'title': row['title']}) рівно з цими полями. При хибному document_id не викликай fetch і поверни (422, {'code':'invalid_id'}). Неочікувані винятки залежності передавай.\n\n**Синтетичні запити підтримки**",
+            "en": "Implement solve(document_id, fetch). For a positive Python int (excluding bool), call fetch(document_id) once. If it returns None, return (404, {'code':'not_found'}). Otherwise return (200, {'id': row['id'], 'title': row['title']}) with exactly those two fields. If document_id is invalid, do not call fetch and return (422, {'code':'invalid_id'}). An unexpected dependency exception propagates.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Перевір ввід до пошуку.",
+              "en": "Validate before looking anything up."
+            },
+            {
+              "uk": "Розрізняй відсутній рядок і збій залежності.",
+              "en": "Distinguish a missing row from a dependency failure."
+            },
+            {
+              "uk": "Створи новий dict рівно з публічними ключами.",
+              "en": "Construct exactly the public keys as a fresh mapping."
+            }
+          ],
+          "solution": {
+            "uk": "Відображай очікувані результати явно. Дай викликачу окремо обробляти збої залежності.\n\n```python\nfrom collections.abc import Callable, Mapping\n\ndef solve(document_id: object, fetch: Callable[[int], Mapping[str, object] | None]) -> tuple[int, dict[str, object]]:\n    if type(document_id) is not int or document_id < 1:\n        return 422, {'code': 'invalid_id'}\n    row = fetch(document_id)\n    if row is None:\n        return 404, {'code': 'not_found'}\n    return 200, {'id': row['id'], 'title': row['title']}\n```",
+            "en": "Map expected outcomes explicitly. Let the caller handle dependency failures separately.\n\n```python\nfrom collections.abc import Callable, Mapping\n\ndef solve(document_id: object, fetch: Callable[[int], Mapping[str, object] | None]) -> tuple[int, dict[str, object]]:\n    if type(document_id) is not int or document_id < 1:\n        return 422, {'code': 'invalid_id'}\n    row = fetch(document_id)\n    if row is None:\n        return 404, {'code': 'not_found'}\n    return 200, {'id': row['id'], 'title': row['title']}\n```"
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(document_id, fetch). Для додатного int Python без bool один раз виклич fetch(document_id). Для None поверни (404, {'code':'not_found'}). Інакше поверни (200, {'id': row['id'], 'title': row['title']}) рівно з цими полями. При хибному document_id не викликай fetch і поверни (422, {'code':'invalid_id'}). Неочікувані винятки залежності передавай.\n\n**Синтетичні документи політик**",
+            "en": "Implement solve(document_id, fetch). For a positive Python int (excluding bool), call fetch(document_id) once. If it returns None, return (404, {'code':'not_found'}). Otherwise return (200, {'id': row['id'], 'title': row['title']}) with exactly those two fields. If document_id is invalid, do not call fetch and return (422, {'code':'invalid_id'}). An unexpected dependency exception propagates.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Перевір ввід до пошуку.",
+              "en": "Validate before looking anything up."
+            },
+            {
+              "uk": "Розрізняй відсутній рядок і збій залежності.",
+              "en": "Distinguish a missing row from a dependency failure."
+            },
+            {
+              "uk": "Створи новий dict рівно з публічними ключами.",
+              "en": "Construct exactly the public keys as a fresh mapping."
+            }
+          ],
+          "solution": {
+            "uk": "Відображай очікувані результати явно. Дай викликачу окремо обробляти збої залежності.\n\n```python\nfrom collections.abc import Callable, Mapping\n\ndef solve(document_id: object, fetch: Callable[[int], Mapping[str, object] | None]) -> tuple[int, dict[str, object]]:\n    if type(document_id) is not int or document_id < 1:\n        return 422, {'code': 'invalid_id'}\n    row = fetch(document_id)\n    if row is None:\n        return 404, {'code': 'not_found'}\n    return 200, {'id': row['id'], 'title': row['title']}\n```",
+            "en": "Map expected outcomes explicitly. Let the caller handle dependency failures separately.\n\n```python\nfrom collections.abc import Callable, Mapping\n\ndef solve(document_id: object, fetch: Callable[[int], Mapping[str, object] | None]) -> tuple[int, dict[str, object]]:\n    if type(document_id) is not int or document_id < 1:\n        return 422, {'code': 'invalid_id'}\n    row = fetch(document_id)\n    if row is None:\n        return 404, {'code': 'not_found'}\n    return 200, {'id': row['id'], 'title': row['title']}\n```"
+          }
+        }
+      ]
+    },
+    {
+      "id": "W04-L03-E2",
+      "title": {
+        "uk": "Додати endpoint Project A з явними залежностями",
+        "en": "Add a Project A endpoint with explicit dependencies"
+      },
+      "kind": "rubric",
+      "objectives": [
+        "O2"
+      ],
+      "estimateMinutes": 70,
+      "criteria": [
+        {
+          "id": "C1",
+          "title": {
+            "uk": "Додано фактичні результати маршрутів у процесі для всіх статусів.",
+            "en": "Attach real in-process route results for all required statuses."
+          }
+        },
+        {
+          "id": "C2",
+          "title": {
+            "uk": "Показано заміну залежності й обмежене представлення.",
+            "en": "Show a dependency override and a restricted response shape."
+          }
+        },
+        {
+          "id": "C3",
+          "title": {
+            "uk": "Пояснено місце commit успішного створення.",
+            "en": "Explain where successful create commits."
+          }
+        }
+      ],
+      "example": {
+        "uk": "GET повертає id і title без storage_key. Невалідний запит чи тіло дають задокументовану помилку.",
+        "en": "GET returns id and title, without storage_key. Invalid query or body returns a documented validation failure."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Створи модель POST /documents і модель відповіді GET /documents/{id}. Під’єднай одноразову сесію в тестах і перевір 201, 404 та 422. Запиши шлях OpenAPI й покажи внутрішнє поле, відсутнє у відповідях. Поясни транзакційну межу створення.\n\n**Синтетичні накладні**",
+            "en": "Create a POST /documents request model and GET /documents/{id} response model. Inject a disposable session in tests and assert 201, 404 and 422. Record the OpenAPI path and show one internal field omitted from all client output. Explain your transaction boundary for create.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Обери окремі моделі CreateDocument і DocumentResponse.",
+              "en": "Choose separate CreateDocument and DocumentResponse models."
+            },
+            {
+              "uk": "Під’єднай сесію через Depends.",
+              "en": "Inject the session into the route through Depends."
+            },
+            {
+              "uk": "Перевір точні ключі JSON відповіді.",
+              "en": "Assert the exact keys of returned JSON."
+            }
+          ],
+          "solution": {
+            "uk": "Перевір ввід у FastAPI, ізолюй сесію на тест і повертай дані форми DocumentResponse. Залиш БД за сервісною межею й зафіксуй одну транзакцію створення.",
+            "en": "Validate inputs at FastAPI, scope the session per test, and return only data shaped by DocumentResponse. Keep database operations behind the service boundary and commit one logical create transaction."
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Створи модель POST /documents і модель відповіді GET /documents/{id}. Під’єднай одноразову сесію в тестах і перевір 201, 404 та 422. Запиши шлях OpenAPI й покажи внутрішнє поле, відсутнє у відповідях. Поясни транзакційну межу створення.\n\n**Синтетичні запити підтримки**",
+            "en": "Create a POST /documents request model and GET /documents/{id} response model. Inject a disposable session in tests and assert 201, 404 and 422. Record the OpenAPI path and show one internal field omitted from all client output. Explain your transaction boundary for create.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Обери окремі моделі CreateDocument і DocumentResponse.",
+              "en": "Choose separate CreateDocument and DocumentResponse models."
+            },
+            {
+              "uk": "Під’єднай сесію через Depends.",
+              "en": "Inject the session into the route through Depends."
+            },
+            {
+              "uk": "Перевір точні ключі JSON відповіді.",
+              "en": "Assert the exact keys of returned JSON."
+            }
+          ],
+          "solution": {
+            "uk": "Перевір ввід у FastAPI, ізолюй сесію на тест і повертай дані форми DocumentResponse. Залиш БД за сервісною межею й зафіксуй одну транзакцію створення.",
+            "en": "Validate inputs at FastAPI, scope the session per test, and return only data shaped by DocumentResponse. Keep database operations behind the service boundary and commit one logical create transaction."
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Створи модель POST /documents і модель відповіді GET /documents/{id}. Під’єднай одноразову сесію в тестах і перевір 201, 404 та 422. Запиши шлях OpenAPI й покажи внутрішнє поле, відсутнє у відповідях. Поясни транзакційну межу створення.\n\n**Синтетичні документи політик**",
+            "en": "Create a POST /documents request model and GET /documents/{id} response model. Inject a disposable session in tests and assert 201, 404 and 422. Record the OpenAPI path and show one internal field omitted from all client output. Explain your transaction boundary for create.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Обери окремі моделі CreateDocument і DocumentResponse.",
+              "en": "Choose separate CreateDocument and DocumentResponse models."
+            },
+            {
+              "uk": "Під’єднай сесію через Depends.",
+              "en": "Inject the session into the route through Depends."
+            },
+            {
+              "uk": "Перевір точні ключі JSON відповіді.",
+              "en": "Assert the exact keys of returned JSON."
+            }
+          ],
+          "solution": {
+            "uk": "Перевір ввід у FastAPI, ізолюй сесію на тест і повертай дані форми DocumentResponse. Залиш БД за сервісною межею й зафіксуй одну транзакцію створення.",
+            "en": "Validate inputs at FastAPI, scope the session per test, and return only data shaped by DocumentResponse. Keep database operations behind the service boundary and commit one logical create transaction."
+          }
+        }
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "id": "Q1",
+      "prompt": {
+        "uk": "Яка модель має вилучати внутрішній шлях зберігання?",
+        "en": "Which model should omit internal storage path?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Лише модель ORM.",
+            "en": "Only the ORM model."
+          },
+          "explanation": {
+            "uk": "Зберігання може потребувати шлях.",
+            "en": "Internal persistence can legitimately require the path."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Лише парсер CLI.",
+            "en": "Only the CLI argument parser."
+          },
+          "explanation": {
+            "uk": "HTTP-відповідь потребує своєї форми.",
+            "en": "The HTTP response needs its own explicit shape."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Публічна модель відповіді.",
+            "en": "The public response model."
+          },
+          "explanation": {
+            "uk": "Вона контролює серіалізацію представлення.",
+            "en": "It controls serialization into the wire representation."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q2",
+      "prompt": {
+        "uk": "Коли шлях FastAPI не проходить валідацію цілого, який локальний компонент не має шукати документ?",
+        "en": "When a FastAPI request path fails integer validation, what local component should still be untouched?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Сервіс пошуку документа маршруту.",
+            "en": "The route's document lookup service."
+          },
+          "explanation": {
+            "uk": "Валідація не дає маршруту обробити неправильне значення.",
+            "en": "Input validation prevents the route from processing the bad value."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Лише роутер фронтенду.",
+            "en": "The frontend router only."
+          },
+          "explanation": {
+            "uk": "Backend валідує незалежно від frontend.",
+            "en": "Backend validation is independent of frontend routing."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "JSON-декодер лише валідних відповідей.",
+            "en": "The JSON decoder used only on valid responses."
+          },
+          "explanation": {
+            "uk": "Суть у відсутності пошуку для невалідного вводу.",
+            "en": "The key issue is avoiding the domain lookup for invalid input."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q3",
+      "prompt": {
+        "uk": "Що дає Depends у тесті маршруту?",
+        "en": "What benefit does Depends give a route test?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Усуває потребу у перевірці HTTP-форми.",
+            "en": "It removes the need for tests to check HTTP shape."
+          },
+          "explanation": {
+            "uk": "Залежності не гарантують серіалізацію.",
+            "en": "Dependencies do not guarantee serialization."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Дає межу для ізольованої тестової залежності.",
+            "en": "It supplies a seam for a scoped fixture dependency."
+          },
+          "explanation": {
+            "uk": "Маршрут працює з контрольованою сесією чи сервісом.",
+            "en": "The route runs against a controlled service or session."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Завжди робить commit після SELECT.",
+            "en": "It always commits after each SELECT."
+          },
+          "explanation": {
+            "uk": "Поведінку транзакції задає застосунок.",
+            "en": "Transaction behavior is application-defined."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q4",
+      "prompt": {
+        "uk": "Що має повідомити маршрут за неочікуваного збою джерела?",
+        "en": "What should a route signal when its data source unexpectedly fails?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Фіктивний 200 з порожнім записом.",
+            "en": "A fake 200 with an empty row."
+          },
+          "explanation": {
+            "uk": "Це приховує операційну помилку.",
+            "en": "That hides an operational failure."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Повний внутрішній traceback.",
+            "en": "The full internal traceback."
+          },
+          "explanation": {
+            "uk": "Traceback може розкрити внутрішні та чутливі дані.",
+            "en": "Tracebacks can expose internals and sensitive data."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Контрольовану серверну помилку, окрему від відсутнього документа.",
+            "en": "A controlled server failure, separate from a missing document."
+          },
+          "explanation": {
+            "uk": "Відсутні дані й збій пошуку мають різні значення.",
+            "en": "Missing data and failed lookup have different meanings."
+          }
+        }
+      ]
+    }
+  ],
+  "crosslinks": [
+    "W04-L02",
+    "W04-L04"
+  ]
+}

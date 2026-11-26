@@ -1,0 +1,499 @@
+{
+  "id": "W01-L03",
+  "contentVersion": 1,
+  "objectives": [
+    {
+      "id": "O1",
+      "title": {
+        "en": "Identify the Python interpreter and isolate dependencies.",
+        "uk": "Визнач інтерпретатор Python та ізолюй залежності."
+      },
+      "skill": "tooling"
+    },
+    {
+      "id": "O2",
+      "title": {
+        "en": "Use Git and CLI exit status to reproduce an example.",
+        "uk": "Відтвори приклад з Git і кодом завершення CLI."
+      },
+      "skill": "tooling"
+    },
+    {
+      "id": "O3",
+      "title": {
+        "en": "Construct deterministic fixtures with boundary cases.",
+        "uk": "Створи детерміновані фікстури з граничними випадками."
+      },
+      "skill": "diagnostics"
+    }
+  ],
+  "overview": {
+    "en": "A test result can be reproduced when another person knows the interpreter, dependency versions, inputs, commands and expected output. Use a virtual environment for Python dependencies and Git for source and evidence. Keep a learning log with the first failure and the condition that would prove it fixed. In this lesson you will run a fixture example, implement one parsing contract and then transfer the same testing habit to a JSON file. Both exercises run in your IDE. The Quest server receives case outcomes.\n\nOn Windows you can use PowerShell with the virtual environment’s explicit interpreter. On Linux or WSL use the interpreter under .venv/bin. Choose one environment for a run and record it. Working directories and path formats differ between shells. The exercise only uses Python’s standard library. pytest and the Quest Runner run the published verification suite separately.",
+    "uk": "Результат тесту можна відтворити, коли інша людина знає інтерпретатор, версії залежностей, входи, команди й очікуваний результат. Використовуй віртуальне середовище для залежностей Python, а Git для коду й доказів. Веди навчальний журнал із першим збоєм і умовою, за якою його можна вважати виправленим. У цьому уроці ти запустиш приклад із фікстурою, реалізуєш контракт парсингу й застосуєш ту саму звичку тестування до JSON-файлу. Обидві вправи працюють у твоєму IDE. Сервер Quest отримує результати тестів.\n\nУ Windows можна використовувати PowerShell із явним шляхом до інтерпретатора віртуального середовища. У Linux чи WSL використовуй інтерпретатор з .venv/bin. Обери одне середовище для запуску й запиши його. Робочі каталоги й формати шляхів у різних оболонках відрізняються. Код вправ використовує стандартну бібліотеку Python. pytest і Quest Runner окремо запускають опублікований набір перевірок."
+  },
+  "theory": {
+    "en": "### Make the interpreter visible\nA shell resolves commands with PATH. An IDE can use a different interpreter from the terminal. Inspect both before debugging an import error. Create an environment with `python -m venv .venv`; on Windows use `py -3.12 -m venv .venv` if you have multiple versions. Run `.venv/Scripts/python.exe -m pip --version` in PowerShell or `.venv/bin/python -m pip --version` in WSL/Linux. The path displayed by pip should point into the environment. The `-m` form avoids accidentally using another pip. Activation changes the shell’s PATH and is optional when you call the interpreter explicitly.\n\n### Track the inputs to a run\nIn a separate learning-log directory, use `git init`, `git status --short`, and `git diff` to inspect your work. Commit source, synthetic inputs, README and the dependency lock. Keep virtual environments and tokens outside version history. An input description such as “some JSON” is hard to repeat. Store a small file with its encoding and schema. A clean clone is a practical test of instructions: it has no untracked fixture, local IDE setting or global dependency. Record the revision and command and verify success on a fresh copy. If it fails, fix the missing input or instruction.\n\n| Observation | Inspect first | Confirmation |\n| --- | --- | --- |\n| Import works inside the IDE only | Interpreter path | Both commands show the same environment |\n| File is found from one terminal only | Current directory | Start from the recorded directory or use explicit path |\n| Output varies across runs | Time, network, randomness | Replace uncontrolled input with a fixture |\n| Error printed but command “succeeds” | Exit status | Invalid input returns nonzero |\n\n### Design the fixture\nFor a parser, choose one ordinary case, a boundary and a malformed case. In the example the input is a string with a count. JSON true is a boolean, even though booleans in Python subclass int. If the contract really means a nonnegative integer, reject booleans explicitly. The output for a valid example should be precise enough to assert. For invalid input use a nonzero exit status, and send the explanation to stderr. PowerShell exposes the status in `$LASTEXITCODE`, a POSIX shell in `$?`. pytest compares actual values with assertions and can check exceptions. A fixture is a controlled setup, such as a UTF-8 file in a temporary directory that contains your chosen rows. Synthetic data keeps tests portable and avoids personal records.\n\nIn the second exercise, an empty list yields an empty count. A row with a missing or blank label fails instead of being silently counted. Ask what you would do with case and whitespace in a production contract. Follow the stated contract for this exercise and add a test before changing normalization rules. That makes the policy visible in code review.",
+    "uk": "### Покажи, який інтерпретатор працює\nShell знаходить команди за PATH. IDE може використовувати інший інтерпретатор, ніж термінал. Перевір обидва перед пошуком причини помилки імпорту. Створи середовище командою `python -m venv .venv`. У Windows із кількома версіями можна використати `py -3.12 -m venv .venv`. Запусти `.venv/Scripts/python.exe -m pip --version` у PowerShell або `.venv/bin/python -m pip --version` у WSL чи Linux. Шлях у виводі pip має вести всередину середовища. Форма `-m` допомагає уникнути запуску іншого pip. Активація змінює PATH оболонки й необов’язкова, коли викликаєш інтерпретатор явно.\n\n### Зафіксуй входи запуску\nВ окремому каталозі learning-log скористайся `git init`, `git status --short` і `git diff`, щоб переглянути роботу. Коміть код, синтетичні входи, README і lockfile залежностей. Віртуальні середовища й токени тримай поза історією версій. Вхід «якийсь JSON» складно повторити. Збережи малий файл і вкажи кодування та схему. Чистий клон перевіряє інструкції, бо в ньому немає невідстежуваної фікстури, локального налаштування IDE й глобальної залежності. Запиши ревізію, команду й перевір успіх на чистій копії. Якщо є збій, виправ відсутній вхід або інструкцію.\n\n| Спостереження | Що перевірити спочатку | Підтвердження |\n| --- | --- | --- |\n| Імпорт працює тільки в IDE | Шлях до інтерпретатора | Обидві команди показують те саме середовище |\n| Файл знаходиться лише з одного термінала | Поточний каталог | Запуск із записаного каталогу або за явним шляхом |\n| Вивід різний між запусками | Час, мережа, випадковість | Підміни неконтрольований вхід фікстурою |\n| Є повідомлення помилки й успішний статус | Код завершення | Некоректний вхід повертає ненульовий код |\n\n### Спроєктуй фікстуру\nДля парсера обери звичайний, граничний і помилковий випадки. У прикладі вхід є рядком із лічильником. JSON-значення true є булевим, хоча bool у Python є підкласом int. Якщо контракт вимагає невід’ємне ціле, відхиляй булеві значення явно. Вивід коректного прикладу має бути точним, щоб його можна було перевірити. Для хибного входу використовуй ненульовий код і повідомлення в stderr. PowerShell показує код у `$LASTEXITCODE`, POSIX shell у `$?`. pytest порівнює значення через assert і може перевірити виняток. Фікстура задає контрольований стан, наприклад файл UTF-8 у тимчасовому каталозі з вибраними рядками. Синтетичні дані полегшують переносимість і не потребують особистих записів.\n\nУ другій вправі порожній список дає порожній підрахунок. Рядок із відсутньою чи порожньою міткою має дати помилку. Подумай, як production-контракт трактував би регістр і пробіли. У цій вправі дотримуйся заданого контракту й додай тест, перш ніж змінювати правила нормалізації. Так політику буде видно на рев’ю."
+  },
+  "recap": {
+    "en": "Pin the interpreter and inputs. Compare outputs and exit status. Record first failure and a clean-clone reproduction.",
+    "uk": "Зафіксуй інтерпретатор і входи. Звіряй вивід та код завершення. Записуй перший збій і кроки відтворення з чистого клону."
+  },
+  "interview": [
+    "Why can pip and Python point to different environments?",
+    "How would you make a flaky file-processing test deterministic?"
+  ],
+  "interviewGuide": {
+    "en": "Explain how you would demonstrate the fix to another developer.",
+    "uk": "Поясни, як ти продемонструєш виправлення іншому розробнику."
+  },
+  "sources": [
+    {
+      "title": {
+        "en": "Virtual environments",
+        "uk": "Віртуальні середовища"
+      },
+      "url": "https://docs.python.org/3.12/tutorial/venv.html",
+      "version": "Python 3.12",
+      "checked": "2026-11-26"
+    },
+    {
+      "title": {
+        "en": "Assertions in pytest",
+        "uk": "Оператори assert у pytest"
+      },
+      "url": "https://docs.pytest.org/en/stable/how-to/assert.html",
+      "version": "pytest stable",
+      "checked": "2026-11-26"
+    }
+  ],
+  "examples": [
+    {
+      "file": "fixture_trace.py",
+      "expected": "count=3",
+      "explanation": {
+        "en": "Run with the standard library. The default fixture is a JSON object with count 3.",
+        "uk": "Запусти зі стандартною бібліотекою. Типова фікстура є JSON-об’єктом із count 3."
+      },
+      "error": {
+        "en": "Run with --fixture null. Expect 'expected an object with count' and exit 2.",
+        "uk": "Запусти з --fixture null. Очікуй повідомлення 'expected an object with count' і код 2."
+      }
+    }
+  ],
+  "questions": [
+    {
+      "id": "Q1",
+      "prompt": {
+        "en": "The IDE passes, the terminal cannot import pytest. What is the first comparison?",
+        "uk": "В IDE тести проходять, термінал не імпортує pytest. Що спочатку порівняти?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "options": [
+        {
+          "id": "a",
+          "title": {
+            "en": "Interpreter paths and pip locations",
+            "uk": "Шляхи до інтерпретаторів і pip"
+          },
+          "explanation": {
+            "en": "Different environments have different installed packages.",
+            "uk": "У середовищах різні встановлені пакети."
+          }
+        },
+        {
+          "id": "b",
+          "title": {
+            "en": "Rename the test file",
+            "uk": "Перейменувати тест"
+          },
+          "explanation": {
+            "en": "A file name does not select Python.",
+            "uk": "Ім’я файлу не обирає Python."
+          }
+        },
+        {
+          "id": "c",
+          "title": {
+            "en": "Delete the local history",
+            "uk": "Видалити локальну історію"
+          },
+          "explanation": {
+            "en": "History does not explain a missing package.",
+            "uk": "Історія не пояснює відсутній пакет."
+          }
+        }
+      ],
+      "correct": [
+        "a"
+      ]
+    },
+    {
+      "id": "Q2",
+      "prompt": {
+        "en": "Which artifacts support a clean run? Choose all that apply.",
+        "uk": "Які артефакти підтримують чистий запуск? Обери всі."
+      },
+      "objectives": [
+        "O2"
+      ],
+      "options": [
+        {
+          "id": "a",
+          "title": {
+            "en": "Pinned dependencies and a command in README",
+            "uk": "Фіксовані залежності й команда в README"
+          },
+          "explanation": {
+            "en": "They explain the setup.",
+            "uk": "Вони описують середовище."
+          }
+        },
+        {
+          "id": "b",
+          "title": {
+            "en": "A committed token",
+            "uk": "Токен у коміті"
+          },
+          "explanation": {
+            "en": "Secrets must stay outside version history.",
+            "uk": "Секрети тримай поза історією."
+          }
+        },
+        {
+          "id": "c",
+          "title": {
+            "en": "A committed synthetic fixture",
+            "uk": "Синтетична фікстура в коміті"
+          },
+          "explanation": {
+            "en": "The input is available in the clone.",
+            "uk": "Вхід доступний у клоні."
+          }
+        }
+      ],
+      "correct": [
+        "a",
+        "c"
+      ]
+    },
+    {
+      "id": "Q3",
+      "prompt": {
+        "en": "What case checks a missing CLI value?",
+        "uk": "Який кейс перевіряє відсутнє значення CLI?"
+      },
+      "objectives": [
+        "O3"
+      ],
+      "options": [
+        {
+          "id": "a",
+          "title": {
+            "en": "key=ok",
+            "uk": "key=ok"
+          },
+          "explanation": {
+            "en": "This is a valid value.",
+            "uk": "Це коректне значення."
+          }
+        },
+        {
+          "id": "b",
+          "title": {
+            "en": "key= followed only by spaces",
+            "uk": "key= і лише пробіли далі"
+          },
+          "explanation": {
+            "en": "Trimming exposes an empty value.",
+            "uk": "Обрізання пробілів виявляє порожнє значення."
+          }
+        },
+        {
+          "id": "c",
+          "title": {
+            "en": "Two valid rows",
+            "uk": "Два коректні рядки"
+          },
+          "explanation": {
+            "en": "This checks count, not missing input.",
+            "uk": "Це перевіряє кількість, а не відсутній вхід."
+          }
+        }
+      ],
+      "correct": [
+        "b"
+      ]
+    },
+    {
+      "id": "Q4",
+      "prompt": {
+        "en": "The CLI rejects input but returns 0. What breaks?",
+        "uk": "CLI відхиляє вхід, але повертає 0. Що ламається?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "options": [
+        {
+          "id": "a",
+          "title": {
+            "en": "UTF-8 necessarily changes",
+            "uk": "UTF-8 обов’язково змінюється"
+          },
+          "explanation": {
+            "en": "Encoding is independent of exit status.",
+            "uk": "Кодування не залежить від коду виходу."
+          }
+        },
+        {
+          "id": "b",
+          "title": {
+            "en": "Git stops tracking files",
+            "uk": "Git припиняє відстеження"
+          },
+          "explanation": {
+            "en": "This has no effect on Git tracking.",
+            "uk": "Це не впливає на відстеження Git."
+          }
+        },
+        {
+          "id": "c",
+          "title": {
+            "en": "Automation sees a success status.",
+            "uk": "Автоматизація бачить успіх."
+          },
+          "explanation": {
+            "en": "The caller needs nonzero status to handle errors.",
+            "uk": "Викликачеві потрібен ненульовий код для обробки помилки."
+          }
+        }
+      ],
+      "correct": [
+        "c"
+      ]
+    }
+  ],
+  "exercises": [
+    {
+      "id": "W01-L03-E1",
+      "title": {
+        "en": "Parse a CLI setting",
+        "uk": "Оброби параметр CLI"
+      },
+      "kind": "code",
+      "objectives": [
+        "O1"
+      ],
+      "estimateMinutes": 55,
+      "criteria": [],
+      "example": {
+        "en": "' topic = orchid ' → ('topic', 'orchid'). 'key=a=b' keeps 'a=b'.",
+        "uk": "' topic = orchid ' → ('topic', 'orchid'). У 'key=a=b' зберігається 'a=b'."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "en": "Primary attempt",
+            "uk": "Основний варіант"
+          },
+          "prompt": {
+            "en": "Implement parse_setting in setting.py. Split on the first equals sign and trim both parts. Raise ValueError when the separator, key or value is missing. Use examples with orchid.",
+            "uk": "Реалізуй parse_setting в setting.py. Діли за першим знаком дорівнює й обрізай пробіли з обох боків. Піднімай ValueError, якщо бракує роздільника, ключа чи значення. Спробуй приклади з orchid."
+          },
+          "hints": [
+            {
+              "en": "Identify the first separator.",
+              "uk": "Знайди перший роздільник."
+            },
+            {
+              "en": "Split into key, separator, value and check the trimmed values.",
+              "uk": "Виділи ключ, роздільник і значення, потім перевір обрізані значення."
+            },
+            {
+              "en": "str.partition('=') preserves the remaining equals signs.",
+              "uk": "str.partition('=') зберігає решту знаків дорівнює."
+            }
+          ],
+          "solution": {
+            "en": "Use partition, trim both parts, raise for any missing piece, then return the pair.",
+            "uk": "Скористайся partition, обріж пробіли, підніми виняток для відсутньої частини й поверни пару."
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "en": "Retry 1",
+            "uk": "Повтор 1"
+          },
+          "prompt": {
+            "en": "Use the same contract with maple and a nested equals sign. Re-test blank input and Unicode.",
+            "uk": "Застосуй той самий контракт з maple та ще одним знаком дорівнює. Повтори тести порожнього входу й Unicode."
+          },
+          "hints": [
+            {
+              "en": "Identify the first separator.",
+              "uk": "Знайди перший роздільник."
+            },
+            {
+              "en": "Split into key, separator, value and check the trimmed values.",
+              "uk": "Виділи ключ, роздільник і значення, потім перевір обрізані значення."
+            },
+            {
+              "en": "str.partition('=') preserves the remaining equals signs.",
+              "uk": "str.partition('=') зберігає решту знаків дорівнює."
+            }
+          ],
+          "solution": {
+            "en": "Use partition, trim both parts, raise for any missing piece, then return the pair.",
+            "uk": "Скористайся partition, обріж пробіли, підніми виняток для відсутньої частини й поверни пару."
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "en": "Retry 2",
+            "uk": "Повтор 2"
+          },
+          "prompt": {
+            "en": "Use the same contract with cedar. Add a key and value surrounded by whitespace.",
+            "uk": "Застосуй той самий контракт із cedar. Додай ключ і значення з пробілами навколо."
+          },
+          "hints": [
+            {
+              "en": "Identify the first separator.",
+              "uk": "Знайди перший роздільник."
+            },
+            {
+              "en": "Split into key, separator, value and check the trimmed values.",
+              "uk": "Виділи ключ, роздільник і значення, потім перевір обрізані значення."
+            },
+            {
+              "en": "str.partition('=') preserves the remaining equals signs.",
+              "uk": "str.partition('=') зберігає решту знаків дорівнює."
+            }
+          ],
+          "solution": {
+            "en": "Use partition, trim both parts, raise for any missing piece, then return the pair.",
+            "uk": "Скористайся partition, обріж пробіли, підніми виняток для відсутньої частини й поверни пару."
+          }
+        }
+      ],
+      "diagnostic": false
+    },
+    {
+      "id": "W01-L03-E2",
+      "title": {
+        "en": "Count fixture categories",
+        "uk": "Порахуй категорії фікстури"
+      },
+      "kind": "code",
+      "objectives": [
+        "O2"
+      ],
+      "estimateMinutes": 65,
+      "criteria": [],
+      "example": {
+        "en": "[{\"kind\":\"orchid\"},{\"kind\":\"orchid\"}] → {\"orchid\":2}. [] → {}.",
+        "uk": "[{\"kind\":\"orchid\"},{\"kind\":\"orchid\"}] → {\"orchid\":2}. [] → {}."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "en": "Primary attempt",
+            "uk": "Основний варіант"
+          },
+          "prompt": {
+            "en": "Implement count_kinds(path) in fixture_counts.py. Read a UTF-8 JSON list of objects with nonblank string kind. Count exact keys. Raise ValueError for malformed data. Try orchid and lime.",
+            "uk": "Реалізуй count_kinds(path) у fixture_counts.py. Прочитай список JSON у UTF-8 з об’єктами й непорожнім текстовим kind. Рахуй точні ключі. Піднімай ValueError для хибних даних. Спробуй orchid і lime."
+          },
+          "hints": [
+            {
+              "en": "Separate parsing from validation.",
+              "uk": "Відокрем парсинг від валідації."
+            },
+            {
+              "en": "Validate the top-level list and each row before incrementing.",
+              "uk": "Перевір список і кожен рядок перед підрахунком."
+            },
+            {
+              "en": "Counter or counts.get(kind, 0) + 1 records repetitions.",
+              "uk": "Counter або counts.get(kind, 0) + 1 врахує повтори."
+            }
+          ],
+          "solution": {
+            "en": "Decode UTF-8, parse JSON, reject a non-list or invalid label, increment a counter over the exact kind, then return a dict.",
+            "uk": "Декодуй UTF-8, розбери JSON, відхили не список або хибну мітку, збільш лічильник точного kind і поверни dict."
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "en": "Retry 1",
+            "uk": "Повтор 1"
+          },
+          "prompt": {
+            "en": "Repeat with maple and jade, an empty list and a blank kind. Keep the same interface.",
+            "uk": "Повтори для maple і jade, порожнього списку й порожньої мітки. Збережи інтерфейс."
+          },
+          "hints": [
+            {
+              "en": "Separate parsing from validation.",
+              "uk": "Відокрем парсинг від валідації."
+            },
+            {
+              "en": "Validate the top-level list and each row before incrementing.",
+              "uk": "Перевір список і кожен рядок перед підрахунком."
+            },
+            {
+              "en": "Counter or counts.get(kind, 0) + 1 records repetitions.",
+              "uk": "Counter або counts.get(kind, 0) + 1 врахує повтори."
+            }
+          ],
+          "solution": {
+            "en": "Decode UTF-8, parse JSON, reject a non-list or invalid label, increment a counter over the exact kind, then return a dict.",
+            "uk": "Декодуй UTF-8, розбери JSON, відхили не список або хибну мітку, збільш лічильник точного kind і поверни dict."
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "en": "Retry 2",
+            "uk": "Повтор 2"
+          },
+          "prompt": {
+            "en": "Repeat with cedar, iris and a Unicode label. Keep exact keys and reject missing labels.",
+            "uk": "Повтори для cedar, iris і мітки Unicode. Збережи точні ключі й відхиляй відсутні мітки."
+          },
+          "hints": [
+            {
+              "en": "Separate parsing from validation.",
+              "uk": "Відокрем парсинг від валідації."
+            },
+            {
+              "en": "Validate the top-level list and each row before incrementing.",
+              "uk": "Перевір список і кожен рядок перед підрахунком."
+            },
+            {
+              "en": "Counter or counts.get(kind, 0) + 1 records repetitions.",
+              "uk": "Counter або counts.get(kind, 0) + 1 врахує повтори."
+            }
+          ],
+          "solution": {
+            "en": "Decode UTF-8, parse JSON, reject a non-list or invalid label, increment a counter over the exact kind, then return a dict.",
+            "uk": "Декодуй UTF-8, розбери JSON, відхили не список або хибну мітку, збільш лічильник точного kind і поверни dict."
+          }
+        }
+      ],
+      "diagnostic": false
+    }
+  ],
+  "crosslinks": [
+    "W01-L02",
+    "W01-L04"
+  ]
+}

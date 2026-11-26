@@ -1,0 +1,501 @@
+{
+  "id": "W02-L01",
+  "contentVersion": 1,
+  "overview": {
+    "uk": "Імпорт документів часто починається зі списку, а далі потребує повторного пошуку за ID. Урок простежує шлях від упорядкованого вводу до типізованого індексу, з яким зручно працювати. Ти обереш list, dict, set або deque за операцією, яку потрібно здешевити. Анотація типу передає очікування аналізатору й інженеру, який читатиме код. Dataclass фіксує внутрішнє представлення після розбору. Також простежиш, як політика першого запису впливає на результат повторного імпорту. Приклад використовує синтетичні дані й розрізняє вартість побудови індексу та пошуку за ним.",
+    "en": "A document import often starts as a list and turns into repeated searches by ID. This lesson follows a small batch from ordered input to a typed index you can query efficiently. You will choose a list, dict, set, or deque based on the operation you need to make cheap. Type annotations communicate expectations to a checker and to the next maintainer. A dataclass records the internal shape after parsing. You will also trace how a first-wins duplicate rule changes the result when an import is replayed. The example runs entirely on synthetic data and separates the cost of building the index from the cost of looking something up."
+  },
+  "theory": {
+    "uk": "### Модель запису\n\nЗапису потрібен стабільний ідентифікатор і поля, які він представляє. Dataclass з іменованими полями дає змогу розрізнити ID документа, заголовок та розмір. Згенерований ініціалізатор, представлення й рівність роблять порівняння читабельними. Frozen dataclass захищає присвоєння власним властивостям. Поле все ще може посилатися на змінний список. Для незмінних колекцій обирай кортежі. Анотація bytes_count: int сама не відхилить рядок під час виконання. Правило варто забезпечити на межі вводу, а модель застосувати для внутрішніх даних.\n\n### Вибір за операцією\n\nList забезпечує доступ за індексом за сталий час, а append має амортизовану сталу вартість. Пошук значення, видалення або вставка на початку мають лінійну вартість через перебір або зміщення елементів. Для стека підійдуть append і pop у кінці. Для черги підійдуть append і popleft у deque. Set фіксує появу ID без пов’язаних даних, а dict зберігає ID і запис. У нормальних умовах пошук через хеш має очікувану сталу вартість. Побудова індексу все одно обходить вхід і зберігає унікальні ключі. Для n рядків і q пошуків повторна фільтрація може коштувати O(nq), а індекс потребує очікуваних O(n + q) операцій.\n\n### Трасування дублікатів\n\nПростеж ID A, B, A зі значеннями Draft, Notes, Final. Після перших двох рядків словник містить A→Draft і B→Notes. Політика першого запису залишає обидва значення. Політика останнього оновлює A→Final і зберігає позицію A в порядку вставки словника Python. Якщо повторювані ID означають конфлікт версій, поверни конфлікт, щоб викликач явно обрав версію. Визнач правило до початку обходу. У тестах перевір порядок і вміст окремими твердженнями. Рахуй унікальні ID для оцінки пам’яті та обмежуй або обробляй вхід потоково, коли він може перевищити пам’ять.\n\n### Виміряй вартість індексу до вибору\n\nУяви пакет з 30 000 рядків, 8 000 унікальних ID і звіт із запитами за 2 000 ID. У гіршому сценарії список дасть 60 мільйонів переглядів. Побудова dict потребує близько 30 000 відвідувань і зберігає 8 000 записів, а потім має 2 000 пошуків з очікуваною сталою вартістю. Це оцінка операцій. Вимірюй реальне навантаження окремо, бо хешування й виділення пам’яті теж коштують часу. Якщо єдиний споживач читає рядки один раз за порядком, додатковий індекс дає мало користі. Коли пакет уже у PostgreSQL, унікальний індекс там прискорить пошук між процесами й обмежить повторні записи.\n\nДля рівності потрібна окрема фікстура. Якщо один адаптер знижує регістр ID, а другий розрізняє, правило дублікатів працюватиме над різними ключами. Для траси A, a і A спочатку перевір нормалізацію ключа, потім першу появу й кількість записів. Кешуй проєкцію запису, якщо викликачу потрібен лише заголовок. Залиш початковий порядок, якщо треба повідомити про кожен відхилений рядок. Вибір визначає, що можна відновити після агрегування.",
+    "en": "### Model the record\n\nA record needs a stable identity and data carried by that identity. Use a dataclass with named fields when code must distinguish document ID, title and byte count. Generated initialization, representation and equality make comparisons readable. A frozen dataclass protects reassignment of its own attributes. A field can still point to a mutable list. Choose tuples for collections that must remain immutable. An annotation like bytes_count: int won't reject a string at runtime. Establish that rule at the input boundary and keep the model focused on internal data.\n\n### Choose by operation\n\nA Python list gives indexed access in constant time and append in amortized constant time. Searching for a value and deleting or inserting at the front are linear because entries must be inspected or shifted. A stack can append and pop at the end. A queue can append and popleft on a deque. A set tracks whether an ID has been seen without storing its associated data. A dict stores both ID and record. Hash-based lookup is expected constant time under normal conditions. Building the index still visits each row and stores each distinct key. With n inputs and q queries, repeated linear filtering may cost O(nq) compared with expected O(n + q) additional operations for an index.\n\n### Trace duplicate handling\n\nTrace IDs A, B, A with values Draft, Notes, Final. After the first two rows, the dict contains A→Draft and B→Notes. A first-wins policy leaves both values unchanged. A last-wins policy updates A→Final and preserves the insertion order of A in a Python dict. If repeated IDs indicate competing versions, report a conflict so the caller can select a version explicitly. Decide before iterating. Then check the output order and contents with separate test assertions. Count distinct IDs for memory planning, and cap or stream inputs when the batch may grow beyond memory.\n\n### Measure the index before choosing it\n\nConsider a batch of 30,000 rows with 8,000 distinct IDs and a report that asks for 2,000 IDs. A worst-case list scan can visit 60 million rows. Building a dict requires about 30,000 visits and 8,000 retained entries, then 2,000 expected constant-time lookups. The count is an operation model, so benchmark the actual workload separately. Hashing and allocation also cost time. If the only consumer reads the rows once in order, an extra index buys little. If the batch already lives in PostgreSQL, a unique index there can handle lookups across processes and constrain duplicated writes.\n\nAn equality test deserves its own fixture. If ID is lowercased in one adapter and case-sensitive in another, the duplicate policy runs over different keys. For the trace A, a and A, assert the key normalization rule first, then assert first occurrence and record count. Cache a projection of the record if the caller only needs the title. Keep the original ordered list if the caller must still report every rejected line. These choices establish what can be reconstructed after aggregation."
+  },
+  "recap": {
+    "uk": "Вибирай колекції за операціями, моделюй відомі дані через dataclass і визначай правила дублікатів явно. Перевіряй типи на межі.",
+    "en": "Select collections from operations, model known data with a dataclass, and make duplicate handling explicit. Check type assumptions at the boundary."
+  },
+  "objectives": [
+    {
+      "id": "O1",
+      "title": {
+        "uk": "Обирати колекцію за способом доступу й оцінювати вартість.",
+        "en": "Choose a collection by access pattern and estimate its cost."
+      },
+      "skill": "tooling"
+    },
+    {
+      "id": "O2",
+      "title": {
+        "uk": "Представляти валідований запис і задавати політику дублікатів.",
+        "en": "Represent a validated record and define a duplicate policy."
+      },
+      "skill": "systems"
+    }
+  ],
+  "sources": [
+    {
+      "title": {
+        "uk": "Dataclass",
+        "en": "Data Classes"
+      },
+      "url": "https://docs.python.org/3.12/library/dataclasses.html",
+      "version": "Python 3.12",
+      "checked": "2026-11-26"
+    }
+  ],
+  "examples": [
+    {
+      "file": "w02_l01_example.py",
+      "expected": "{'a': 'draft', 'b': 'note'}",
+      "explanation": {
+        "uk": "Індекс за правилом першого запису з типізованих полів. Python 3.12, лише стандартна бібліотека.",
+        "en": "A first-wins index built from typed records. Python 3.12, standard library only."
+      },
+      "error": {
+        "uk": "Спробуй список як ключ. Dict підніме TypeError, бо список нехешований.",
+        "en": "Try a list as the key. The dict raises TypeError because lists are unhashable."
+      }
+    }
+  ],
+  "interview": [
+    "How do you choose a data structure for repeated lookup?",
+    "When would you reject a duplicate identifier?"
+  ],
+  "interviewGuide": {
+    "uk": "Назви конкретні операції та поясни витрати часу й пам’яті.",
+    "en": "Give a concrete access pattern and mention both time and memory."
+  },
+  "exercises": [
+    {
+      "id": "W02-L01-E1",
+      "title": {
+        "uk": "Індексувати заголовки за ключем",
+        "en": "Index document titles by key"
+      },
+      "kind": "code",
+      "objectives": [
+        "O1"
+      ],
+      "estimateMinutes": 64,
+      "criteria": [],
+      "example": {
+        "uk": "Вхід [(\" a \", \" Draft \"), (\"a\", \"Final\")] дає {\"a\": \"Draft\"}.",
+        "en": "Input [(\" a \", \" Draft \"), (\"a\", \"Final\")] yields {\"a\": \"Draft\"}."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(rows) для iterable з кортежів (key, title). Поверни dict: ключ після str.strip з урахуванням регістру → перший заголовок після str.strip. Піднімай ValueError, якщо ключ або заголовок порожній, навіть у дублікаті. Обійди ввід один раз, збережи порядок першої появи.\n\n**Синтетичні накладні**",
+            "en": "Implement solve(rows) for an iterable of (key, title) string tuples. Return a dict mapping trimmed, case-sensitive keys to the first trimmed title per key. Strip with str.strip. Reject any empty key or title with ValueError, even in a duplicate. Consume the input once and preserve order of first appearance.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Який ключ має бути унікальним?",
+              "en": "Which key must be unique?"
+            },
+            {
+              "uk": "Очисть обидва поля перед пошуком ключа.",
+              "en": "Clean both fields before checking if the key already exists."
+            },
+            {
+              "uk": "dict.setdefault(key, title) додає значення лише за відсутнього ключа.",
+              "en": "dict.setdefault(key, title) inserts only on a missing key."
+            }
+          ],
+          "solution": {
+            "uk": "Перевір обидва рядки й використай вставку відповідно до контракту.\n\n```python\nfrom collections.abc import Iterable\n\ndef solve(rows: Iterable[tuple[str, str]]) -> dict[str, str]:\n    result: dict[str, str] = {}\n    for raw_key, raw_title in rows:\n        key, title = raw_key.strip(), raw_title.strip()\n        if not key or not title:\n            raise ValueError(\"key and title are required\")\n        result.setdefault(key, title)\n    return result\n```",
+            "en": "Validate both strings and choose the insertion operation matching the contract.\n\n```python\nfrom collections.abc import Iterable\n\ndef solve(rows: Iterable[tuple[str, str]]) -> dict[str, str]:\n    result: dict[str, str] = {}\n    for raw_key, raw_title in rows:\n        key, title = raw_key.strip(), raw_title.strip()\n        if not key or not title:\n            raise ValueError(\"key and title are required\")\n        result.setdefault(key, title)\n    return result\n```"
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(rows) для iterable з кортежів (key, title). Поверни dict: ключ після str.strip з урахуванням регістру → перший заголовок після str.strip. Піднімай ValueError, якщо ключ або заголовок порожній, навіть у дублікаті. Обійди ввід один раз, збережи порядок першої появи.\n\n**Синтетичні запити підтримки**",
+            "en": "Implement solve(rows) for an iterable of (key, title) string tuples. Return a dict mapping trimmed, case-sensitive keys to the first trimmed title per key. Strip with str.strip. Reject any empty key or title with ValueError, even in a duplicate. Consume the input once and preserve order of first appearance.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Який ключ має бути унікальним?",
+              "en": "Which key must be unique?"
+            },
+            {
+              "uk": "Очисть обидва поля перед пошуком ключа.",
+              "en": "Clean both fields before checking if the key already exists."
+            },
+            {
+              "uk": "dict.setdefault(key, title) додає значення лише за відсутнього ключа.",
+              "en": "dict.setdefault(key, title) inserts only on a missing key."
+            }
+          ],
+          "solution": {
+            "uk": "Перевір обидва рядки й використай вставку відповідно до контракту.\n\n```python\nfrom collections.abc import Iterable\n\ndef solve(rows: Iterable[tuple[str, str]]) -> dict[str, str]:\n    result: dict[str, str] = {}\n    for raw_key, raw_title in rows:\n        key, title = raw_key.strip(), raw_title.strip()\n        if not key or not title:\n            raise ValueError(\"key and title are required\")\n        result.setdefault(key, title)\n    return result\n```",
+            "en": "Validate both strings and choose the insertion operation matching the contract.\n\n```python\nfrom collections.abc import Iterable\n\ndef solve(rows: Iterable[tuple[str, str]]) -> dict[str, str]:\n    result: dict[str, str] = {}\n    for raw_key, raw_title in rows:\n        key, title = raw_key.strip(), raw_title.strip()\n        if not key or not title:\n            raise ValueError(\"key and title are required\")\n        result.setdefault(key, title)\n    return result\n```"
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(rows) для iterable з кортежів (key, title). Поверни dict: ключ після str.strip з урахуванням регістру → перший заголовок після str.strip. Піднімай ValueError, якщо ключ або заголовок порожній, навіть у дублікаті. Обійди ввід один раз, збережи порядок першої появи.\n\n**Синтетичні документи політик**",
+            "en": "Implement solve(rows) for an iterable of (key, title) string tuples. Return a dict mapping trimmed, case-sensitive keys to the first trimmed title per key. Strip with str.strip. Reject any empty key or title with ValueError, even in a duplicate. Consume the input once and preserve order of first appearance.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Який ключ має бути унікальним?",
+              "en": "Which key must be unique?"
+            },
+            {
+              "uk": "Очисть обидва поля перед пошуком ключа.",
+              "en": "Clean both fields before checking if the key already exists."
+            },
+            {
+              "uk": "dict.setdefault(key, title) додає значення лише за відсутнього ключа.",
+              "en": "dict.setdefault(key, title) inserts only on a missing key."
+            }
+          ],
+          "solution": {
+            "uk": "Перевір обидва рядки й використай вставку відповідно до контракту.\n\n```python\nfrom collections.abc import Iterable\n\ndef solve(rows: Iterable[tuple[str, str]]) -> dict[str, str]:\n    result: dict[str, str] = {}\n    for raw_key, raw_title in rows:\n        key, title = raw_key.strip(), raw_title.strip()\n        if not key or not title:\n            raise ValueError(\"key and title are required\")\n        result.setdefault(key, title)\n    return result\n```",
+            "en": "Validate both strings and choose the insertion operation matching the contract.\n\n```python\nfrom collections.abc import Iterable\n\ndef solve(rows: Iterable[tuple[str, str]]) -> dict[str, str]:\n    result: dict[str, str] = {}\n    for raw_key, raw_title in rows:\n        key, title = raw_key.strip(), raw_title.strip()\n        if not key or not title:\n            raise ValueError(\"key and title are required\")\n        result.setdefault(key, title)\n    return result\n```"
+          }
+        }
+      ]
+    },
+    {
+      "id": "W02-L01-E2",
+      "title": {
+        "uk": "Обрати індекс для однопрохідного імпорту",
+        "en": "Choose an index for a one-pass import"
+      },
+      "kind": "rubric",
+      "objectives": [
+        "O2"
+      ],
+      "estimateMinutes": 68,
+      "criteria": [
+        {
+          "id": "C1",
+          "title": {
+            "uk": "Порівняно вартість пошуку й пам’яті трьох колекцій.",
+            "en": "Compare lookup and storage costs for three collections."
+          }
+        },
+        {
+          "id": "C2",
+          "title": {
+            "uk": "Наведено трасу дубліката й перевірено обраний запис.",
+            "en": "Show a duplicate trace and assert the selected record."
+          }
+        },
+        {
+          "id": "C3",
+          "title": {
+            "uk": "Пояснено умову переходу до зовнішнього індексу.",
+            "en": "Explain the condition for an external index."
+          }
+        }
+      ],
+      "example": {
+        "uk": "Простеж a, b, a і поясни, чи зберігся другий заголовок.",
+        "en": "Trace a, b, a and report whether the second title persists plus why."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Напиши односторінковий дизайн для потоку з 10 000 записів і повторних запитів за ID. Порівняй list, dict і set та напиши невдалий тест для правила дублікатів. Додай синтетичну трасу трьох записів. Поясни, що зміниш, коли дані не поміщатимуться в пам’ять.\n\n**Синтетичні накладні**",
+            "en": "Write a one-page design for a stream of 10,000 records and repeated ID queries. Compare a plain list, dict, and set and implement a small failing test for the duplicate policy. Attach a synthetic trace of three records. Explain how you would react if the data no longer fit in memory.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Визнач, чи потрібне значення, чи лише перевірка присутності.",
+              "en": "Ask whether you need the value or only membership."
+            },
+            {
+              "uk": "Оціни n операцій побудови й q читань.",
+              "en": "Estimate n builds plus q reads."
+            },
+            {
+              "uk": "Склади вхід, де дублікат відрізняється лише заголовком.",
+              "en": "Build an input that differs only in the title of a duplicate."
+            }
+          ],
+          "solution": {
+            "uk": "Використай dict для ID→запис, поки індекс поміщається. Спершу валідуй, зафіксуй правило дубліката тестом і перенеси індекс у сховище, коли робочий набір виходить за бюджет пам’яті.",
+            "en": "Use a dict for ID→record while it fits. Validate first, specify the duplicate rule in a failing test, and move the index to a datastore when the working set exceeds the memory budget."
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Напиши односторінковий дизайн для потоку з 10 000 записів і повторних запитів за ID. Порівняй list, dict і set та напиши невдалий тест для правила дублікатів. Додай синтетичну трасу трьох записів. Поясни, що зміниш, коли дані не поміщатимуться в пам’ять.\n\n**Синтетичні запити підтримки**",
+            "en": "Write a one-page design for a stream of 10,000 records and repeated ID queries. Compare a plain list, dict, and set and implement a small failing test for the duplicate policy. Attach a synthetic trace of three records. Explain how you would react if the data no longer fit in memory.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Визнач, чи потрібне значення, чи лише перевірка присутності.",
+              "en": "Ask whether you need the value or only membership."
+            },
+            {
+              "uk": "Оціни n операцій побудови й q читань.",
+              "en": "Estimate n builds plus q reads."
+            },
+            {
+              "uk": "Склади вхід, де дублікат відрізняється лише заголовком.",
+              "en": "Build an input that differs only in the title of a duplicate."
+            }
+          ],
+          "solution": {
+            "uk": "Використай dict для ID→запис, поки індекс поміщається. Спершу валідуй, зафіксуй правило дубліката тестом і перенеси індекс у сховище, коли робочий набір виходить за бюджет пам’яті.",
+            "en": "Use a dict for ID→record while it fits. Validate first, specify the duplicate rule in a failing test, and move the index to a datastore when the working set exceeds the memory budget."
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Напиши односторінковий дизайн для потоку з 10 000 записів і повторних запитів за ID. Порівняй list, dict і set та напиши невдалий тест для правила дублікатів. Додай синтетичну трасу трьох записів. Поясни, що зміниш, коли дані не поміщатимуться в пам’ять.\n\n**Синтетичні документи політик**",
+            "en": "Write a one-page design for a stream of 10,000 records and repeated ID queries. Compare a plain list, dict, and set and implement a small failing test for the duplicate policy. Attach a synthetic trace of three records. Explain how you would react if the data no longer fit in memory.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Визнач, чи потрібне значення, чи лише перевірка присутності.",
+              "en": "Ask whether you need the value or only membership."
+            },
+            {
+              "uk": "Оціни n операцій побудови й q читань.",
+              "en": "Estimate n builds plus q reads."
+            },
+            {
+              "uk": "Склади вхід, де дублікат відрізняється лише заголовком.",
+              "en": "Build an input that differs only in the title of a duplicate."
+            }
+          ],
+          "solution": {
+            "uk": "Використай dict для ID→запис, поки індекс поміщається. Спершу валідуй, зафіксуй правило дубліката тестом і перенеси індекс у сховище, коли робочий набір виходить за бюджет пам’яті.",
+            "en": "Use a dict for ID→record while it fits. Validate first, specify the duplicate rule in a failing test, and move the index to a datastore when the working set exceeds the memory budget."
+          }
+        }
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "id": "Q1",
+      "prompt": {
+        "uk": "Коли корисні і dict, і list?",
+        "en": "When are a dict and a list both useful?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Зберегти порядок відображення й індексувати записи за ID.",
+            "en": "Keep display order and index records for ID lookup."
+          },
+          "explanation": {
+            "uk": "Список представляє порядок показу, а словник відповідає на пошук за ID.",
+            "en": "The list represents presentation order and the dict answers identity lookup."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Замінити пошук перевіркою присутності в list.",
+            "en": "Replace all lookup with list membership."
+          },
+          "explanation": {
+            "uk": "Пошук у списку все ще перебирає елементи.",
+            "en": "List membership still scans entries."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Використати set для пошуку ID→заголовок за ключем.",
+            "en": "Use a set for ID→title pairs by key."
+          },
+          "explanation": {
+            "uk": "Set має перевірку присутності, без інтерфейсу ключ→значення.",
+            "en": "A set has membership, without a key-to-value interface."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q2",
+      "prompt": {
+        "uk": "Вміст якого поля frozen dataclass ще може змінюватися?",
+        "en": "Which field of a frozen dataclass could still change contents?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Кожне поле стає глибоко незмінним.",
+            "en": "Each field value becomes deeply immutable."
+          },
+          "explanation": {
+            "uk": "Frozen не змінює об’єкти рекурсивно.",
+            "en": "Freezing does not recursively change objects."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Поле, що посилається на список.",
+            "en": "A field that references a list."
+          },
+          "explanation": {
+            "uk": "Frozen блокує присвоєння полю, а список залишається змінним.",
+            "en": "Freezing blocks attribute assignment, while the referenced list is still mutable."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Рядкове поле можна змінити на місці.",
+            "en": "A string field can be edited in place."
+          },
+          "explanation": {
+            "uk": "Рядки Python незмінні.",
+            "en": "Python strings are immutable."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q3",
+      "prompt": {
+        "uk": "Скільки рядків треба переглянути для індексу першого запису?",
+        "en": "How many rows must you inspect to build a first-wins index?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Щонайбільше перший унікальний рядок.",
+            "en": "At most the first distinct row."
+          },
+          "explanation": {
+            "uk": "Невідомо, чи пізніше з’являться інші ID.",
+            "en": "You do not know there are no later distinct rows."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Лише дублікати.",
+            "en": "Only the duplicate rows."
+          },
+          "explanation": {
+            "uk": "Для визначення дублікатів спочатку треба прочитати рядки.",
+            "en": "Identifying duplicates first requires reading the rows."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Усі рядки в загальному випадку.",
+            "en": "All rows in the general case."
+          },
+          "explanation": {
+            "uk": "Пізній рядок може додати новий ID або порушити контракт.",
+            "en": "A late row can add a new ID or violate the input contract."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q4",
+      "prompt": {
+        "uk": "Яка операція черги добре поєднується з append?",
+        "en": "Which queue operation pairs well with append?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "deque.popleft().",
+            "en": "deque.popleft()."
+          },
+          "explanation": {
+            "uk": "Вона видаляє найстаріший елемент без зміщення списку.",
+            "en": "It removes the oldest item without shifting a list."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "list.pop().",
+            "en": "list.pop()."
+          },
+          "explanation": {
+            "uk": "Вона видаляє найновіший елемент, як у стеку.",
+            "en": "It removes the newest item, as in a stack."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "list.insert(0, item).",
+            "en": "list.insert(0, item)."
+          },
+          "explanation": {
+            "uk": "Вона вставляє елемент і зміщує наявні.",
+            "en": "It inserts rather than removes and shifts existing entries."
+          }
+        }
+      ]
+    }
+  ],
+  "crosslinks": [
+    "W01-L03",
+    "W02-L02"
+  ]
+}

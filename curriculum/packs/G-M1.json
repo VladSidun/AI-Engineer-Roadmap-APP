@@ -1,0 +1,786 @@
+{
+  "id": "G-M1",
+  "contentVersion": 1,
+  "overview": {
+    "uk": "Покажи професійний процес Python від стабільного вводу до офлайн-тестів і чистого запуску. Випробування поєднує нормалізацію за першим записом, async-запити й обмежений повтор безпечного читання. У власному репозиторії покажи CLI, детерміновані фікстури й відтворюване встановлення. Вправа з кодом вимірює основну поведінку. Окрема рубрика фіксує твоє локальне демо й пояснення.",
+    "en": "Demonstrate a professional Python workflow from a stable input contract through offline tests and a clean run. The challenge combines first-wins normalization with asynchronous probing and a bounded retry for safe reads. In your own repository demonstrate the CLI, deterministic test fixtures and repeatable installation. The code exercise measures the core behavior. The separate rubric records your local demonstration and explanation."
+  },
+  "theory": {
+    "uk": "### Поєднання навичок\n\nСпочатку перевір усі дані й збережи порядок вставки. Нормалізуй дублікати до будь-якого виклику. Під час fetch пройди стани очікування, активного запиту, відповіді й щонайбільше раз очікування повтору. Збережи результати за порядком входу. Порівняй валідний дублікат, пізній некоректний рядок і відповідь для повтору. Тести керують синтетичною мережею й відтворюють усі три.",
+    "en": "### Combine the pieces\n\nFirst validate all input and preserve insertion order. Normalize duplicate IDs before issuing any calls. During each fetch, move through states waiting, active, reply and, at most once, waiting for retry. Store results by input order. Compare a valid duplicate, an invalid later row and a retryable response. The tests own synthetic network behavior and can reproduce all three."
+  },
+  "recap": {
+    "uk": "Подай власну трасу, поясни компроміс англійською й відмічай критерій лише за наявності доказу.",
+    "en": "Submit your own trace, explain the trade-off in English, and check each rubric item only when your artifact shows it."
+  },
+  "objectives": [
+    {
+      "id": "O1",
+      "title": {
+        "uk": "Поєднати нормалізацію, обмежені async-виклики й один безпечний повтор.",
+        "en": "Integrate normalization, bounded async calls and one safe retry."
+      },
+      "skill": "systems"
+    },
+    {
+      "id": "O2",
+      "title": {
+        "uk": "Відтворити і пояснити процес чистого клону.",
+        "en": "Reproduce and explain a clean-clone engineering workflow."
+      },
+      "skill": "evaluation"
+    }
+  ],
+  "sources": [
+    {
+      "title": {
+        "uk": "RFC 9110 · HTTP",
+        "en": "RFC 9110 · HTTP"
+      },
+      "url": "https://www.rfc-editor.org/rfc/rfc9110.html",
+      "version": "RFC 9110",
+      "checked": "2026-11-26"
+    },
+    {
+      "title": {
+        "uk": "asyncio TaskGroup",
+        "en": "asyncio TaskGroup"
+      },
+      "url": "https://docs.python.org/3.12/library/asyncio-task.html",
+      "version": "Python 3.12",
+      "checked": "2026-11-26"
+    }
+  ],
+  "examples": [],
+  "interview": [
+    "Describe the behavior you verified.",
+    "What limitation remains in your solution?"
+  ],
+  "interviewGuide": {
+    "uk": "Скористайся англійським поясненням з рубрики. Назви вхід, результат і обмеження.",
+    "en": "Use the English explanation from the rubric. Name an input, its result, and a limitation."
+  },
+  "exercises": [
+    {
+      "id": "G-M1-E1",
+      "title": {
+        "uk": "Побудувати обмежену перевірку документів",
+        "en": "Build a bounded document probe"
+      },
+      "kind": "code",
+      "objectives": [
+        "O1"
+      ],
+      "estimateMinutes": 105,
+      "criteria": [],
+      "example": {
+        "uk": "Ключі a,a,b зі статусами 503→200 для a, 404 для b дають {a:200,b:404}.",
+        "en": "Keys a,a,b and statuses 503→200 for a, 404 for b yield {a:200,b:404}."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Реалізуй async solve(keys, fetch, limit). Обріж кожен рядковий ID, відхили порожні до I/O, збережи першу появу. Для limit < 1 піднімай ValueError. Await fetch(key) повертає цілий HTTP-статус. Повтори 503 один раз негайно для керованої GET-фікстури. Поверни фінальні статуси у dict за порядком першої появи. Активні fetch обмежені limit. Лише для цієї фікстури повтор без паузи. Інші винятки можна передати.\n\n**Синтетичні накладні**",
+            "en": "Implement async solve(keys, fetch, limit). Trim each string ID, reject blanks before any I/O, and keep first appearance of each ID. Raise ValueError for limit < 1. Await fetch(key) returning an integer HTTP status. Retry a status of 503 once immediately for this controlled GET fixture, and return the final statuses in a dict in first-appearance order. Bound concurrent fetch calls by limit. For this fixture only the retry has no delay. Other exceptions may propagate.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Перевір увесь набір ключів до планування.",
+              "en": "Validate the entire key set before scheduling."
+            },
+            {
+              "uk": "Використай дедуплікацію за порядком вставки, далі один семафор.",
+              "en": "Use insertion-ordered deduplication, then one shared semaphore."
+            },
+            {
+              "uk": "Дай кожній задачі щонайбільше два fetch й зберіть результати за порядком вводу.",
+              "en": "Give each independent task at most two fetches and assemble results in input order."
+            }
+          ],
+          "solution": {
+            "uk": "Розділи валідацію, обмежене планування й правило відповіді. Група задач визначає область усіх запитів.\n\n```python\nimport asyncio\nfrom collections.abc import Awaitable, Callable\n\nasync def solve(keys: list[str], fetch: Callable[[str], Awaitable[int]], limit: int) -> dict[str, int]:\n    clean = list(dict.fromkeys(key.strip() for key in keys))\n    if limit < 1 or '' in clean:\n        raise ValueError('keys and positive limit required')\n    capacity = asyncio.Semaphore(limit)\n\n    async def probe(key: str) -> int:\n        async with capacity:\n            status = await fetch(key)\n            return await fetch(key) if status == 503 else status\n\n    async with asyncio.TaskGroup() as group:\n        scheduled = {key: group.create_task(probe(key)) for key in clean}\n    return {key: request.result() for key, request in scheduled.items()}\n```",
+            "en": "Decouple validation, bounded scheduling and reply policy. The task group scopes all requests.\n\n```python\nimport asyncio\nfrom collections.abc import Awaitable, Callable\n\nasync def solve(keys: list[str], fetch: Callable[[str], Awaitable[int]], limit: int) -> dict[str, int]:\n    clean = list(dict.fromkeys(key.strip() for key in keys))\n    if limit < 1 or '' in clean:\n        raise ValueError('keys and positive limit required')\n    capacity = asyncio.Semaphore(limit)\n\n    async def probe(key: str) -> int:\n        async with capacity:\n            status = await fetch(key)\n            return await fetch(key) if status == 503 else status\n\n    async with asyncio.TaskGroup() as group:\n        scheduled = {key: group.create_task(probe(key)) for key in clean}\n    return {key: request.result() for key, request in scheduled.items()}\n```"
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Реалізуй async solve(keys, fetch, limit). Обріж кожен рядковий ID, відхили порожні до I/O, збережи першу появу. Для limit < 1 піднімай ValueError. Await fetch(key) повертає цілий HTTP-статус. Повтори 503 один раз негайно для керованої GET-фікстури. Поверни фінальні статуси у dict за порядком першої появи. Активні fetch обмежені limit. Лише для цієї фікстури повтор без паузи. Інші винятки можна передати.\n\n**Синтетичні запити підтримки**",
+            "en": "Implement async solve(keys, fetch, limit). Trim each string ID, reject blanks before any I/O, and keep first appearance of each ID. Raise ValueError for limit < 1. Await fetch(key) returning an integer HTTP status. Retry a status of 503 once immediately for this controlled GET fixture, and return the final statuses in a dict in first-appearance order. Bound concurrent fetch calls by limit. For this fixture only the retry has no delay. Other exceptions may propagate.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Перевір увесь набір ключів до планування.",
+              "en": "Validate the entire key set before scheduling."
+            },
+            {
+              "uk": "Використай дедуплікацію за порядком вставки, далі один семафор.",
+              "en": "Use insertion-ordered deduplication, then one shared semaphore."
+            },
+            {
+              "uk": "Дай кожній задачі щонайбільше два fetch й зберіть результати за порядком вводу.",
+              "en": "Give each independent task at most two fetches and assemble results in input order."
+            }
+          ],
+          "solution": {
+            "uk": "Розділи валідацію, обмежене планування й правило відповіді. Група задач визначає область усіх запитів.\n\n```python\nimport asyncio\nfrom collections.abc import Awaitable, Callable\n\nasync def solve(keys: list[str], fetch: Callable[[str], Awaitable[int]], limit: int) -> dict[str, int]:\n    clean = list(dict.fromkeys(key.strip() for key in keys))\n    if limit < 1 or '' in clean:\n        raise ValueError('keys and positive limit required')\n    capacity = asyncio.Semaphore(limit)\n\n    async def probe(key: str) -> int:\n        async with capacity:\n            status = await fetch(key)\n            return await fetch(key) if status == 503 else status\n\n    async with asyncio.TaskGroup() as group:\n        scheduled = {key: group.create_task(probe(key)) for key in clean}\n    return {key: request.result() for key, request in scheduled.items()}\n```",
+            "en": "Decouple validation, bounded scheduling and reply policy. The task group scopes all requests.\n\n```python\nimport asyncio\nfrom collections.abc import Awaitable, Callable\n\nasync def solve(keys: list[str], fetch: Callable[[str], Awaitable[int]], limit: int) -> dict[str, int]:\n    clean = list(dict.fromkeys(key.strip() for key in keys))\n    if limit < 1 or '' in clean:\n        raise ValueError('keys and positive limit required')\n    capacity = asyncio.Semaphore(limit)\n\n    async def probe(key: str) -> int:\n        async with capacity:\n            status = await fetch(key)\n            return await fetch(key) if status == 503 else status\n\n    async with asyncio.TaskGroup() as group:\n        scheduled = {key: group.create_task(probe(key)) for key in clean}\n    return {key: request.result() for key, request in scheduled.items()}\n```"
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Реалізуй async solve(keys, fetch, limit). Обріж кожен рядковий ID, відхили порожні до I/O, збережи першу появу. Для limit < 1 піднімай ValueError. Await fetch(key) повертає цілий HTTP-статус. Повтори 503 один раз негайно для керованої GET-фікстури. Поверни фінальні статуси у dict за порядком першої появи. Активні fetch обмежені limit. Лише для цієї фікстури повтор без паузи. Інші винятки можна передати.\n\n**Синтетичні документи політик**",
+            "en": "Implement async solve(keys, fetch, limit). Trim each string ID, reject blanks before any I/O, and keep first appearance of each ID. Raise ValueError for limit < 1. Await fetch(key) returning an integer HTTP status. Retry a status of 503 once immediately for this controlled GET fixture, and return the final statuses in a dict in first-appearance order. Bound concurrent fetch calls by limit. For this fixture only the retry has no delay. Other exceptions may propagate.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Перевір увесь набір ключів до планування.",
+              "en": "Validate the entire key set before scheduling."
+            },
+            {
+              "uk": "Використай дедуплікацію за порядком вставки, далі один семафор.",
+              "en": "Use insertion-ordered deduplication, then one shared semaphore."
+            },
+            {
+              "uk": "Дай кожній задачі щонайбільше два fetch й зберіть результати за порядком вводу.",
+              "en": "Give each independent task at most two fetches and assemble results in input order."
+            }
+          ],
+          "solution": {
+            "uk": "Розділи валідацію, обмежене планування й правило відповіді. Група задач визначає область усіх запитів.\n\n```python\nimport asyncio\nfrom collections.abc import Awaitable, Callable\n\nasync def solve(keys: list[str], fetch: Callable[[str], Awaitable[int]], limit: int) -> dict[str, int]:\n    clean = list(dict.fromkeys(key.strip() for key in keys))\n    if limit < 1 or '' in clean:\n        raise ValueError('keys and positive limit required')\n    capacity = asyncio.Semaphore(limit)\n\n    async def probe(key: str) -> int:\n        async with capacity:\n            status = await fetch(key)\n            return await fetch(key) if status == 503 else status\n\n    async with asyncio.TaskGroup() as group:\n        scheduled = {key: group.create_task(probe(key)) for key in clean}\n    return {key: request.result() for key, request in scheduled.items()}\n```",
+            "en": "Decouple validation, bounded scheduling and reply policy. The task group scopes all requests.\n\n```python\nimport asyncio\nfrom collections.abc import Awaitable, Callable\n\nasync def solve(keys: list[str], fetch: Callable[[str], Awaitable[int]], limit: int) -> dict[str, int]:\n    clean = list(dict.fromkeys(key.strip() for key in keys))\n    if limit < 1 or '' in clean:\n        raise ValueError('keys and positive limit required')\n    capacity = asyncio.Semaphore(limit)\n\n    async def probe(key: str) -> int:\n        async with capacity:\n            status = await fetch(key)\n            return await fetch(key) if status == 503 else status\n\n    async with asyncio.TaskGroup() as group:\n        scheduled = {key: group.create_task(probe(key)) for key in clean}\n    return {key: request.result() for key, request in scheduled.items()}\n```"
+          }
+        }
+      ]
+    },
+    {
+      "id": "G-M1-E2",
+      "title": {
+        "uk": "Продемонструвати роботу з чистого клону",
+        "en": "Demonstrate the clean-clone workflow"
+      },
+      "kind": "rubric",
+      "objectives": [
+        "O2"
+      ],
+      "estimateMinutes": 80,
+      "criteria": [
+        {
+          "id": "C1",
+          "title": {
+            "uk": "Чисте встановлення й локальні команди CI пройшли.",
+            "en": "Clean install and local CI-equivalent commands pass."
+          }
+        },
+        {
+          "id": "C2",
+          "title": {
+            "uk": "Записано самостійну зміну з доказом падіння й успіху.",
+            "en": "Record a self-authored change with fail-then-pass evidence."
+          }
+        },
+        {
+          "id": "C3",
+          "title": {
+            "uk": "Англійське пояснення пов’язує пік одночасності, повтор та ідемпотентність.",
+            "en": "The English explanation connects peak concurrency, retry, and idempotency."
+          }
+        }
+      ],
+      "example": {
+        "uk": "Звіт включає версію Python, ID тестів, спостережене падіння й результат після зміни.",
+        "en": "The report includes Python version, test IDs, an observed failed assertion, and the replacement result after the change."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "В окремій локальній папці встанови фіксовані залежності й продемонструй тести нормалізатора та клієнта. Самостійно додай зміну на кшталт нового заголовка відповіді чи валідного поля. Покажи тест, що падає до зміни й проходить після. Англійською поясни обмежену одночасність і безпечні повтори з трасою тестів. Додай команди й очищений вивід до підсумку.\n\n**Синтетичні накладні**",
+            "en": "In a separate local workspace, install from documented pins and demonstrate your normalizer and client tests. Add a safe change such as accepting a new response header or a new valid input field. Show a test failing before the change and passing after it. Explain in English how bounded concurrency and safe retries work, using a trace from your tests. Record commands and sanitized output in the evidence summary.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Використай нове локальне середовище замість старого venv.",
+              "en": "Use a new local environment instead of an existing venv."
+            },
+            {
+              "uk": "Обери зміну, яку явно перевірить нова синтетична фікстура.",
+              "en": "Choose a change that can fail visibly on a new synthetic fixture."
+            },
+            {
+              "uk": "Додай трасу хоча б одного повтору.",
+              "en": "Include the trace of at least one replay or retry."
+            }
+          ],
+          "solution": {
+            "uk": "Нова фікстура має показати відсутнє правило. Запусти попередню версію, додай правило й підтверди іншу поведінку регресійними перевірками.",
+            "en": "A new fixture should expose a missing rule. Run the old version to show the failure, add the rule, and prove unrelated behavior with regression checks."
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "В окремій локальній папці встанови фіксовані залежності й продемонструй тести нормалізатора та клієнта. Самостійно додай зміну на кшталт нового заголовка відповіді чи валідного поля. Покажи тест, що падає до зміни й проходить після. Англійською поясни обмежену одночасність і безпечні повтори з трасою тестів. Додай команди й очищений вивід до підсумку.\n\n**Синтетичні запити підтримки**",
+            "en": "In a separate local workspace, install from documented pins and demonstrate your normalizer and client tests. Add a safe change such as accepting a new response header or a new valid input field. Show a test failing before the change and passing after it. Explain in English how bounded concurrency and safe retries work, using a trace from your tests. Record commands and sanitized output in the evidence summary.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Використай нове локальне середовище замість старого venv.",
+              "en": "Use a new local environment instead of an existing venv."
+            },
+            {
+              "uk": "Обери зміну, яку явно перевірить нова синтетична фікстура.",
+              "en": "Choose a change that can fail visibly on a new synthetic fixture."
+            },
+            {
+              "uk": "Додай трасу хоча б одного повтору.",
+              "en": "Include the trace of at least one replay or retry."
+            }
+          ],
+          "solution": {
+            "uk": "Нова фікстура має показати відсутнє правило. Запусти попередню версію, додай правило й підтверди іншу поведінку регресійними перевірками.",
+            "en": "A new fixture should expose a missing rule. Run the old version to show the failure, add the rule, and prove unrelated behavior with regression checks."
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "В окремій локальній папці встанови фіксовані залежності й продемонструй тести нормалізатора та клієнта. Самостійно додай зміну на кшталт нового заголовка відповіді чи валідного поля. Покажи тест, що падає до зміни й проходить після. Англійською поясни обмежену одночасність і безпечні повтори з трасою тестів. Додай команди й очищений вивід до підсумку.\n\n**Синтетичні документи політик**",
+            "en": "In a separate local workspace, install from documented pins and demonstrate your normalizer and client tests. Add a safe change such as accepting a new response header or a new valid input field. Show a test failing before the change and passing after it. Explain in English how bounded concurrency and safe retries work, using a trace from your tests. Record commands and sanitized output in the evidence summary.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Використай нове локальне середовище замість старого venv.",
+              "en": "Use a new local environment instead of an existing venv."
+            },
+            {
+              "uk": "Обери зміну, яку явно перевірить нова синтетична фікстура.",
+              "en": "Choose a change that can fail visibly on a new synthetic fixture."
+            },
+            {
+              "uk": "Додай трасу хоча б одного повтору.",
+              "en": "Include the trace of at least one replay or retry."
+            }
+          ],
+          "solution": {
+            "uk": "Нова фікстура має показати відсутнє правило. Запусти попередню версію, додай правило й підтверди іншу поведінку регресійними перевірками.",
+            "en": "A new fixture should expose a missing rule. Run the old version to show the failure, add the rule, and prove unrelated behavior with regression checks."
+          }
+        }
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "id": "Q1",
+      "prompt": {
+        "uk": "Де усунення дублікатів зменшить мережеве навантаження?",
+        "en": "Where can duplicate elimination reduce network load?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Після повтору кожного збою.",
+            "en": "After reissuing each failed request."
+          },
+          "explanation": {
+            "uk": "Зайві виклики вже витратили місткість.",
+            "en": "The redundant calls have already consumed capacity."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "До планування fetch.",
+            "en": "Before scheduling fetches."
+          },
+          "explanation": {
+            "uk": "Черга отримує лише логічні ключі.",
+            "en": "The queue receives only logical keys."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Лише при форматуванні фінального звіту.",
+            "en": "When formatting the final report only."
+          },
+          "explanation": {
+            "uk": "Дубльовані виклики вже сталися.",
+            "en": "Duplicate calls already happened."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q2",
+      "prompt": {
+        "uk": "Коли має падати парсинг, щоб уникнути часткового fetch пакета?",
+        "en": "When should parsing reject an invalid row to avoid partial batch fetch?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Після першої успішної відповіді.",
+            "en": "After the first successful network response."
+          },
+          "explanation": {
+            "uk": "Це вже створює спостережену часткову роботу.",
+            "en": "That already creates observable partial work."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Лише до друку результату.",
+            "en": "Before printing the results only."
+          },
+          "explanation": {
+            "uk": "Попередні запити вже могли виконатись.",
+            "en": "Earlier requests would still have run."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "До планування будь-яких мережевих викликів пакета.",
+            "en": "Before scheduling any network calls for the batch."
+          },
+          "explanation": {
+            "uk": "Це забезпечує валідацію до побічних ефектів.",
+            "en": "This enforces validation-before-effects."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q3",
+      "prompt": {
+        "uk": "Декодер отримав 204. Який розбір представлення доречний?",
+        "en": "The decoder received a 204 response. Which representation parsing is appropriate?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Повернути результат без вмісту.",
+            "en": "Return the no-content result."
+          },
+          "explanation": {
+            "uk": "Статус 204 не несе вмісту відповіді.",
+            "en": "Status 204 carries no response content."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Розібрати порожні байти як об’єкт.",
+            "en": "Parse the empty bytes as an object."
+          },
+          "explanation": {
+            "uk": "Порожні байти не є об’єктом JSON.",
+            "en": "Empty bytes aren't a JSON object."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Повернути вигадане тіло успіху.",
+            "en": "Return a synthetic success body to the caller."
+          },
+          "explanation": {
+            "uk": "Вигадане представлення порушує контракт.",
+            "en": "Fabricating a representation violates the wire contract."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q4",
+      "prompt": {
+        "uk": "Порядок входу a,b,c, а c закінчується першим. Як повернути a,b,c?",
+        "en": "Input order is a,b,c while c finishes first. How can the return order remain a,b,c?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Припустити, що планування завжди дорівнює завершенню.",
+            "en": "Assume scheduling order always equals completion order."
+          },
+          "explanation": {
+            "uk": "Тривалість окремих задач різна.",
+            "en": "Individual work duration varies."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Зберігати задачі за порядком ключів і зібрати після завершення.",
+            "en": "Track tasks by original key order and assemble after completion."
+          },
+          "explanation": {
+            "uk": "Порядок виконання й представлення можуть відрізнятись.",
+            "en": "Scheduling and presentation order can remain separate."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Додавати результати лише в момент завершення.",
+            "en": "Append results only when each task completes."
+          },
+          "explanation": {
+            "uk": "Це збере порядок завершення.",
+            "en": "That records completion order."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q5",
+      "prompt": {
+        "uk": "Що має спостерігати тест семафора, якщо значення правильні?",
+        "en": "What does a test of a semaphore need to observe if the code returns correct values?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Лише кількість повернених ключів.",
+            "en": "Only count returned keys."
+          },
+          "explanation": {
+            "uk": "Хибна місткість може повернути всі ключі.",
+            "en": "A wrong capacity can still return all keys."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Лише загальний час на публічному API.",
+            "en": "Only total wall time against a public API."
+          },
+          "explanation": {
+            "uk": "Таке вимірювання містить неконтрольовану мінливість.",
+            "en": "That measurement contains uncontrolled variability."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Максимум активних fetch.",
+            "en": "Maximum active fetch calls."
+          },
+          "explanation": {
+            "uk": "Результат і одночасна місткість є різними інваріантами.",
+            "en": "Result identity and concurrent capacity are different invariants."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q6",
+      "prompt": {
+        "uk": "Який результат має зберігати чисте перетворення для однакового вводу?",
+        "en": "Which result should a pure transform preserve across identical inputs?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Той самий вихід за тих самих правил.",
+            "en": "The same output under the same rules."
+          },
+          "explanation": {
+            "uk": "Детермінізм робить твердження повторюваними.",
+            "en": "Determinism makes regression assertions repeatable."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Новий заголовок при кожному виклику.",
+            "en": "A new generated title on each invocation."
+          },
+          "explanation": {
+            "uk": "Це додало б сторонній стан чи випадковість.",
+            "en": "That would add unrelated state or randomness."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Лише той самий код завершення при зміні полів.",
+            "en": "Only the same exit code even if fields change."
+          },
+          "explanation": {
+            "uk": "Значення виходу важливі викликачу.",
+            "en": "Output values matter to callers."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q7",
+      "prompt": {
+        "uk": "Навіщо під’єднати затримку повтору в тестованому клієнті?",
+        "en": "Why inject the retry delay into a testable client?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Ігнорувати дедлайн.",
+            "en": "Ignore the configured deadline."
+          },
+          "explanation": {
+            "uk": "Бюджет є окремим контрактом.",
+            "en": "The budget is a separate contract."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Записати запитану затримку без реального очікування.",
+            "en": "Record requested delay without paying real wait time."
+          },
+          "explanation": {
+            "uk": "Тест детерміновано перевіряє розклад.",
+            "en": "A test checks the schedule deterministically."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Типово надсилати більше запитів.",
+            "en": "Send more requests by default."
+          },
+          "explanation": {
+            "uk": "Під’єднання паузи не змінює правила повторів.",
+            "en": "Delay injection leaves the retry policy unchanged."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q8",
+      "prompt": {
+        "uk": "Яке налаштування тесту знайде неоголошену залежність?",
+        "en": "Which test setup detects an undeclared dependency?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Використати старе середовище розробника.",
+            "en": "Use the developer's old environment."
+          },
+          "explanation": {
+            "uk": "Воно вже може містити залежність.",
+            "en": "It may already contain the dependency."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Порівняти заголовки на двох скриншотах.",
+            "en": "Compare titles in two screenshots."
+          },
+          "explanation": {
+            "uk": "Скриншоти не доводять встановлення.",
+            "en": "Screenshots do not establish installation."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "У свіжому середовищі встановити лише задокументовані версії.",
+            "en": "Install only documented pins in a fresh environment."
+          },
+          "explanation": {
+            "uk": "Неоголошеного пакета там немає.",
+            "en": "An undeclared package is absent there."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q9",
+      "prompt": {
+        "uk": "Який діагностичний запис має супроводжувати невалідну відповідь?",
+        "en": "Which diagnostic record should accompany an invalid client reply?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "ID операції та подія invalid_response.",
+            "en": "Operation ID and a stable invalid_response event."
+          },
+          "explanation": {
+            "uk": "Це дає контекст для трасування без розкриття даних.",
+            "en": "It gives traceable context without disclosing raw data."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Уся відповідь із полями користувача.",
+            "en": "The entire reply including user fields."
+          },
+          "explanation": {
+            "uk": "Вона може розкрити особисту інформацію.",
+            "en": "It can expose personal information."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Bearer token викликача для повтору.",
+            "en": "The caller's bearer token for retry."
+          },
+          "explanation": {
+            "uk": "Облікові дані мають лишатися поза журналами.",
+            "en": "Credentials must stay out of logs."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q10",
+      "prompt": {
+        "uk": "Коли можна повторити створення після роз’єднання?",
+        "en": "When can a create request be repeated after a disconnect?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Щоразу з малим тілом JSON.",
+            "en": "Whenever the JSON body is small."
+          },
+          "explanation": {
+            "uk": "Розмір не визначає семантику повтору.",
+            "en": "Size does not determine repeat semantics."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Коли сервер підтримує той самий ключ у цій області й відбиток запиту.",
+            "en": "When the server supports the same scoped key and request fingerprint."
+          },
+          "explanation": {
+            "uk": "Сервер може розпізнати вже застосований логічний запит.",
+            "en": "The server can recognize the logical request already applied."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Щоразу за асинхронного I/O.",
+            "en": "Whenever the client uses asynchronous IO."
+          },
+          "explanation": {
+            "uk": "Механізм await не дедуплікує запис.",
+            "en": "Await mechanics do not deduplicate writes."
+          }
+        }
+      ]
+    }
+  ],
+  "crosslinks": [
+    "SR-W02",
+    "SR-W03",
+    "W04-L01"
+  ]
+}

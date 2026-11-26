@@ -1,0 +1,510 @@
+{
+  "id": "W03-L02",
+  "contentVersion": 1,
+  "overview": {
+    "uk": "Клієнт API може одночасно мати незалежні запити, які чекають на сокети. AsyncIO звільняє цей час для інших задач циклу подій. Урок переходить від одного await до групи з обмеженням, порівнює очікування й обчислення та пояснює різницю між порядком завершення і входу. Ти реалізуєш обробку пакета через під’єднану async-функцію, щоб тестувати без мережі. Потім детермінована фікстура очікування покаже, як необмежена реалізація запускає забагато запитів одночасно.",
+    "en": "An API client can have independent requests waiting for sockets at the same time. AsyncIO makes that wait available to other tasks on the event loop. The lesson walks from awaiting one request to running a bounded batch, compares waiting with CPU work, and shows why order of completion differs from input order. You will implement the batch against an injected asynchronous function so the behavior can be tested without the network. Then you will use a deterministic waiting fixture to show how an unbounded implementation can make too many requests at once."
+  },
+  "theory": {
+    "uk": "### Корутини та цикл подій\n\nВиклик async-функції створює об’єкт корутини. Вона виконується під час await або після планування як задача. Коли корутина чекає на незавершену операцію, цикл подій може запустити іншу готову задачу. Цикл з обчисленнями або time.sleep у цьому потоці блокує інших до повернення керування. Для важких обчислень розглянь пул процесів або воркер з окремим бюджетом. Почни з вимірювання часу.\n\n### Обмеження активного вводу-виводу\n\nСемафор навколо реального await обмежує активні запити. При місткості 2 стартують A і B, B може завершитися першою, тоді C отримає місце. Результати за індексами вводу зберігають порядок, навіть якщо завершення B, C, A. Контекстний менеджер звільнить слот при винятку й скасуванні. Семафор не обмежує кількість створених задач. Для довгих потоків застосуй bounded queue і фіксовану кількість воркерів або розбивай вхід на сторінки.\n\n### Власник задач і сокетів\n\nTaskGroup чекає дочірніх задач. Якщо дочірня піднімає необроблений виняток, сусіди скасовуються, а група повідомляє про відмови разом. Визнач, чи одна помилка валить пакет, чи стає явним результатом елемента. Тримай ресурси в області власника. Контекст AsyncClient з HTTPX може спільно використовувати з’єднання. Новий клієнт у кожній задачі втрачає пул. MockTransport обслуговує синтетичні відповіді в тестах. Окремо перевір скасування, тайм-аути й ліміт.\n\n### Простеж роботу зі зворотним тиском\n\nНа старті A та B займають два слоти. C чекає. B завершується на 15 мс, тоді C стартує й повертається на 35 мс. A закінчується на 40 мс. Порядок результату може лишитися A, B, C. Уяви 50 000 входів. Створення задачі на кожен збільшує чергу, хоча працюють лише двоє. Виробник із bounded queue чекає, коли вона повна. Слоти обмежують активні виклики, місткість — роботу в черзі, а тайм-аути — очікування. Кожна межа захищає окремий ресурс.\n\nКоли задачу скасовано під час мережевого await, застосуй finally для очищення і передай скасування. При його пригніченні нібито скасований пакет може тримати ресурси або ще писати. Перевір бар’єром входу в корутину, далі скасуй її й перевір очищення. Для пропускної здатності CPU вимірюй окремою фікстурою зі сталими входами й зазнач витрати старту процесу. Це інше питання, ніж ліміт I/O.",
+    "en": "### Coroutines and the event loop\n\nCalling an async function constructs a coroutine object. It executes when awaited or scheduled as a task. If a coroutine awaits an operation that must wait, the event loop can resume a different runnable task. A CPU-bound loop or time.sleep in that thread blocks other tasks until control returns. For CPU-heavy work consider a process pool or worker with a separate resource budget. The right decision starts with measuring where time is spent.\n\n### Bound active I/O\n\nA semaphore around the real await bounds requests in flight. With capacity 2, A and B start, B may finish first, and C then obtains a slot. A result list indexed by input preserves order even if completion is B, C, A. Use a context manager so failure and cancellation release slots. A semaphore does not bound the number of tasks you create. For long streams use a bounded queue and a fixed number of workers or page the input.\n\n### Own tasks and sockets\n\nTaskGroup waits for its children. If a child raises an unhandled error, siblings are cancelled and the group reports failures together. Decide whether one failure should fail the batch or become an explicit per-item result. Keep resources inside their owner scope. An HTTPX AsyncClient context can share connections across calls. Recreating the client in every task loses pooling. A MockTransport handles synthetic responses for tests. Check cancellation, configured timeouts and limit independently from result content.\n\n### Trace work under backpressure\n\nAt time zero, jobs A and B occupy a two-slot semaphore. C waits. B finishes at 15 ms, then C starts and returns at 35 ms. A finishes at 40 ms. Result order can still be A, B, C. Now imagine 50,000 inputs. Allocating a coroutine and task per input lets the task queue grow while only two do useful work. A producer feeding a bounded queue waits when the queue fills. Worker slots cap active calls, queue capacity caps waiting work, and timeouts cap waits. Each protects a different resource.\n\nWhen a task is cancelled while awaiting a network call, use finally for cleanup and allow cancellation to propagate. If you catch and suppress it, an apparently cancelled batch may still hold resources or continue writing. Test this with a barrier that proves the coroutine entered, then cancel it and assert cleanup. To measure parallel CPU throughput, use a separate timing fixture with stable input and report process startup overhead. These measurements answer different questions from a bounded-I/O test."
+  },
+  "recap": {
+    "uk": "Очікуй мережу через await, обмежуй область ресурсів, активні запити й чергу для великих входів.",
+    "en": "Await network waits, keep resources scoped, and bound active requests as well as queued work for large inputs."
+  },
+  "objectives": [
+    {
+      "id": "O1",
+      "title": {
+        "uk": "Розрізняти конкурентний ввід-вивід і паралельні обчислення.",
+        "en": "Distinguish I/O concurrency from CPU parallelism."
+      },
+      "skill": "systems"
+    },
+    {
+      "id": "O2",
+      "title": {
+        "uk": "Обмежувати кількість одночасних async-викликів.",
+        "en": "Enforce a bound on concurrent asynchronous calls."
+      },
+      "skill": "tooling"
+    }
+  ],
+  "sources": [
+    {
+      "title": {
+        "uk": "asyncio tasks",
+        "en": "asyncio tasks"
+      },
+      "url": "https://docs.python.org/3.12/library/asyncio-task.html",
+      "version": "Python 3.12",
+      "checked": "2026-11-26"
+    },
+    {
+      "title": {
+        "uk": "HTTPX transports",
+        "en": "HTTPX transports"
+      },
+      "url": "https://www.python-httpx.org/advanced/transports/",
+      "version": "HTTPX",
+      "checked": "2026-11-26"
+    }
+  ],
+  "examples": [
+    {
+      "file": "w03_l02_example.py",
+      "expected": "['ONE', 'TWO']",
+      "explanation": {
+        "uk": "gather повертає результати в порядку аргументів. Стандартна бібліотека Python 3.12.",
+        "en": "gather reports results in argument order. Python 3.12 standard library."
+      },
+      "error": {
+        "uk": "Додай до name операцію з винятком. Очікуваний gather передасть помилку.",
+        "en": "Run the code with an operation that raises inside name. The awaited gather propagates the failure."
+      }
+    }
+  ],
+  "interview": [
+    "What blocks an asyncio event loop?",
+    "How do you verify bounded concurrency without relying on real network latency?"
+  ],
+  "interviewGuide": {
+    "uk": "Назви лічильник або бар’єр, що вимірює фактичну активність.",
+    "en": "Name a counter or barrier that measures actual active work."
+  },
+  "exercises": [
+    {
+      "id": "W03-L02-E1",
+      "title": {
+        "uk": "Отримати обмежений пакет у порядку входу",
+        "en": "Fetch a bounded batch in input order"
+      },
+      "kind": "code",
+      "objectives": [
+        "O1"
+      ],
+      "estimateMinutes": 75,
+      "criteria": [],
+      "example": {
+        "uk": "Ключі a,b можуть завершитися b,a, але результати йдуть для a,b.",
+        "en": "Keys a,b may finish b,a but must return results for a,b."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Реалізуй async solve(fetch, keys, limit). Виконай await fetch(key) для кожного входу й поверни list у порядку вводу. Одночасно може працювати не більш ніж limit викликів. Порожні keys дають []. Для limit менше 1 піднімай ValueError. Якщо fetch падає, передавай помилку або обгортку TaskGroup.\n\n**Синтетичні накладні**",
+            "en": "Implement async solve(fetch, keys, limit). Await fetch(key) for each input and return a list in input order. At most limit fetch calls may be active at once. Empty keys yield an empty list. Raise ValueError if limit is less than one. If a fetch fails, allow the failure or its TaskGroup wrapper to propagate.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Обмежуй активну роботу, а не загальну кількість задач.",
+              "en": "Track active work rather than total tasks."
+            },
+            {
+              "uk": "Використай async with на спільному Semaphore.",
+              "en": "Use async with on a shared Semaphore."
+            },
+            {
+              "uk": "Збережи задачі TaskGroup у порядку входу й виклич result після виходу.",
+              "en": "Save TaskGroup tasks in input order and call result after exit."
+            }
+          ],
+          "solution": {
+            "uk": "Один семафор захищає fetch. Група задач явно визначає життєвий цикл помилок і скасування.\n\n```python\nimport asyncio\nfrom collections.abc import Awaitable, Callable\n\nasync def solve(fetch: Callable[[str], Awaitable[str]], keys: list[str], limit: int) -> list[str]:\n    if limit < 1:\n        raise ValueError('positive limit required')\n    capacity = asyncio.Semaphore(limit)\n\n    async def one(key: str) -> str:\n        async with capacity:\n            return await fetch(key)\n\n    async with asyncio.TaskGroup() as group:\n        results = [group.create_task(one(key)) for key in keys]\n    return [result.result() for result in results]\n```",
+            "en": "One semaphore guards fetch. The task group makes failure and cancellation lifecycle explicit.\n\n```python\nimport asyncio\nfrom collections.abc import Awaitable, Callable\n\nasync def solve(fetch: Callable[[str], Awaitable[str]], keys: list[str], limit: int) -> list[str]:\n    if limit < 1:\n        raise ValueError('positive limit required')\n    capacity = asyncio.Semaphore(limit)\n\n    async def one(key: str) -> str:\n        async with capacity:\n            return await fetch(key)\n\n    async with asyncio.TaskGroup() as group:\n        results = [group.create_task(one(key)) for key in keys]\n    return [result.result() for result in results]\n```"
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Реалізуй async solve(fetch, keys, limit). Виконай await fetch(key) для кожного входу й поверни list у порядку вводу. Одночасно може працювати не більш ніж limit викликів. Порожні keys дають []. Для limit менше 1 піднімай ValueError. Якщо fetch падає, передавай помилку або обгортку TaskGroup.\n\n**Синтетичні запити підтримки**",
+            "en": "Implement async solve(fetch, keys, limit). Await fetch(key) for each input and return a list in input order. At most limit fetch calls may be active at once. Empty keys yield an empty list. Raise ValueError if limit is less than one. If a fetch fails, allow the failure or its TaskGroup wrapper to propagate.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Обмежуй активну роботу, а не загальну кількість задач.",
+              "en": "Track active work rather than total tasks."
+            },
+            {
+              "uk": "Використай async with на спільному Semaphore.",
+              "en": "Use async with on a shared Semaphore."
+            },
+            {
+              "uk": "Збережи задачі TaskGroup у порядку входу й виклич result після виходу.",
+              "en": "Save TaskGroup tasks in input order and call result after exit."
+            }
+          ],
+          "solution": {
+            "uk": "Один семафор захищає fetch. Група задач явно визначає життєвий цикл помилок і скасування.\n\n```python\nimport asyncio\nfrom collections.abc import Awaitable, Callable\n\nasync def solve(fetch: Callable[[str], Awaitable[str]], keys: list[str], limit: int) -> list[str]:\n    if limit < 1:\n        raise ValueError('positive limit required')\n    capacity = asyncio.Semaphore(limit)\n\n    async def one(key: str) -> str:\n        async with capacity:\n            return await fetch(key)\n\n    async with asyncio.TaskGroup() as group:\n        results = [group.create_task(one(key)) for key in keys]\n    return [result.result() for result in results]\n```",
+            "en": "One semaphore guards fetch. The task group makes failure and cancellation lifecycle explicit.\n\n```python\nimport asyncio\nfrom collections.abc import Awaitable, Callable\n\nasync def solve(fetch: Callable[[str], Awaitable[str]], keys: list[str], limit: int) -> list[str]:\n    if limit < 1:\n        raise ValueError('positive limit required')\n    capacity = asyncio.Semaphore(limit)\n\n    async def one(key: str) -> str:\n        async with capacity:\n            return await fetch(key)\n\n    async with asyncio.TaskGroup() as group:\n        results = [group.create_task(one(key)) for key in keys]\n    return [result.result() for result in results]\n```"
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Реалізуй async solve(fetch, keys, limit). Виконай await fetch(key) для кожного входу й поверни list у порядку вводу. Одночасно може працювати не більш ніж limit викликів. Порожні keys дають []. Для limit менше 1 піднімай ValueError. Якщо fetch падає, передавай помилку або обгортку TaskGroup.\n\n**Синтетичні документи політик**",
+            "en": "Implement async solve(fetch, keys, limit). Await fetch(key) for each input and return a list in input order. At most limit fetch calls may be active at once. Empty keys yield an empty list. Raise ValueError if limit is less than one. If a fetch fails, allow the failure or its TaskGroup wrapper to propagate.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Обмежуй активну роботу, а не загальну кількість задач.",
+              "en": "Track active work rather than total tasks."
+            },
+            {
+              "uk": "Використай async with на спільному Semaphore.",
+              "en": "Use async with on a shared Semaphore."
+            },
+            {
+              "uk": "Збережи задачі TaskGroup у порядку входу й виклич result після виходу.",
+              "en": "Save TaskGroup tasks in input order and call result after exit."
+            }
+          ],
+          "solution": {
+            "uk": "Один семафор захищає fetch. Група задач явно визначає життєвий цикл помилок і скасування.\n\n```python\nimport asyncio\nfrom collections.abc import Awaitable, Callable\n\nasync def solve(fetch: Callable[[str], Awaitable[str]], keys: list[str], limit: int) -> list[str]:\n    if limit < 1:\n        raise ValueError('positive limit required')\n    capacity = asyncio.Semaphore(limit)\n\n    async def one(key: str) -> str:\n        async with capacity:\n            return await fetch(key)\n\n    async with asyncio.TaskGroup() as group:\n        results = [group.create_task(one(key)) for key in keys]\n    return [result.result() for result in results]\n```",
+            "en": "One semaphore guards fetch. The task group makes failure and cancellation lifecycle explicit.\n\n```python\nimport asyncio\nfrom collections.abc import Awaitable, Callable\n\nasync def solve(fetch: Callable[[str], Awaitable[str]], keys: list[str], limit: int) -> list[str]:\n    if limit < 1:\n        raise ValueError('positive limit required')\n    capacity = asyncio.Semaphore(limit)\n\n    async def one(key: str) -> str:\n        async with capacity:\n            return await fetch(key)\n\n    async with asyncio.TaskGroup() as group:\n        results = [group.create_task(one(key)) for key in keys]\n    return [result.result() for result in results]\n```"
+          }
+        }
+      ]
+    },
+    {
+      "id": "W03-L02-E2",
+      "title": {
+        "uk": "Простежити скасування та місткість",
+        "en": "Trace cancellation and capacity"
+      },
+      "kind": "rubric",
+      "objectives": [
+        "O2"
+      ],
+      "estimateMinutes": 70,
+      "criteria": [
+        {
+          "id": "C1",
+          "title": {
+            "uk": "Записано спостережені старт, помилку й очищення.",
+            "en": "Record observed start, error and cleanup events."
+          }
+        },
+        {
+          "id": "C2",
+          "title": {
+            "uk": "Показано міру одночасності для двох лімітів.",
+            "en": "Show a concurrency measure for both limits."
+          }
+        },
+        {
+          "id": "C3",
+          "title": {
+            "uk": "Пояснено стратегію обмеженого вводу.",
+            "en": "Explain a bounded input strategy."
+          }
+        }
+      ],
+      "example": {
+        "uk": "У TaskGroup помилка задачі скасовує сусіда. Його finally записує звільнення.",
+        "en": "A failing child cancels a sibling in TaskGroup. Its finally block records release."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Запусти синтетичний пакет, де друга операція падає після старту іншої. Запиши, які задачі завершилися, які звільнили ресурс і яку помилку бачить викликач. Порівняй один і два слоти. Опиши, як обмежиш пам’ять для 100 000 ID.\n\n**Синтетичні накладні**",
+            "en": "Run a synthetic batch in which the second operation raises after another has started. Record which children finish, which release their resources, and the exception your caller sees. Compare a one-slot and two-slot batch. Write how you would keep memory bounded for 100,000 IDs.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Використай бар’єр події для встановлення старту.",
+              "en": "Use an event barrier to establish started tasks."
+            },
+            {
+              "uk": "Записуй лічильник на вході та у finally.",
+              "en": "Record a counter on entry and in finally."
+            },
+            {
+              "uk": "Використай фіксовану кількість воркерів із Queue(maxsize=...).",
+              "en": "Use a fixed number of workers with Queue(maxsize=...)."
+            }
+          ],
+          "solution": {
+            "uk": "Задай область через TaskGroup. Очищуй через finally, передавай скасування й заміни задачі на кожен вхід bounded queue для потоку.",
+            "en": "Use TaskGroup for scope. Wrap cleanup in finally, let cancellation propagate, then replace per-input tasks with a bounded queue for streams."
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Запусти синтетичний пакет, де друга операція падає після старту іншої. Запиши, які задачі завершилися, які звільнили ресурс і яку помилку бачить викликач. Порівняй один і два слоти. Опиши, як обмежиш пам’ять для 100 000 ID.\n\n**Синтетичні запити підтримки**",
+            "en": "Run a synthetic batch in which the second operation raises after another has started. Record which children finish, which release their resources, and the exception your caller sees. Compare a one-slot and two-slot batch. Write how you would keep memory bounded for 100,000 IDs.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Використай бар’єр події для встановлення старту.",
+              "en": "Use an event barrier to establish started tasks."
+            },
+            {
+              "uk": "Записуй лічильник на вході та у finally.",
+              "en": "Record a counter on entry and in finally."
+            },
+            {
+              "uk": "Використай фіксовану кількість воркерів із Queue(maxsize=...).",
+              "en": "Use a fixed number of workers with Queue(maxsize=...)."
+            }
+          ],
+          "solution": {
+            "uk": "Задай область через TaskGroup. Очищуй через finally, передавай скасування й заміни задачі на кожен вхід bounded queue для потоку.",
+            "en": "Use TaskGroup for scope. Wrap cleanup in finally, let cancellation propagate, then replace per-input tasks with a bounded queue for streams."
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Запусти синтетичний пакет, де друга операція падає після старту іншої. Запиши, які задачі завершилися, які звільнили ресурс і яку помилку бачить викликач. Порівняй один і два слоти. Опиши, як обмежиш пам’ять для 100 000 ID.\n\n**Синтетичні документи політик**",
+            "en": "Run a synthetic batch in which the second operation raises after another has started. Record which children finish, which release their resources, and the exception your caller sees. Compare a one-slot and two-slot batch. Write how you would keep memory bounded for 100,000 IDs.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Використай бар’єр події для встановлення старту.",
+              "en": "Use an event barrier to establish started tasks."
+            },
+            {
+              "uk": "Записуй лічильник на вході та у finally.",
+              "en": "Record a counter on entry and in finally."
+            },
+            {
+              "uk": "Використай фіксовану кількість воркерів із Queue(maxsize=...).",
+              "en": "Use a fixed number of workers with Queue(maxsize=...)."
+            }
+          ],
+          "solution": {
+            "uk": "Задай область через TaskGroup. Очищуй через finally, передавай скасування й заміни задачі на кожен вхід bounded queue для потоку.",
+            "en": "Use TaskGroup for scope. Wrap cleanup in finally, let cancellation propagate, then replace per-input tasks with a bounded queue for streams."
+          }
+        }
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "id": "Q1",
+      "prompt": {
+        "uk": "Що дозволяє іншій корутині працювати під час очікування запиту?",
+        "en": "What lets another coroutine run while a request waits?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Позначення циклу CPU як async прискорює його.",
+            "en": "Marking a CPU loop async speeds it up."
+          },
+          "explanation": {
+            "uk": "Цикл CPU працює без передачі керування.",
+            "en": "A CPU loop still runs without yielding."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Виклик async-функції запускає її у фоновому потоці.",
+            "en": "Calling an async function executes it in a background thread."
+          },
+          "explanation": {
+            "uk": "Він повертає об’єкт корутини.",
+            "en": "It returns a coroutine object."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Await незавершеного I/O віддає керування.",
+            "en": "Awaiting unfinished I/O yields control."
+          },
+          "explanation": {
+            "uk": "Цикл подій планує іншу готову задачу.",
+            "en": "The event loop can schedule another runnable task."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q2",
+      "prompt": {
+        "uk": "Що має охоплювати семафор?",
+        "en": "Where must the semaphore cover?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Мережеву операцію з await.",
+            "en": "The awaited network operation."
+          },
+          "explanation": {
+            "uk": "Слот зайнятий до завершення справжнього I/O.",
+            "en": "That keeps the slot occupied until the actual IO ends."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Лише створення корутини.",
+            "en": "Only creating the coroutine object."
+          },
+          "explanation": {
+            "uk": "Створення не запускає операцію.",
+            "en": "Creation does not run the operation."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Лише збереження відповіді після await.",
+            "en": "Only storing the response after await."
+          },
+          "explanation": {
+            "uk": "Запити вже могли бути необмежені.",
+            "en": "Requests could already be unbounded."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q3",
+      "prompt": {
+        "uk": "Що все ще зростає з довжиною вводу при задачі на кожен елемент?",
+        "en": "What still grows with input length in one-task-per-item scheduling?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Мережевий тайм-аут кожної задачі.",
+            "en": "Each task's network timeout set by config."
+          },
+          "explanation": {
+            "uk": "Тайм-аут задається окремо.",
+            "en": "Timeout is a separate choice."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Кількість задач і роботи в черзі.",
+            "en": "Number of task objects and queued work."
+          },
+          "explanation": {
+            "uk": "Семафор обмежує лише активну роботу.",
+            "en": "A semaphore bounds in-flight work only."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Місткість семафора.",
+            "en": "The semaphore capacity."
+          },
+          "explanation": {
+            "uk": "Задана місткість фіксована.",
+            "en": "The configured capacity is fixed."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q4",
+      "prompt": {
+        "uk": "Навіщо повторно використовувати HTTPX AsyncClient у пакеті?",
+        "en": "Why reuse an HTTPX AsyncClient for a batch?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Він автоматично зберігає порядок усіх відповідей.",
+            "en": "It automatically preserves input order of all responses."
+          },
+          "explanation": {
+            "uk": "Порядок вибирає код викликача.",
+            "en": "Your calling code chooses result ordering."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Він перетворює CPU-роботу на паралельні процеси.",
+            "en": "It converts CPU work to parallel processes."
+          },
+          "explanation": {
+            "uk": "Робота з HTTP-з’єднаннями цього не робить.",
+            "en": "HTTP connection handling does not do this."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Він може повторно використати з’єднання з пулу.",
+            "en": "It can reuse pooled connections."
+          },
+          "explanation": {
+            "uk": "Життя клієнта керує ресурсами з’єднань.",
+            "en": "Client lifetime controls reusable connection resources."
+          }
+        }
+      ]
+    }
+  ],
+  "crosslinks": [
+    "W03-L01",
+    "W03-L03"
+  ]
+}

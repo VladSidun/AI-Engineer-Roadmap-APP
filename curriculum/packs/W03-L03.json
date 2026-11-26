@@ -1,0 +1,510 @@
+{
+  "id": "W03-L03",
+  "contentVersion": 1,
+  "overview": {
+    "uk": "Тайм-аут означає, що клієнт припинив очікування. Сервер ще може завершити операцію. Повтор створення документа без стабільного ID запиту здатен створити два документи. Урок узгоджує бюджет часу, правила повторів, backoff і серверний контракт ідемпотентності. Ти реалізуєш детермінований цикл із під’єднаними операціями. Він розрізняє тимчасову й постійну відмову, виконує скінченну кількість спроб і не чекає після останнього збою. Простеж, що змінюється при заміні читання на запис із повтором після тайм-ауту.",
+    "en": "A timeout tells the caller it stopped waiting. The server may still complete the operation. Retrying a document creation without a stable request identity can create two documents. This lesson aligns a timeout budget, retry policy, backoff and the server's idempotency contract. You will implement a small deterministic retry loop against injected operations. It distinguishes a short transient failure from a permanent error, honors a finite attempt count and avoids delaying the last failure. Then you will trace what changes when a read is replaced with a write and the same timed-out request is replayed."
+  },
+  "theory": {
+    "uk": "### Тайм-аут описує очікування\n\nРозділяй очікування з’єднання, слота пулу, запису й читання, якщо клієнт їх відрізняє. Тайм-аут однієї операції може лишити запит активним через кілька повторів. Неси один монотонний дедлайн і рахуй залишок до кожної спроби та паузи. Якщо бюджету бракує, поверни чітку відмову. Локальний тайм-аут після передачі байтів не підтверджує серверний commit. Перевір стан сервера або повтори логічний запит із дедуплікацією.\n\n### Повторам потрібні правила\n\nПовторюй лише помилки, які можуть зникнути в межах твого бюджету. 429 може обмежувати квоту, 503 означати недоступність. Враховуй Retry-After в межах дедлайну. Експоненційний backoff збільшує паузи при повторних відмовах. У production додають обмежений випадковий розкид, щоб багато клієнтів не повторювали синхронно. 400 або зламаний JSON у відповіді успіху зазвичай потребують виправлення запиту чи контракту. Миттєвий повтор того самого вводу мало допомагає. Для активної роботи резервуй слоти за можливості й обмежуй сумарні повтори клієнта.\n\n### Повтор запису потребує контракту обох сторін\n\nКлюч ідемпотентності представляє одну логічну операцію. Створи його один раз і використовуй у повторах. Сервер відстежує ключ, область клієнта, відбиток запиту й результат. Той самий ключ і тіло повертають записаний результат. Змінене тіло з тим самим ключем дає конфлікт. Unique constraint і транзакція унеможливлюють подвійне створення. Ключ не захищає, якщо сервер його ігнорує. У вправі наданий ключ означає явний контракт. Під’єднай sleep, щоб тести записували паузи без реального очікування.\n\n### Склади бюджет логічного запиту\n\nПрипустимо, викликач дає 900 мс. Перша спроба чекає 250 мс до тайм-ауту. Після паузи 100 мс друга дає 503 ще через 200 мс. Лишається максимум 350 мс. Якщо сервер просить секунду, бюджет замалий. Поверни спостережений тимчасовий збій або тайм-аут за контрактом API та збережи ID, щоб викликач міг звірити запис. Тайм-аути з’єднання, запису й читання можуть вимагати різного діагностичного контексту, навіть за однакової відповіді користувачу.\n\nБюджет повторів на кожному рівні множить трафік. Три спроби клієнта й три спроби gateway можуть дати дев’ять викликів upstream на один запит. Визнач власника повторів і спільний ID для кореляції. Окремо перевір той самий ключ зі зміненим тілом і точний повтор. Сервер має відхилити інший відбиток без повтору ефекту. Тестовий транспорт записує вихідні виклики й запропоновані паузи. Познач причину кожної спроби й чи лишалось достатньо часу для її початку.",
+    "en": "### Timeouts describe a wait\n\nTreat connection, pool, write and read waits as separate causes where the client exposes them. A per-operation timeout can leave the overall request pending across several retries. Carry one monotonic deadline and derive remaining time before each attempt and delay. If the remaining budget is too short, return a clear failure to the caller. A local timeout after request bytes were sent cannot confirm whether the remote commit happened. Inspect the server state or replay a deduplicated logical request.\n\n### Retries need a policy\n\nRetry only failures that might improve within your budget. A service can respond 429 to enforce quota and 503 when unavailable. Respect Retry-After when it fits the deadline. Exponential backoff extends gaps after repeated failure. Production clients often add bounded jitter to avoid synchronized retries from many clients. A 400 or a malformed successful JSON payload usually needs a request or contract fix. There is little reason to repeat identical input immediately. Reserve concurrency slots for active work where feasible and bound retry traffic across the whole client.\n\n### Write retries belong to both sides\n\nAn idempotency key represents one logical operation. Generate it once and reuse it on retry. A server tracks key, caller scope, request fingerprint and result. The same key and payload replay the stored result. The same key with a changed payload becomes a conflict. A unique constraint plus transaction avoids two concurrent creations. Sending a key to a server that ignores it gives no protection. In the exercise a provided key represents an explicit server contract. Inject sleep so your tests record delays without waiting real time.\n\n### Budget one logical request\n\nSuppose a caller gives 900 ms. The first attempt waits 250 ms and times out. After a 100 ms delay, the second responds with 503 after another 200 ms. At most 350 ms remains. A server asking you to wait one second exceeds that budget. Return the observed temporary error or timeout outcome as promised by the API, and keep an existing operation ID so the caller can reconcile a write. Timeout at the connect, write or read boundary can require different diagnostic context even when the user-facing response is identical.\n\nA retry budget at each layer can multiply overall traffic. Three client attempts and three gateway attempts can cause nine upstream calls for one request. Decide which layer owns retries and use an overall request ID so attempts can be correlated. Check same key with changed payload separately from an exact replay. The server should reject a mismatched fingerprint without repeating the effect. A test transport can capture both outbound operations and proposed delays. Record why each attempt was allowed and whether it actually began after enough time remained."
+  },
+  "recap": {
+    "uk": "Використовуй дедлайн, обмежене правило повторів і один стабільний ключ на логічну операцію запису.",
+    "en": "Use a deadline, a bounded retry policy and one stable idempotency key per logical write."
+  },
+  "objectives": [
+    {
+      "id": "O1",
+      "title": {
+        "uk": "Обирати повторювані відмови та враховувати дедлайн.",
+        "en": "Select retryable failures and account for a deadline."
+      },
+      "skill": "systems"
+    },
+    {
+      "id": "O2",
+      "title": {
+        "uk": "Зберігати безпечність повтору для читання й запису з дедуплікацією.",
+        "en": "Keep a retry safe for read and deduplicated write semantics."
+      },
+      "skill": "diagnostics"
+    }
+  ],
+  "sources": [
+    {
+      "title": {
+        "uk": "RFC 9110 · HTTP",
+        "en": "RFC 9110 · HTTP"
+      },
+      "url": "https://www.rfc-editor.org/rfc/rfc9110.html",
+      "version": "RFC 9110",
+      "checked": "2026-11-26"
+    },
+    {
+      "title": {
+        "uk": "asyncio timeouts",
+        "en": "asyncio timeouts"
+      },
+      "url": "https://docs.python.org/3.12/library/asyncio-task.html",
+      "version": "Python 3.12",
+      "checked": "2026-11-26"
+    }
+  ],
+  "examples": [
+    {
+      "file": "w03_l03_example.py",
+      "expected": "[0.1, 0.2, 0.4, 0.8, 1.0]",
+      "explanation": {
+        "uk": "Простеж експоненційну затримку з лімітом одна секунда. Код не очікує.",
+        "en": "Trace an exponential delay with a one-second cap. The code performs no waiting."
+      },
+      "error": {
+        "uk": "Правило має відхилити від’ємну кількість повторів до розкладу.",
+        "en": "A negative retry count should be rejected by policy before constructing a schedule."
+      }
+    }
+  ],
+  "interview": [
+    "What does a timeout tell you about a remote side effect?",
+    "How would you test backoff without slowing down the suite?"
+  ],
+  "interviewGuide": {
+    "uk": "Назви гарантію клієнтського часу й умову сервера.",
+    "en": "Name both the client timing guarantee and the server condition."
+  },
+  "exercises": [
+    {
+      "id": "W03-L03-E1",
+      "title": {
+        "uk": "Реалізувати скінченні повтори з під’єднаним очікуванням",
+        "en": "Implement finite retries with an injected clock"
+      },
+      "kind": "code",
+      "objectives": [
+        "O1"
+      ],
+      "estimateMinutes": 75,
+      "criteria": [],
+      "example": {
+        "uk": "GET: [503, 200] повертає другу відповідь і фіксує паузу 0.1 секунди.",
+        "en": "GET: [503, 200] returns the second response and records one delay of 0.1 seconds."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Реалізуй async solve(method, send, sleep, attempts, key=None). send(key) дає (status, result) або піднімає TimeoutError. Поверни першу відповідь поза правилом повтору або фінальну. Тайм-аути й 429, 502, 503, 504 повторюй лише для GET або POST з непорожнім ключем. Передавай фінальний TimeoutError і TimeoutError без повтору. Виконуй await sleep(0.1 * 2 ** i) після збою i, починаючи з нуля. Використовуй той самий ключ. Відхиляй attempts поза 1–5.\n\n**Синтетичні накладні**",
+            "en": "Implement async solve(method, send, sleep, attempts, key=None). send(key) returns (status, result) or raises TimeoutError. Return the first nonretryable or final response. Repeat timeouts and statuses 429, 502, 503, 504 only for GET or a POST with a nonempty key. Propagate an unrepeatable or final TimeoutError. Await sleep(0.1 * 2 ** i) after repeatable failure i, starting at zero. Keep the same key each time. Reject attempts outside 1–5.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Визнач право повтору до циклу.",
+              "en": "Choose retry eligibility before entering the loop."
+            },
+            {
+              "uk": "Зупиняйся на останній спробі без паузи.",
+              "en": "Stop on the last attempt without sleeping."
+            },
+            {
+              "uk": "Обробляй лише TimeoutError, далі перевіряй дозволені статуси.",
+              "en": "Handle only TimeoutError, then check allowed response statuses."
+            }
+          ],
+          "solution": {
+            "uk": "Повторюй лише дозволені тимчасові відмови й лише там, де операція безпечна при повторі.\n\n```python\nfrom collections.abc import Awaitable, Callable\n\nasync def solve(method: str, send: Callable[[str | None], Awaitable[tuple[int, str]]],\n                sleep: Callable[[float], Awaitable[None]], attempts: int,\n                key: str | None = None) -> tuple[int, str]:\n    if not 1 <= attempts <= 5:\n        raise ValueError('attempts must be between 1 and 5')\n    repeatable = method == 'GET' or (method == 'POST' and bool(key))\n    for index in range(attempts):\n        can_retry = repeatable and index + 1 < attempts\n        try:\n            response = await send(key)\n        except TimeoutError:\n            if not can_retry:\n                raise\n        else:\n            if not can_retry or response[0] not in {429, 502, 503, 504}:\n                return response\n        await sleep(0.1 * 2 ** index)\n    raise AssertionError('last attempt must return or raise')\n```",
+            "en": "Retry an allowlist of transient failures only when the operation is safe to repeat.\n\n```python\nfrom collections.abc import Awaitable, Callable\n\nasync def solve(method: str, send: Callable[[str | None], Awaitable[tuple[int, str]]],\n                sleep: Callable[[float], Awaitable[None]], attempts: int,\n                key: str | None = None) -> tuple[int, str]:\n    if not 1 <= attempts <= 5:\n        raise ValueError('attempts must be between 1 and 5')\n    repeatable = method == 'GET' or (method == 'POST' and bool(key))\n    for index in range(attempts):\n        can_retry = repeatable and index + 1 < attempts\n        try:\n            response = await send(key)\n        except TimeoutError:\n            if not can_retry:\n                raise\n        else:\n            if not can_retry or response[0] not in {429, 502, 503, 504}:\n                return response\n        await sleep(0.1 * 2 ** index)\n    raise AssertionError('last attempt must return or raise')\n```"
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Реалізуй async solve(method, send, sleep, attempts, key=None). send(key) дає (status, result) або піднімає TimeoutError. Поверни першу відповідь поза правилом повтору або фінальну. Тайм-аути й 429, 502, 503, 504 повторюй лише для GET або POST з непорожнім ключем. Передавай фінальний TimeoutError і TimeoutError без повтору. Виконуй await sleep(0.1 * 2 ** i) після збою i, починаючи з нуля. Використовуй той самий ключ. Відхиляй attempts поза 1–5.\n\n**Синтетичні запити підтримки**",
+            "en": "Implement async solve(method, send, sleep, attempts, key=None). send(key) returns (status, result) or raises TimeoutError. Return the first nonretryable or final response. Repeat timeouts and statuses 429, 502, 503, 504 only for GET or a POST with a nonempty key. Propagate an unrepeatable or final TimeoutError. Await sleep(0.1 * 2 ** i) after repeatable failure i, starting at zero. Keep the same key each time. Reject attempts outside 1–5.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Визнач право повтору до циклу.",
+              "en": "Choose retry eligibility before entering the loop."
+            },
+            {
+              "uk": "Зупиняйся на останній спробі без паузи.",
+              "en": "Stop on the last attempt without sleeping."
+            },
+            {
+              "uk": "Обробляй лише TimeoutError, далі перевіряй дозволені статуси.",
+              "en": "Handle only TimeoutError, then check allowed response statuses."
+            }
+          ],
+          "solution": {
+            "uk": "Повторюй лише дозволені тимчасові відмови й лише там, де операція безпечна при повторі.\n\n```python\nfrom collections.abc import Awaitable, Callable\n\nasync def solve(method: str, send: Callable[[str | None], Awaitable[tuple[int, str]]],\n                sleep: Callable[[float], Awaitable[None]], attempts: int,\n                key: str | None = None) -> tuple[int, str]:\n    if not 1 <= attempts <= 5:\n        raise ValueError('attempts must be between 1 and 5')\n    repeatable = method == 'GET' or (method == 'POST' and bool(key))\n    for index in range(attempts):\n        can_retry = repeatable and index + 1 < attempts\n        try:\n            response = await send(key)\n        except TimeoutError:\n            if not can_retry:\n                raise\n        else:\n            if not can_retry or response[0] not in {429, 502, 503, 504}:\n                return response\n        await sleep(0.1 * 2 ** index)\n    raise AssertionError('last attempt must return or raise')\n```",
+            "en": "Retry an allowlist of transient failures only when the operation is safe to repeat.\n\n```python\nfrom collections.abc import Awaitable, Callable\n\nasync def solve(method: str, send: Callable[[str | None], Awaitable[tuple[int, str]]],\n                sleep: Callable[[float], Awaitable[None]], attempts: int,\n                key: str | None = None) -> tuple[int, str]:\n    if not 1 <= attempts <= 5:\n        raise ValueError('attempts must be between 1 and 5')\n    repeatable = method == 'GET' or (method == 'POST' and bool(key))\n    for index in range(attempts):\n        can_retry = repeatable and index + 1 < attempts\n        try:\n            response = await send(key)\n        except TimeoutError:\n            if not can_retry:\n                raise\n        else:\n            if not can_retry or response[0] not in {429, 502, 503, 504}:\n                return response\n        await sleep(0.1 * 2 ** index)\n    raise AssertionError('last attempt must return or raise')\n```"
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Реалізуй async solve(method, send, sleep, attempts, key=None). send(key) дає (status, result) або піднімає TimeoutError. Поверни першу відповідь поза правилом повтору або фінальну. Тайм-аути й 429, 502, 503, 504 повторюй лише для GET або POST з непорожнім ключем. Передавай фінальний TimeoutError і TimeoutError без повтору. Виконуй await sleep(0.1 * 2 ** i) після збою i, починаючи з нуля. Використовуй той самий ключ. Відхиляй attempts поза 1–5.\n\n**Синтетичні документи політик**",
+            "en": "Implement async solve(method, send, sleep, attempts, key=None). send(key) returns (status, result) or raises TimeoutError. Return the first nonretryable or final response. Repeat timeouts and statuses 429, 502, 503, 504 only for GET or a POST with a nonempty key. Propagate an unrepeatable or final TimeoutError. Await sleep(0.1 * 2 ** i) after repeatable failure i, starting at zero. Keep the same key each time. Reject attempts outside 1–5.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Визнач право повтору до циклу.",
+              "en": "Choose retry eligibility before entering the loop."
+            },
+            {
+              "uk": "Зупиняйся на останній спробі без паузи.",
+              "en": "Stop on the last attempt without sleeping."
+            },
+            {
+              "uk": "Обробляй лише TimeoutError, далі перевіряй дозволені статуси.",
+              "en": "Handle only TimeoutError, then check allowed response statuses."
+            }
+          ],
+          "solution": {
+            "uk": "Повторюй лише дозволені тимчасові відмови й лише там, де операція безпечна при повторі.\n\n```python\nfrom collections.abc import Awaitable, Callable\n\nasync def solve(method: str, send: Callable[[str | None], Awaitable[tuple[int, str]]],\n                sleep: Callable[[float], Awaitable[None]], attempts: int,\n                key: str | None = None) -> tuple[int, str]:\n    if not 1 <= attempts <= 5:\n        raise ValueError('attempts must be between 1 and 5')\n    repeatable = method == 'GET' or (method == 'POST' and bool(key))\n    for index in range(attempts):\n        can_retry = repeatable and index + 1 < attempts\n        try:\n            response = await send(key)\n        except TimeoutError:\n            if not can_retry:\n                raise\n        else:\n            if not can_retry or response[0] not in {429, 502, 503, 504}:\n                return response\n        await sleep(0.1 * 2 ** index)\n    raise AssertionError('last attempt must return or raise')\n```",
+            "en": "Retry an allowlist of transient failures only when the operation is safe to repeat.\n\n```python\nfrom collections.abc import Awaitable, Callable\n\nasync def solve(method: str, send: Callable[[str | None], Awaitable[tuple[int, str]]],\n                sleep: Callable[[float], Awaitable[None]], attempts: int,\n                key: str | None = None) -> tuple[int, str]:\n    if not 1 <= attempts <= 5:\n        raise ValueError('attempts must be between 1 and 5')\n    repeatable = method == 'GET' or (method == 'POST' and bool(key))\n    for index in range(attempts):\n        can_retry = repeatable and index + 1 < attempts\n        try:\n            response = await send(key)\n        except TimeoutError:\n            if not can_retry:\n                raise\n        else:\n            if not can_retry or response[0] not in {429, 502, 503, 504}:\n                return response\n        await sleep(0.1 * 2 ** index)\n    raise AssertionError('last attempt must return or raise')\n```"
+          }
+        }
+      ]
+    },
+    {
+      "id": "W03-L03-E2",
+      "title": {
+        "uk": "Простежити операцію в межах дедлайну",
+        "en": "Trace the same operation through a deadline"
+      },
+      "kind": "rubric",
+      "objectives": [
+        "O2"
+      ],
+      "estimateMinutes": 70,
+      "criteria": [
+        {
+          "id": "C1",
+          "title": {
+            "uk": "Наведено залишок часу перед кожним кроком.",
+            "en": "Include remaining time before each step."
+          }
+        },
+        {
+          "id": "C2",
+          "title": {
+            "uk": "Відхилено повтор, затримка якого перевищує дедлайн.",
+            "en": "Refuse a retry whose delay exceeds the deadline."
+          }
+        },
+        {
+          "id": "C3",
+          "title": {
+            "uk": "Показано один ключ і правило дедуплікації запису.",
+            "en": "Show one key and deduplication rule for replaying a write."
+          }
+        }
+      ],
+      "example": {
+        "uk": "Після 250 мс очікування й 150 мс паузи лишається до 300 мс. Retry-After в одну секунду не вміститься.",
+        "en": "After a 250 ms wait and 150 ms pause, up to 300 ms remains. A one-second Retry-After cannot fit."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Зроби таблицю для загального бюджету 700 мс, тайм-ауту 250 мс, паузи 150 мс і наступного Retry-After 1 секунда. Поясни залишок у кожній точці. Порівняй читання і створення з втраченою першою відповіддю.\n\n**Синтетичні накладні**",
+            "en": "Make a trace table with a 700 ms end-to-end budget, a 250 ms first timeout, a 150 ms pause and a subsequent Retry-After of 1 second. Explain the remaining budget at each point. Compare a read and a create whose first response was lost.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Використай минулий час замість позначок календарного часу.",
+              "en": "Use elapsed time rather than wall-clock timestamps."
+            },
+            {
+              "uk": "Відніми тривалість другої операції перед оцінкою паузи.",
+              "en": "Subtract the second operation's elapsed time before evaluating its delay."
+            },
+            {
+              "uk": "Обмеж ключ поточним актором і відбитком запиту.",
+              "en": "Scope a dedup key to the current actor and payload fingerprint."
+            }
+          ],
+          "solution": {
+            "uk": "Після першого очікування лишається 450 мс. Після паузи — не більше 300 мс. Заверши запит без паузи поза бюджетом. Повторюй створення після тайм-ауту лише за документованого контракту ідемпотентності.",
+            "en": "After the first wait, 450 ms remains. After the pause, at most 300 ms remains. End instead of delaying beyond the budget. A timed-out creation can be replayed only under the documented idempotency contract."
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Зроби таблицю для загального бюджету 700 мс, тайм-ауту 250 мс, паузи 150 мс і наступного Retry-After 1 секунда. Поясни залишок у кожній точці. Порівняй читання і створення з втраченою першою відповіддю.\n\n**Синтетичні запити підтримки**",
+            "en": "Make a trace table with a 700 ms end-to-end budget, a 250 ms first timeout, a 150 ms pause and a subsequent Retry-After of 1 second. Explain the remaining budget at each point. Compare a read and a create whose first response was lost.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Використай минулий час замість позначок календарного часу.",
+              "en": "Use elapsed time rather than wall-clock timestamps."
+            },
+            {
+              "uk": "Відніми тривалість другої операції перед оцінкою паузи.",
+              "en": "Subtract the second operation's elapsed time before evaluating its delay."
+            },
+            {
+              "uk": "Обмеж ключ поточним актором і відбитком запиту.",
+              "en": "Scope a dedup key to the current actor and payload fingerprint."
+            }
+          ],
+          "solution": {
+            "uk": "Після першого очікування лишається 450 мс. Після паузи — не більше 300 мс. Заверши запит без паузи поза бюджетом. Повторюй створення після тайм-ауту лише за документованого контракту ідемпотентності.",
+            "en": "After the first wait, 450 ms remains. After the pause, at most 300 ms remains. End instead of delaying beyond the budget. A timed-out creation can be replayed only under the documented idempotency contract."
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Зроби таблицю для загального бюджету 700 мс, тайм-ауту 250 мс, паузи 150 мс і наступного Retry-After 1 секунда. Поясни залишок у кожній точці. Порівняй читання і створення з втраченою першою відповіддю.\n\n**Синтетичні документи політик**",
+            "en": "Make a trace table with a 700 ms end-to-end budget, a 250 ms first timeout, a 150 ms pause and a subsequent Retry-After of 1 second. Explain the remaining budget at each point. Compare a read and a create whose first response was lost.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Використай минулий час замість позначок календарного часу.",
+              "en": "Use elapsed time rather than wall-clock timestamps."
+            },
+            {
+              "uk": "Відніми тривалість другої операції перед оцінкою паузи.",
+              "en": "Subtract the second operation's elapsed time before evaluating its delay."
+            },
+            {
+              "uk": "Обмеж ключ поточним актором і відбитком запиту.",
+              "en": "Scope a dedup key to the current actor and payload fingerprint."
+            }
+          ],
+          "solution": {
+            "uk": "Після першого очікування лишається 450 мс. Після паузи — не більше 300 мс. Заверши запит без паузи поза бюджетом. Повторюй створення після тайм-ауту лише за документованого контракту ідемпотентності.",
+            "en": "After the first wait, 450 ms remains. After the pause, at most 300 ms remains. End instead of delaying beyond the budget. A timed-out creation can be replayed only under the documented idempotency contract."
+          }
+        }
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "id": "Q1",
+      "prompt": {
+        "uk": "Що доводить тайм-аут запису?",
+        "en": "What does a timed-out write prove?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Клієнт припинив очікування.",
+            "en": "The client stopped waiting."
+          },
+          "explanation": {
+            "uk": "Сервер усе ще міг зробити commit.",
+            "en": "The server may still have committed."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Дистанційна транзакція відкотилась.",
+            "en": "The remote transaction rolled back."
+          },
+          "explanation": {
+            "uk": "Клієнт цього не знає.",
+            "en": "The client lacks that information."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Запит не дійшов до сервера.",
+            "en": "The request never reached the server."
+          },
+          "explanation": {
+            "uk": "Відповідь може загубитися після commit.",
+            "en": "A response can be lost after commit."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q2",
+      "prompt": {
+        "uk": "Як змінюється ключ ідемпотентності при повторі?",
+        "en": "How should an idempotency key change during a retry?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Поділи один ключ між усіма користувачами.",
+            "en": "Share one key across every user."
+          },
+          "explanation": {
+            "uk": "Ключ належить області викликача й операції.",
+            "en": "Keys belong to a caller scope and operation."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Використовуй той самий ключ для тієї самої операції.",
+            "en": "Reuse the same key for the same logical write."
+          },
+          "explanation": {
+            "uk": "Дедуплікація залежить від збігу з попереднім записом.",
+            "en": "Deduplication depends on matching the earlier record."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Щоразу створюй новий ключ.",
+            "en": "Create a different key every time."
+          },
+          "explanation": {
+            "uk": "Це може створити другий ефект.",
+            "en": "That can cause a second effect."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q3",
+      "prompt": {
+        "uk": "Що робити з Retry-After довшим за дедлайн?",
+        "en": "What should a client do with Retry-After longer than its deadline?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Негайно повторити під тою ж квотою.",
+            "en": "Retry immediately with the same quota."
+          },
+          "explanation": {
+            "uk": "Це ігнорує сигнал сервера.",
+            "en": "It disregards the server's signal."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Почати необмежений цикл.",
+            "en": "Start an unbounded loop."
+          },
+          "explanation": {
+            "uk": "Викликач втрачає межу часу.",
+            "en": "The caller loses a time bound."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Завершити операцію в межах дедлайну.",
+            "en": "End the operation within the deadline."
+          },
+          "explanation": {
+            "uk": "Пауза не поміщається в бюджет.",
+            "en": "The delay cannot fit the request budget."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q4",
+      "prompt": {
+        "uk": "Навіщо випадковий розкид у графіку повторів?",
+        "en": "Why is jitter used in retry schedules?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Зменшити синхронність клієнтів.",
+            "en": "Reduce synchronization between clients."
+          },
+          "explanation": {
+            "uk": "Випадкова затримка розсіює сплески.",
+            "en": "A randomized delay disperses bursts."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Зробити час усіх повторів однаковим.",
+            "en": "Make every retry identical in timing."
+          },
+          "explanation": {
+            "uk": "Однаковий час може синхронізувати.",
+            "en": "Identical delay can cause synchronization."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Усунути потребу в дедлайні.",
+            "en": "Avoid needing a deadline."
+          },
+          "explanation": {
+            "uk": "Випадкові паузи теж витрачають бюджет.",
+            "en": "Randomized gaps still consume the budget."
+          }
+        }
+      ]
+    }
+  ],
+  "crosslinks": [
+    "W03-L02",
+    "W03-L04"
+  ]
+}

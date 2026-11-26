@@ -1,0 +1,519 @@
+{
+  "id": "W05-L04",
+  "contentVersion": 1,
+  "overview": {
+    "uk": "Чиста функція авторизації може пройти тести, хоча endpoint пропускає умову tenant. Перевір захист на двох рівнях. Табличні unit-тести закріплюють правила політики. Інтеграційні тести викликають API й спостерігають одноразову БД та сховище. Визнач у таблиці акторів, дії, ресурси й очікувані ефекти, далі перевір мутацію області на синтетичних рядках. Заверши малим threat model, який збирає кожен важливий ризик з відтворюваною перевіркою й описує припущення фікстури.",
+    "en": "A pure authorization function can pass while the real endpoint still omits the tenant condition. Put defense checks at two levels. Table-driven unit tests pin each policy rule. Integration tests invoke the API and observe a disposable database and storage fixture. You will define actors, actions, resources and expected effects in a table, then verify a scoped mutation against synthetic rows. Finish with a small threat model that ties each important risk to one reproducible check and records the assumptions of the fixture."
+  },
+  "theory": {
+    "uk": "### Розрізнювальні фікстури\n\nВикористай два синтетичні tenant з одним рядком кожен, власника, невласника в tenant і зовнішнього актора. Додай успішний тест, що справді дозволяє редагування. Додай відмови ролі, tenant і відсутнього документа. Перевір статус і тіло, далі запитай БД, щоб ефект не ховався за правильною помилкою. Перевір незмінність сторонніх рядків після валідної мутації. Фікстура з одним tenant не виявить хибу області.\n\n### Ізоляція реальних залежностей\n\nІнтеграційний тест може замінити перевірку ідентичності керованою фікстурою і зберегти справжні маршрут, ORM, міграції та записи. Це перевіряє авторизацію, залишаючи verifier окремим тестам. Застосуй міграції до тестової БД і створи синтетичні дані на тест. Очищення не має зачіпати особисту чи production БД. Параметризуй з ID, що пояснюють очікування. Вправа Runner перевіряє збережені рядки в одноразовій SQLite. В окремому проєкті тестуй справжню PostgreSQL.\n\n### Перетворення загрози на перевірку\n\nПереліч активи, як документи, ідентичність і внутрішні ключі. Визнач точки входу та межі довіри, потім сформулюй збій гарантії. Для міжтенантної мутації твердження — незмінний стан і відповідь без розкриття. Для upload перевір також відсутність збережених байтів після відмови. Запиши залишкові ризики, скажімо неперевірений провайдер сховища. Пріоритезуй вплив і частини, що змінюються разом із маршрутами, запитами чи ролями.\n\n### Сформулюй твердження для кожної гарантії\n\nУяви власника, який оновлює title, і сторонній tenant, що отримує відмову. Створи два рядки з різними tenant, власниками й заголовками. Для успіху перевір, що змінився рівно один title і відповідь має тільки публічні поля. Для відмови звір задокументовану відповідь і обидва рядки зі знімком до запиту. Окрема сесія читає зафіксовані дані. Запускай незалежно. Оновлення фікстури між ними зменшує залежність від порядку й попередніх тестів.\n\nПочни threat model із таблиці меж: ідентичність визначає verifier, стан ресурсу — БД, файл є недовіреним, ключі сховища створює сервіс. Зв’яжи кожне рішення з позитивним і негативним спостереженням. Явно опиши підставленого провайдера ідентичності, щоб читач бачив неперевірену частину. Важливість надають справжні активи, наприклад приватний документ чи квота. Оновлюй таблицю тестів з новим маршрутом, експортом або адміністративною роллю.",
+    "en": "### Pick fixtures that discriminate\n\nUse two synthetic tenants with one row each, a same-tenant owner, a non-owner and an outsider. Include one allowed case to show the setup can really edit. Add rejected cases for role, tenant and nonexistent document. Verify the status and payload, then query the database so a wrong side effect cannot hide under a correct error. Verify unrelated rows remain untouched after a valid mutation. A fixture that contains only one tenant cannot expose scope mistakes.\n\n### Isolate the real dependencies\n\nAn integration test may replace identity verification with a controlled fixture while keeping real route, ORM, migration and database writes. That tests the authorization integration while leaving verification to distinct tests. Apply migrations to a test database and create synthetic data per test. Ensure cleanup cannot affect a personal or production database. Parameterize using case IDs that explain the expectation. The runner exercise verifies row persistence in a disposable SQLite fixture. Use actual PostgreSQL in the separate project checks.\n\n### Translate a threat into an assertion\n\nList assets such as documents, identities and internal keys. Identify entry points and trust boundaries, then state what failure would violate a guarantee. For a cross-tenant mutation, the relevant assertion is unchanged state plus a non-disclosing response. For uploads, the assertion can include the absence of persisted bytes after rejection. Record residual risks such as an untested storage provider. Prioritize cases by impact and parts that can change when routes, queries or roles evolve.\n\n### Write assertions for each observed guarantee\n\nImagine a test case in which an owner updates a document title and another tenant is denied. Seed two rows with different tenants, owners and titles. For the successful case, assert that exactly one title changed and the response exposes only public fields. For the denied case, assert the documented response and compare both stored rows with the pre-request snapshot. Use a separate session so the check observes committed data. Run the cases independently. A reset between them reduces order dependence and avoids using data from a previous test as a missing prerequisite.\n\nA threat model can start with a small boundary table: caller identity belongs to the verifier, resource state belongs to the database, file contents are untrusted, and storage keys belong to the service. Link each decision to positive and negative observations. If the identity provider is replaced by a fixture, describe that explicitly so a reader understands which part still requires verification. Keep severity connected to actual assets, such as a private document or resource quota. Update the test table when adding a new route, an export or an administrative role."
+  },
+  "recap": {
+    "uk": "Тестуй функцію політики й справжнє застосування на межах HTTP та сховища.",
+    "en": "Test both the policy function and its real use at the HTTP and storage boundaries."
+  },
+  "objectives": [
+    {
+      "id": "O1",
+      "title": {
+        "uk": "Побудувати матрицю негативних перевірок доступу зі станом сховища.",
+        "en": "Build a negative access-control test matrix that checks persistent effects."
+      },
+      "skill": "evaluation"
+    },
+    {
+      "id": "O2",
+      "title": {
+        "uk": "Пов’язати припущення й тести threat model з межами Project A.",
+        "en": "Connect threat-model assumptions and tests to Project A boundaries."
+      },
+      "skill": "diagnostics"
+    }
+  ],
+  "sources": [
+    {
+      "title": {
+        "uk": "FastAPI testing",
+        "en": "FastAPI testing"
+      },
+      "url": "https://fastapi.tiangolo.com/tutorial/testing/",
+      "version": "FastAPI",
+      "checked": "2026-11-26"
+    },
+    {
+      "title": {
+        "uk": "OWASP Authorization",
+        "en": "OWASP Authorization"
+      },
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html",
+      "version": "OWASP",
+      "checked": "2026-11-26"
+    },
+    {
+      "title": {
+        "uk": "pytest parametrization",
+        "en": "pytest parametrization"
+      },
+      "url": "https://docs.pytest.org/en/stable/how-to/parametrize.html",
+      "version": "pytest 9",
+      "checked": "2026-11-26"
+    }
+  ],
+  "examples": [
+    {
+      "file": "w05_l04_example.py",
+      "expected": "owner allow\nviewer deny\noutsider deny",
+      "explanation": {
+        "uk": "Синтетична політика обчислює дозвіл із ролі й області. Застосуй ту саму матрицю для маршруту Project A.",
+        "en": "The synthetic policy yields allow or deny from identity and scope. Use the same matrix for the real route in Project A."
+      },
+      "error": {
+        "uk": "Заміни очікувану відмову на True: відповідний тест має впасти.",
+        "en": "Replace a denied expected value with True and the corresponding real test should fail."
+      }
+    }
+  ],
+  "interview": [
+    "What is still untested if a fixture replaces authentication?",
+    "How do you verify a denied write caused no side effect?"
+  ],
+  "interviewGuide": {
+    "uk": "Опиши політику, умову SQL і твердження БД.",
+    "en": "Describe the observed policy, SQL predicate and database assertion."
+  },
+  "exercises": [
+    {
+      "id": "W05-L04-E1",
+      "title": {
+        "uk": "Застосувати зміну в області без ефектів відмови",
+        "en": "Apply a scoped update with no denied side effects"
+      },
+      "kind": "code",
+      "objectives": [
+        "O1"
+      ],
+      "estimateMinutes": 75,
+      "criteria": [],
+      "example": {
+        "uk": "Запит до іншого tenant дає 404 і не змінює обидва фікстурні записи.",
+        "en": "A request for another tenant returns 404 and leaves both fixture records unchanged."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(db, document_id, tenant, owner, title). Таблиця SQLite documents має id, tenant, owner, title. Порожній title дає 422 без змін. Запиши title як надано для збігу id, tenant та owner. Фіксуй зміну й поверни 200 для одного рядка, 404 за відсутності. Передавай параметри. Tenant і owner задають довірені викликачі.\n\n**Синтетичні накладні**",
+            "en": "Implement solve(db, document_id, tenant, owner, title). The SQLite table documents contains id, tenant, owner, title. Reject a blank title with return value 422 without changing anything. Update title exactly as supplied for a matching id, tenant and owner. Commit and return 200 on one update; return 404 when no row matches. Use bound parameters. Callers supply trusted tenant and owner.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Спочатку перевір title.",
+              "en": "Check title first."
+            },
+            {
+              "uk": "Умісти всі три селектори в одну WHERE умову мутації.",
+              "en": "Include all three selectors in one mutation WHERE condition."
+            },
+            {
+              "uk": "Визнач результат через rowcount курсора.",
+              "en": "Use the cursor rowcount to decide the outcome."
+            }
+          ],
+          "solution": {
+            "uk": "Один UPDATE з областю узгоджує вибір і зміну. Однаковий статус відсутності й відмови не розрізняє недоступні рядки.\n\n```python\nimport sqlite3\n\ndef solve(db: sqlite3.Connection, document_id: int, tenant: str, owner: str, title: str) -> int:\n    if not title.strip():\n        return 422\n    with db:\n        changed = db.execute('UPDATE documents SET title = ? WHERE id = ? AND tenant = ? AND owner = ?',\n                             (title, document_id, tenant, owner)).rowcount\n    return 200 if changed == 1 else 404\n```",
+            "en": "One scoped UPDATE makes the selection and mutation consistent. Identical missing and denied statuses avoid distinguishing inaccessible rows.\n\n```python\nimport sqlite3\n\ndef solve(db: sqlite3.Connection, document_id: int, tenant: str, owner: str, title: str) -> int:\n    if not title.strip():\n        return 422\n    with db:\n        changed = db.execute('UPDATE documents SET title = ? WHERE id = ? AND tenant = ? AND owner = ?',\n                             (title, document_id, tenant, owner)).rowcount\n    return 200 if changed == 1 else 404\n```"
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(db, document_id, tenant, owner, title). Таблиця SQLite documents має id, tenant, owner, title. Порожній title дає 422 без змін. Запиши title як надано для збігу id, tenant та owner. Фіксуй зміну й поверни 200 для одного рядка, 404 за відсутності. Передавай параметри. Tenant і owner задають довірені викликачі.\n\n**Синтетичні запити підтримки**",
+            "en": "Implement solve(db, document_id, tenant, owner, title). The SQLite table documents contains id, tenant, owner, title. Reject a blank title with return value 422 without changing anything. Update title exactly as supplied for a matching id, tenant and owner. Commit and return 200 on one update; return 404 when no row matches. Use bound parameters. Callers supply trusted tenant and owner.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Спочатку перевір title.",
+              "en": "Check title first."
+            },
+            {
+              "uk": "Умісти всі три селектори в одну WHERE умову мутації.",
+              "en": "Include all three selectors in one mutation WHERE condition."
+            },
+            {
+              "uk": "Визнач результат через rowcount курсора.",
+              "en": "Use the cursor rowcount to decide the outcome."
+            }
+          ],
+          "solution": {
+            "uk": "Один UPDATE з областю узгоджує вибір і зміну. Однаковий статус відсутності й відмови не розрізняє недоступні рядки.\n\n```python\nimport sqlite3\n\ndef solve(db: sqlite3.Connection, document_id: int, tenant: str, owner: str, title: str) -> int:\n    if not title.strip():\n        return 422\n    with db:\n        changed = db.execute('UPDATE documents SET title = ? WHERE id = ? AND tenant = ? AND owner = ?',\n                             (title, document_id, tenant, owner)).rowcount\n    return 200 if changed == 1 else 404\n```",
+            "en": "One scoped UPDATE makes the selection and mutation consistent. Identical missing and denied statuses avoid distinguishing inaccessible rows.\n\n```python\nimport sqlite3\n\ndef solve(db: sqlite3.Connection, document_id: int, tenant: str, owner: str, title: str) -> int:\n    if not title.strip():\n        return 422\n    with db:\n        changed = db.execute('UPDATE documents SET title = ? WHERE id = ? AND tenant = ? AND owner = ?',\n                             (title, document_id, tenant, owner)).rowcount\n    return 200 if changed == 1 else 404\n```"
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(db, document_id, tenant, owner, title). Таблиця SQLite documents має id, tenant, owner, title. Порожній title дає 422 без змін. Запиши title як надано для збігу id, tenant та owner. Фіксуй зміну й поверни 200 для одного рядка, 404 за відсутності. Передавай параметри. Tenant і owner задають довірені викликачі.\n\n**Синтетичні документи політик**",
+            "en": "Implement solve(db, document_id, tenant, owner, title). The SQLite table documents contains id, tenant, owner, title. Reject a blank title with return value 422 without changing anything. Update title exactly as supplied for a matching id, tenant and owner. Commit and return 200 on one update; return 404 when no row matches. Use bound parameters. Callers supply trusted tenant and owner.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Спочатку перевір title.",
+              "en": "Check title first."
+            },
+            {
+              "uk": "Умісти всі три селектори в одну WHERE умову мутації.",
+              "en": "Include all three selectors in one mutation WHERE condition."
+            },
+            {
+              "uk": "Визнач результат через rowcount курсора.",
+              "en": "Use the cursor rowcount to decide the outcome."
+            }
+          ],
+          "solution": {
+            "uk": "Один UPDATE з областю узгоджує вибір і зміну. Однаковий статус відсутності й відмови не розрізняє недоступні рядки.\n\n```python\nimport sqlite3\n\ndef solve(db: sqlite3.Connection, document_id: int, tenant: str, owner: str, title: str) -> int:\n    if not title.strip():\n        return 422\n    with db:\n        changed = db.execute('UPDATE documents SET title = ? WHERE id = ? AND tenant = ? AND owner = ?',\n                             (title, document_id, tenant, owner)).rowcount\n    return 200 if changed == 1 else 404\n```",
+            "en": "One scoped UPDATE makes the selection and mutation consistent. Identical missing and denied statuses avoid distinguishing inaccessible rows.\n\n```python\nimport sqlite3\n\ndef solve(db: sqlite3.Connection, document_id: int, tenant: str, owner: str, title: str) -> int:\n    if not title.strip():\n        return 422\n    with db:\n        changed = db.execute('UPDATE documents SET title = ? WHERE id = ? AND tenant = ? AND owner = ?',\n                             (title, document_id, tenant, owner)).rowcount\n    return 200 if changed == 1 else 404\n```"
+          }
+        }
+      ]
+    },
+    {
+      "id": "W05-L04-E2",
+      "title": {
+        "uk": "Написати threat model і регресії Project A",
+        "en": "Write a Project A threat model and regression suite"
+      },
+      "kind": "rubric",
+      "objectives": [
+        "O2"
+      ],
+      "estimateMinutes": 70,
+      "criteria": [
+        {
+          "id": "C1",
+          "title": {
+            "uk": "Покрито успіх у tenant і міжтенантну відмову в одному наборі.",
+            "en": "Cover same-tenant success and cross-tenant denial in the same suite."
+          }
+        },
+        {
+          "id": "C2",
+          "title": {
+            "uk": "Перевірено стан сховища після відмови запису.",
+            "en": "Check persistent state after denied write."
+          }
+        },
+        {
+          "id": "C3",
+          "title": {
+            "uk": "Два ризики пов’язано зі спостереженими тестами й зазначено залишок.",
+            "en": "Map two risks to observed tests and document what remains."
+          }
+        }
+      ],
+      "example": {
+        "uk": "Інтеграція показує відмову міжтенантної зміни й окремо перевіряє точний попередній заголовок.",
+        "en": "The integration suite reports cross-tenant update denied and independently checks the row's exact previous title."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Додай матрицю actor/action/tenant до README проєкту або дизайну. Запусти успішні й негативні інтеграційні тести на фікстурі PostgreSQL. Обери два активи й назви межу довіри, відмову й тест для кожного. Запиши фактичний результат і залишкові обмеження без секретів та особистих даних.\n\n**Синтетичні накладні**",
+            "en": "Add an actor/action/tenant matrix to the project README or a separate design file. Run positive and denied integration tests against your PostgreSQL fixture. Pick two assets and list a trust boundary, one failure and one test for each. Record the actual outcome and residual limitations without secrets or personal data.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Вибери активи перед відмовами.",
+              "en": "Pick assets before enumerating failures."
+            },
+            {
+              "uk": "Пов’яжи відмову зі статусом і твердженням БД.",
+              "en": "Map denied update to both a status and a DB assertion."
+            },
+            {
+              "uk": "Поясни, яку перевірку ідентичності замінила фікстура.",
+              "en": "Explain which identity verification was replaced by the fixture."
+            }
+          ],
+          "solution": {
+            "uk": "Використай API для поведінки й окрему тестову сесію для стану БД. Запиши фіксовані зміни й незмінний стан за відмови разом із припущеннями межі довіри.",
+            "en": "Use the API for behavior and a dedicated test session for DB verification. Document the committed writes and unchanged denied state alongside trust-boundary assumptions."
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Додай матрицю actor/action/tenant до README проєкту або дизайну. Запусти успішні й негативні інтеграційні тести на фікстурі PostgreSQL. Обери два активи й назви межу довіри, відмову й тест для кожного. Запиши фактичний результат і залишкові обмеження без секретів та особистих даних.\n\n**Синтетичні запити підтримки**",
+            "en": "Add an actor/action/tenant matrix to the project README or a separate design file. Run positive and denied integration tests against your PostgreSQL fixture. Pick two assets and list a trust boundary, one failure and one test for each. Record the actual outcome and residual limitations without secrets or personal data.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Вибери активи перед відмовами.",
+              "en": "Pick assets before enumerating failures."
+            },
+            {
+              "uk": "Пов’яжи відмову зі статусом і твердженням БД.",
+              "en": "Map denied update to both a status and a DB assertion."
+            },
+            {
+              "uk": "Поясни, яку перевірку ідентичності замінила фікстура.",
+              "en": "Explain which identity verification was replaced by the fixture."
+            }
+          ],
+          "solution": {
+            "uk": "Використай API для поведінки й окрему тестову сесію для стану БД. Запиши фіксовані зміни й незмінний стан за відмови разом із припущеннями межі довіри.",
+            "en": "Use the API for behavior and a dedicated test session for DB verification. Document the committed writes and unchanged denied state alongside trust-boundary assumptions."
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Додай матрицю actor/action/tenant до README проєкту або дизайну. Запусти успішні й негативні інтеграційні тести на фікстурі PostgreSQL. Обери два активи й назви межу довіри, відмову й тест для кожного. Запиши фактичний результат і залишкові обмеження без секретів та особистих даних.\n\n**Синтетичні документи політик**",
+            "en": "Add an actor/action/tenant matrix to the project README or a separate design file. Run positive and denied integration tests against your PostgreSQL fixture. Pick two assets and list a trust boundary, one failure and one test for each. Record the actual outcome and residual limitations without secrets or personal data.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Вибери активи перед відмовами.",
+              "en": "Pick assets before enumerating failures."
+            },
+            {
+              "uk": "Пов’яжи відмову зі статусом і твердженням БД.",
+              "en": "Map denied update to both a status and a DB assertion."
+            },
+            {
+              "uk": "Поясни, яку перевірку ідентичності замінила фікстура.",
+              "en": "Explain which identity verification was replaced by the fixture."
+            }
+          ],
+          "solution": {
+            "uk": "Використай API для поведінки й окрему тестову сесію для стану БД. Запиши фіксовані зміни й незмінний стан за відмови разом із припущеннями межі довіри.",
+            "en": "Use the API for behavior and a dedicated test session for DB verification. Document the committed writes and unchanged denied state alongside trust-boundary assumptions."
+          }
+        }
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "id": "Q1",
+      "prompt": {
+        "uk": "Що може пройти за відсутності tenant-умови в маршруті?",
+        "en": "What can pass despite a missing tenant predicate in a route?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Невдале твердження про змінений рядок іншого tenant.",
+            "en": "A failing assertion on the altered other-tenant row."
+          },
+          "explanation": {
+            "uk": "Це вже виявлена відмова.",
+            "en": "That would be a detected failure."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Чистий unit-тест функції політики.",
+            "en": "A pure unit test of a policy function."
+          },
+          "explanation": {
+            "uk": "Він не запускає маршрут або запит.",
+            "en": "It does not exercise the route or query."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Інтеграція, що перевіряє змінений рядок після відмови.",
+            "en": "An integration test that checks the incorrect route's DB row after denial."
+          },
+          "explanation": {
+            "uk": "Побічний ефект порушить твердження.",
+            "en": "A side effect would violate the assertion."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q2",
+      "prompt": {
+        "uk": "Чому до негативних тестів додати дозволену зміну в tenant?",
+        "en": "Why add a same-tenant allowed update to negative checks?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Це замінює міжтенантну перевірку.",
+            "en": "It replaces cross-tenant verification."
+          },
+          "explanation": {
+            "uk": "Дозвіл не доводить відмову.",
+            "en": "Allowed changes cannot prove denial."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Це робить БД спільною між тестами.",
+            "en": "It makes the database shared across tests."
+          },
+          "explanation": {
+            "uk": "Ізоляція є окремим правилом.",
+            "en": "Isolation is an independent setup rule."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Доводить, що фікстура виконує записи й правильну область.",
+            "en": "It proves the fixture exercises real writes and correct scope."
+          },
+          "explanation": {
+            "uk": "Загальна відмова могла б дати хибний успіх негативних тестів.",
+            "en": "A blanket rejection could make negative checks pass falsely."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q3",
+      "prompt": {
+        "uk": "Що перевірити після відхиленої мутації?",
+        "en": "What should a test assert for a denied mutation?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Статус, безпечну форму й незмінні значення.",
+            "en": "Status, safe response shape and unchanged persistent values."
+          },
+          "explanation": {
+            "uk": "Це покриває видимі та приховані ефекти.",
+            "en": "This covers visible and hidden effects."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Лише рядок помилки у логах.",
+            "en": "Only an error line in logs."
+          },
+          "explanation": {
+            "uk": "Логи не доводять стан БД.",
+            "en": "Logs do not prove database state."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Лише напис кнопки.",
+            "en": "Only what a button label says."
+          },
+          "explanation": {
+            "uk": "Напис не забезпечує політику сервера.",
+            "en": "A label does not enforce backend policy."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q4",
+      "prompt": {
+        "uk": "Що робить threat model придатною до дій?",
+        "en": "What makes a threat model actionable?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Обіцянка покрити всі майбутні відмови.",
+            "en": "A promise that all future failures are covered."
+          },
+          "explanation": {
+            "uk": "Невідомі залишки варто описувати явно.",
+            "en": "Residual unknowns must remain explicit."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Конкретний актив, межа довіри, відмова й тест.",
+            "en": "A concrete asset, trust boundary, possible failure and a test."
+          },
+          "explanation": {
+            "uk": "Це зв’язує ризик із відтворюваним доказом.",
+            "en": "This links the risk to reproducible evidence."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Лише перелік назв продуктів.",
+            "en": "A list of product names alone."
+          },
+          "explanation": {
+            "uk": "Назви не описують порушені гарантії.",
+            "en": "Names don't describe violated guarantees."
+          }
+        }
+      ]
+    }
+  ],
+  "crosslinks": [
+    "W05-L03",
+    "SR-W05"
+  ]
+}

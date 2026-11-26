@@ -1,0 +1,802 @@
+{
+  "id": "G-M2",
+  "contentVersion": 1,
+  "overview": {
+    "uk": "Підтвердь придатність бекенд-scaffold у чистому локальному середовищі. Випробування поєднує дозволений запит обробки, ID із БД, повтор, відмову доступу та стійкий результат. Вправа з кодом перевіряє обмежену область job в одноразовій БД. Рубрика вимагає демо Project A з API, PostgreSQL, авторизацією, міграцією й Compose. Запиши точну область перевірок, обмеження та результат після рестарту.",
+    "en": "Prove your backend scaffold is usable from a clean local environment. The assessment combines an authorized processing request, database-backed job identity, replay, denied access and durable results. The controlled code task verifies a scoped job boundary in a disposable database. The rubric asks for a real Project A demonstration with API, PostgreSQL, authorization, migration and Compose. Record the exact scope of your checks, including a known limitation and a result after restart."
+  },
+  "theory": {
+    "uk": "### Збери трасу через межі\n\nВикористай одного синтетичного актора й другого відхиленого tenant. Простеж валідацію, область, транзакцію, job і результат. Очікуваний повтор має той самий ID без другого ефекту. Відмова зберігає значення й не показує початковий job. Рестарт використовує той самий іменований том. Дай команду відтворення й прив’яжи кожне твердження до результату.",
+    "en": "### Collect one trace across boundaries\n\nUse one synthetic actor plus a second denied tenant. Trace validation, scope, transaction, job and result. An expected replay uses the same job identity without a second effect. A denied request must preserve the stored values and cannot reveal the original job. A restart uses the same named volume. Include a command to reproduce the demo and link each claim to an observed output."
+  },
+  "recap": {
+    "uk": "Подай власну трасу, поясни компроміс англійською й відмічай критерій лише за наявності доказу.",
+    "en": "Submit your own trace, explain the trade-off in English, and check each rubric item only when your artifact shows it."
+  },
+  "objectives": [
+    {
+      "id": "O1",
+      "title": {
+        "uk": "Довести область, ідемпотентність і атомарність одного запиту job.",
+        "en": "Prove scope, idempotency and atomicity in one job request."
+      },
+      "skill": "systems"
+    },
+    {
+      "id": "O2",
+      "title": {
+        "uk": "Продемонструвати відтворюваний приватний бекенд Project A.",
+        "en": "Demonstrate a reproducible, private Project A backend."
+      },
+      "skill": "evaluation"
+    }
+  ],
+  "sources": [
+    {
+      "title": {
+        "uk": "PostgreSQL INSERT",
+        "en": "PostgreSQL INSERT"
+      },
+      "url": "https://www.postgresql.org/docs/17/sql-insert.html",
+      "version": "PostgreSQL 17",
+      "checked": "2026-11-26"
+    },
+    {
+      "title": {
+        "uk": "Compose startup",
+        "en": "Compose startup"
+      },
+      "url": "https://docs.docker.com/compose/how-tos/startup-order/",
+      "version": "Docker Compose",
+      "checked": "2026-11-26"
+    },
+    {
+      "title": {
+        "uk": "OWASP Authorization",
+        "en": "OWASP Authorization"
+      },
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html",
+      "version": "OWASP",
+      "checked": "2026-11-26"
+    }
+  ],
+  "examples": [],
+  "interview": [
+    "Describe the behavior you verified.",
+    "What limitation remains in your solution?"
+  ],
+  "interviewGuide": {
+    "uk": "Скористайся англійським поясненням з рубрики. Назви вхід, результат і обмеження.",
+    "en": "Use the English explanation from the rubric. Name an input, its result, and a limitation."
+  },
+  "exercises": [
+    {
+      "id": "G-M2-E1",
+      "title": {
+        "uk": "Реалізувати надійну межу заявок job з областю",
+        "en": "Implement the scoped, durable job-request boundary"
+      },
+      "kind": "code",
+      "objectives": [
+        "O1"
+      ],
+      "estimateMinutes": 105,
+      "criteria": [],
+      "example": {
+        "uk": "Після succeeded для job 3 той самий викликач і ключ дають (200,3,'succeeded'). Інший tenant бачить 404.",
+        "en": "After job 3 reaches succeeded, the same caller and key yield (200,3,'succeeded'). A different tenant sees 404."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(db, document_id, tenant, key) у SQLite з documents(id INTEGER PRIMARY KEY, tenant TEXT) і jobs(id INTEGER PRIMARY KEY, document_id INTEGER, op_key TEXT, status TEXT, UNIQUE(document_id, op_key)). Поверни (422,None,None) для недодатного чи не-int ID (без bool) або порожнього tenant/key. Відсутній або недозволений документ дає (404,None,None) без запису. Інакше створи queued або повторно використай job з точним key в одній транзакції. Поверни (202,job_id,status) для нового й (200,job_id,current_status) для наявного. Не скидай статус. Тест дає БД без активної транзакції.\n\n**Синтетичні накладні**",
+            "en": "Implement solve(db, document_id, tenant, key) using SQLite documents(id INTEGER PRIMARY KEY, tenant TEXT) and jobs(id INTEGER PRIMARY KEY, document_id INTEGER, op_key TEXT, status TEXT, UNIQUE(document_id, op_key)). Return (422,None,None) for a non-positive or non-int ID (excluding bool) or a blank tenant/key. A missing or unauthorized document returns (404,None,None) with no write. Otherwise create a queued job or reuse it, using exact key text and one transaction. Return (202,job_id,status) for a new job and (200,job_id,current_status) for an existing one. Do not reset status. Tests provide a database with no active transaction.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Перевір ввід до доступу до фікстури.",
+              "en": "Validate inputs before accessing the fixture."
+            },
+            {
+              "uk": "Поєднай авторизацію та вставку в одному операторі чи транзакції.",
+              "en": "Select authorization and insertion in one statement or transaction."
+            },
+            {
+              "uk": "Використай insert-from-select із conflict-do-nothing, далі повторно прочитай дозволений рядок.",
+              "en": "Use insert-from-select with conflict-do-nothing, then read the authorized row again."
+            }
+          ],
+          "solution": {
+            "uk": "Вставка вибирає документ лише в довіреному tenant. Читання статусу застосовує ту саму область. Унікальність БД забезпечує один логічний job.\n\n```python\nimport sqlite3\n\ndef solve(db: sqlite3.Connection, document_id: int, tenant: str, key: str) -> tuple[int, int | None, str | None]:\n    if type(document_id) is not int or document_id < 1 or not tenant.strip() or not key.strip():\n        return 422, None, None\n    with db:\n        insert = db.execute(\"\"\"\n            INSERT INTO jobs(document_id, op_key, status)\n            SELECT id, ?, 'queued' FROM documents WHERE id = ? AND tenant = ?\n            ON CONFLICT(document_id, op_key) DO NOTHING\n        \"\"\", (key, document_id, tenant))\n        job = db.execute(\"\"\"\n            SELECT jobs.id, jobs.status FROM jobs JOIN documents ON documents.id = jobs.document_id\n            WHERE documents.id = ? AND documents.tenant = ? AND jobs.op_key = ?\n        \"\"\", (document_id, tenant, key)).fetchone()\n        if job is None:\n            return 404, None, None\n        return (202 if insert.rowcount else 200), job[0], job[1]\n```",
+            "en": "The insert selects a document only in the trusted tenant. The status read joins with the same scope. The database uniqueness rule ensures one logical job.\n\n```python\nimport sqlite3\n\ndef solve(db: sqlite3.Connection, document_id: int, tenant: str, key: str) -> tuple[int, int | None, str | None]:\n    if type(document_id) is not int or document_id < 1 or not tenant.strip() or not key.strip():\n        return 422, None, None\n    with db:\n        insert = db.execute(\"\"\"\n            INSERT INTO jobs(document_id, op_key, status)\n            SELECT id, ?, 'queued' FROM documents WHERE id = ? AND tenant = ?\n            ON CONFLICT(document_id, op_key) DO NOTHING\n        \"\"\", (key, document_id, tenant))\n        job = db.execute(\"\"\"\n            SELECT jobs.id, jobs.status FROM jobs JOIN documents ON documents.id = jobs.document_id\n            WHERE documents.id = ? AND documents.tenant = ? AND jobs.op_key = ?\n        \"\"\", (document_id, tenant, key)).fetchone()\n        if job is None:\n            return 404, None, None\n        return (202 if insert.rowcount else 200), job[0], job[1]\n```"
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(db, document_id, tenant, key) у SQLite з documents(id INTEGER PRIMARY KEY, tenant TEXT) і jobs(id INTEGER PRIMARY KEY, document_id INTEGER, op_key TEXT, status TEXT, UNIQUE(document_id, op_key)). Поверни (422,None,None) для недодатного чи не-int ID (без bool) або порожнього tenant/key. Відсутній або недозволений документ дає (404,None,None) без запису. Інакше створи queued або повторно використай job з точним key в одній транзакції. Поверни (202,job_id,status) для нового й (200,job_id,current_status) для наявного. Не скидай статус. Тест дає БД без активної транзакції.\n\n**Синтетичні запити підтримки**",
+            "en": "Implement solve(db, document_id, tenant, key) using SQLite documents(id INTEGER PRIMARY KEY, tenant TEXT) and jobs(id INTEGER PRIMARY KEY, document_id INTEGER, op_key TEXT, status TEXT, UNIQUE(document_id, op_key)). Return (422,None,None) for a non-positive or non-int ID (excluding bool) or a blank tenant/key. A missing or unauthorized document returns (404,None,None) with no write. Otherwise create a queued job or reuse it, using exact key text and one transaction. Return (202,job_id,status) for a new job and (200,job_id,current_status) for an existing one. Do not reset status. Tests provide a database with no active transaction.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Перевір ввід до доступу до фікстури.",
+              "en": "Validate inputs before accessing the fixture."
+            },
+            {
+              "uk": "Поєднай авторизацію та вставку в одному операторі чи транзакції.",
+              "en": "Select authorization and insertion in one statement or transaction."
+            },
+            {
+              "uk": "Використай insert-from-select із conflict-do-nothing, далі повторно прочитай дозволений рядок.",
+              "en": "Use insert-from-select with conflict-do-nothing, then read the authorized row again."
+            }
+          ],
+          "solution": {
+            "uk": "Вставка вибирає документ лише в довіреному tenant. Читання статусу застосовує ту саму область. Унікальність БД забезпечує один логічний job.\n\n```python\nimport sqlite3\n\ndef solve(db: sqlite3.Connection, document_id: int, tenant: str, key: str) -> tuple[int, int | None, str | None]:\n    if type(document_id) is not int or document_id < 1 or not tenant.strip() or not key.strip():\n        return 422, None, None\n    with db:\n        insert = db.execute(\"\"\"\n            INSERT INTO jobs(document_id, op_key, status)\n            SELECT id, ?, 'queued' FROM documents WHERE id = ? AND tenant = ?\n            ON CONFLICT(document_id, op_key) DO NOTHING\n        \"\"\", (key, document_id, tenant))\n        job = db.execute(\"\"\"\n            SELECT jobs.id, jobs.status FROM jobs JOIN documents ON documents.id = jobs.document_id\n            WHERE documents.id = ? AND documents.tenant = ? AND jobs.op_key = ?\n        \"\"\", (document_id, tenant, key)).fetchone()\n        if job is None:\n            return 404, None, None\n        return (202 if insert.rowcount else 200), job[0], job[1]\n```",
+            "en": "The insert selects a document only in the trusted tenant. The status read joins with the same scope. The database uniqueness rule ensures one logical job.\n\n```python\nimport sqlite3\n\ndef solve(db: sqlite3.Connection, document_id: int, tenant: str, key: str) -> tuple[int, int | None, str | None]:\n    if type(document_id) is not int or document_id < 1 or not tenant.strip() or not key.strip():\n        return 422, None, None\n    with db:\n        insert = db.execute(\"\"\"\n            INSERT INTO jobs(document_id, op_key, status)\n            SELECT id, ?, 'queued' FROM documents WHERE id = ? AND tenant = ?\n            ON CONFLICT(document_id, op_key) DO NOTHING\n        \"\"\", (key, document_id, tenant))\n        job = db.execute(\"\"\"\n            SELECT jobs.id, jobs.status FROM jobs JOIN documents ON documents.id = jobs.document_id\n            WHERE documents.id = ? AND documents.tenant = ? AND jobs.op_key = ?\n        \"\"\", (document_id, tenant, key)).fetchone()\n        if job is None:\n            return 404, None, None\n        return (202 if insert.rowcount else 200), job[0], job[1]\n```"
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(db, document_id, tenant, key) у SQLite з documents(id INTEGER PRIMARY KEY, tenant TEXT) і jobs(id INTEGER PRIMARY KEY, document_id INTEGER, op_key TEXT, status TEXT, UNIQUE(document_id, op_key)). Поверни (422,None,None) для недодатного чи не-int ID (без bool) або порожнього tenant/key. Відсутній або недозволений документ дає (404,None,None) без запису. Інакше створи queued або повторно використай job з точним key в одній транзакції. Поверни (202,job_id,status) для нового й (200,job_id,current_status) для наявного. Не скидай статус. Тест дає БД без активної транзакції.\n\n**Синтетичні документи політик**",
+            "en": "Implement solve(db, document_id, tenant, key) using SQLite documents(id INTEGER PRIMARY KEY, tenant TEXT) and jobs(id INTEGER PRIMARY KEY, document_id INTEGER, op_key TEXT, status TEXT, UNIQUE(document_id, op_key)). Return (422,None,None) for a non-positive or non-int ID (excluding bool) or a blank tenant/key. A missing or unauthorized document returns (404,None,None) with no write. Otherwise create a queued job or reuse it, using exact key text and one transaction. Return (202,job_id,status) for a new job and (200,job_id,current_status) for an existing one. Do not reset status. Tests provide a database with no active transaction.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Перевір ввід до доступу до фікстури.",
+              "en": "Validate inputs before accessing the fixture."
+            },
+            {
+              "uk": "Поєднай авторизацію та вставку в одному операторі чи транзакції.",
+              "en": "Select authorization and insertion in one statement or transaction."
+            },
+            {
+              "uk": "Використай insert-from-select із conflict-do-nothing, далі повторно прочитай дозволений рядок.",
+              "en": "Use insert-from-select with conflict-do-nothing, then read the authorized row again."
+            }
+          ],
+          "solution": {
+            "uk": "Вставка вибирає документ лише в довіреному tenant. Читання статусу застосовує ту саму область. Унікальність БД забезпечує один логічний job.\n\n```python\nimport sqlite3\n\ndef solve(db: sqlite3.Connection, document_id: int, tenant: str, key: str) -> tuple[int, int | None, str | None]:\n    if type(document_id) is not int or document_id < 1 or not tenant.strip() or not key.strip():\n        return 422, None, None\n    with db:\n        insert = db.execute(\"\"\"\n            INSERT INTO jobs(document_id, op_key, status)\n            SELECT id, ?, 'queued' FROM documents WHERE id = ? AND tenant = ?\n            ON CONFLICT(document_id, op_key) DO NOTHING\n        \"\"\", (key, document_id, tenant))\n        job = db.execute(\"\"\"\n            SELECT jobs.id, jobs.status FROM jobs JOIN documents ON documents.id = jobs.document_id\n            WHERE documents.id = ? AND documents.tenant = ? AND jobs.op_key = ?\n        \"\"\", (document_id, tenant, key)).fetchone()\n        if job is None:\n            return 404, None, None\n        return (202 if insert.rowcount else 200), job[0], job[1]\n```",
+            "en": "The insert selects a document only in the trusted tenant. The status read joins with the same scope. The database uniqueness rule ensures one logical job.\n\n```python\nimport sqlite3\n\ndef solve(db: sqlite3.Connection, document_id: int, tenant: str, key: str) -> tuple[int, int | None, str | None]:\n    if type(document_id) is not int or document_id < 1 or not tenant.strip() or not key.strip():\n        return 422, None, None\n    with db:\n        insert = db.execute(\"\"\"\n            INSERT INTO jobs(document_id, op_key, status)\n            SELECT id, ?, 'queued' FROM documents WHERE id = ? AND tenant = ?\n            ON CONFLICT(document_id, op_key) DO NOTHING\n        \"\"\", (key, document_id, tenant))\n        job = db.execute(\"\"\"\n            SELECT jobs.id, jobs.status FROM jobs JOIN documents ON documents.id = jobs.document_id\n            WHERE documents.id = ? AND documents.tenant = ? AND jobs.op_key = ?\n        \"\"\", (document_id, tenant, key)).fetchone()\n        if job is None:\n            return 404, None, None\n        return (202 if insert.rowcount else 200), job[0], job[1]\n```"
+          }
+        }
+      ]
+    },
+    {
+      "id": "G-M2-E2",
+      "title": {
+        "uk": "Перевірити повну віху бекенду Project A",
+        "en": "Review the complete Project A backend milestone"
+      },
+      "kind": "rubric",
+      "objectives": [
+        "O2"
+      ],
+      "estimateMinutes": 115,
+      "criteria": [
+        {
+          "id": "C1",
+          "title": {
+            "uk": "Чисте налаштування, схема й дозволений API відтворюються.",
+            "en": "Clean setup, schema and authorized API flow are reproducible."
+          }
+        },
+        {
+          "id": "C2",
+          "title": {
+            "uk": "Ізоляція й відмови upload не порушують стан.",
+            "en": "Isolation and upload rejection leave persistent state intact."
+          }
+        },
+        {
+          "id": "C3",
+          "title": {
+            "uk": "Вихід job зберігається, повтор має один ефект.",
+            "en": "Job output persists and replay has one effect."
+          }
+        },
+        {
+          "id": "C4",
+          "title": {
+            "uk": "Фактичні тести й межі вказано з доказами.",
+            "en": "Actual tests and limits are stated with evidence."
+          }
+        }
+      ],
+      "example": {
+        "uk": "Протокол дає статуси, ID двох сторінок, відхилену зміну з незмінним заголовком, один job і незмінний підрахунок після рестарту.",
+        "en": "The transcript gives statuses, two page IDs, one denied update with unchanged title, one job row, and unchanged result count after restart."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Продемонструй Project A у новому Compose. Покажи міграцію PostgreSQL і readiness API, дозволені CRUD і пагінацію, відмову tenant, прийнятий та завеликий синтетичні upload, стабільний ID job при повторі й один результат після повтору воркера та рестарту. Додай точні команди, назви тестів і короткий англійський огляд компромісів. Використай синтетичні фікстури без особистих даних, токенів і розкритих секретів.\n\n**Синтетичні накладні**",
+            "en": "Demonstrate Project A in a fresh Compose project. Show migrated PostgreSQL and API readiness, authorized CRUD and pagination, a denied tenant, accepted/oversized synthetic uploads, stable job ID on duplicate request and one result after worker replay and service restart. Attach exact setup commands, test names and a short English walkthrough of trade-offs. Use synthetic fixtures and omit personal data, tokens and expanded secrets.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Почни з одноразової PostgreSQL і нового Compose.",
+              "en": "Start with a disposable PostgreSQL database and a new Compose project."
+            },
+            {
+              "uk": "Перевір стан на кожній очікуваній відмові.",
+              "en": "Verify persistent state at each expected failure."
+            },
+            {
+              "uk": "Покажи ті самі ID job і результату до й після рестарту.",
+              "en": "Demonstrate the same job and result IDs before and after restart."
+            }
+          ],
+          "solution": {
+            "uk": "Запусти чистий локальний стек, застосуй версії послідовно, далі перевір дозволи, відмови й дублювання job від API до БД. Запиши спостережені результати й межі локальної перевірки.",
+            "en": "Run a clean deployment, apply versions in order, then verify allowed and denied requests and duplicate job behavior from API to database. Record only observed outcomes and identify limits of local verification."
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Продемонструй Project A у новому Compose. Покажи міграцію PostgreSQL і readiness API, дозволені CRUD і пагінацію, відмову tenant, прийнятий та завеликий синтетичні upload, стабільний ID job при повторі й один результат після повтору воркера та рестарту. Додай точні команди, назви тестів і короткий англійський огляд компромісів. Використай синтетичні фікстури без особистих даних, токенів і розкритих секретів.\n\n**Синтетичні запити підтримки**",
+            "en": "Demonstrate Project A in a fresh Compose project. Show migrated PostgreSQL and API readiness, authorized CRUD and pagination, a denied tenant, accepted/oversized synthetic uploads, stable job ID on duplicate request and one result after worker replay and service restart. Attach exact setup commands, test names and a short English walkthrough of trade-offs. Use synthetic fixtures and omit personal data, tokens and expanded secrets.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Почни з одноразової PostgreSQL і нового Compose.",
+              "en": "Start with a disposable PostgreSQL database and a new Compose project."
+            },
+            {
+              "uk": "Перевір стан на кожній очікуваній відмові.",
+              "en": "Verify persistent state at each expected failure."
+            },
+            {
+              "uk": "Покажи ті самі ID job і результату до й після рестарту.",
+              "en": "Demonstrate the same job and result IDs before and after restart."
+            }
+          ],
+          "solution": {
+            "uk": "Запусти чистий локальний стек, застосуй версії послідовно, далі перевір дозволи, відмови й дублювання job від API до БД. Запиши спостережені результати й межі локальної перевірки.",
+            "en": "Run a clean deployment, apply versions in order, then verify allowed and denied requests and duplicate job behavior from API to database. Record only observed outcomes and identify limits of local verification."
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Продемонструй Project A у новому Compose. Покажи міграцію PostgreSQL і readiness API, дозволені CRUD і пагінацію, відмову tenant, прийнятий та завеликий синтетичні upload, стабільний ID job при повторі й один результат після повтору воркера та рестарту. Додай точні команди, назви тестів і короткий англійський огляд компромісів. Використай синтетичні фікстури без особистих даних, токенів і розкритих секретів.\n\n**Синтетичні документи політик**",
+            "en": "Demonstrate Project A in a fresh Compose project. Show migrated PostgreSQL and API readiness, authorized CRUD and pagination, a denied tenant, accepted/oversized synthetic uploads, stable job ID on duplicate request and one result after worker replay and service restart. Attach exact setup commands, test names and a short English walkthrough of trade-offs. Use synthetic fixtures and omit personal data, tokens and expanded secrets.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Почни з одноразової PostgreSQL і нового Compose.",
+              "en": "Start with a disposable PostgreSQL database and a new Compose project."
+            },
+            {
+              "uk": "Перевір стан на кожній очікуваній відмові.",
+              "en": "Verify persistent state at each expected failure."
+            },
+            {
+              "uk": "Покажи ті самі ID job і результату до й після рестарту.",
+              "en": "Demonstrate the same job and result IDs before and after restart."
+            }
+          ],
+          "solution": {
+            "uk": "Запусти чистий локальний стек, застосуй версії послідовно, далі перевір дозволи, відмови й дублювання job від API до БД. Запиши спостережені результати й межі локальної перевірки.",
+            "en": "Run a clean deployment, apply versions in order, then verify allowed and denied requests and duplicate job behavior from API to database. Record only observed outcomes and identify limits of local verification."
+          }
+        }
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "id": "Q1",
+      "prompt": {
+        "uk": "Яка умова дозволяє шукати job в області?",
+        "en": "Which condition allows a scoped job lookup?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Використати довірений tenant у join до документа.",
+            "en": "Use trusted tenant in the join to the document."
+          },
+          "explanation": {
+            "uk": "Документ визначає область доступу.",
+            "en": "The document determines allowed access scope."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Довіритися будь-якому job ID від клієнта.",
+            "en": "Trust any job ID supplied by a caller."
+          },
+          "explanation": {
+            "uk": "Ідентифікатор не надає права.",
+            "en": "An identifier does not grant permission."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Видати всі статуси, бо це не вміст.",
+            "en": "Expose every status because status is not content."
+          },
+          "explanation": {
+            "uk": "Метадані можуть розкрити існування й активність.",
+            "en": "Metadata can disclose existence and activity."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q2",
+      "prompt": {
+        "uk": "Яке спостереження доводить збережений ефект повтору?",
+        "en": "Which observation proves a replay preserved the effect?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Два однакові часи відповіді.",
+            "en": "Two equal response times."
+          },
+          "explanation": {
+            "uk": "Час не встановлює ID.",
+            "en": "Timing does not establish job identity."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Той самий ID, актуальний статус та один збережений ефект.",
+            "en": "Identical job identity, current status and one stored effect."
+          },
+          "explanation": {
+            "uk": "Порівняй відповідь і стан сховища.",
+            "en": "Compare both response and persisted state."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Дві 202 з різними job ID.",
+            "en": "Two 202 responses with different job IDs."
+          },
+          "explanation": {
+            "uk": "Це може бути дублюванням.",
+            "en": "This may reflect duplicate creation."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q3",
+      "prompt": {
+        "uk": "Запит створення падає під час вставки job. Коли відкотиться документ?",
+        "en": "A tenant's create request fails during a job insert. When is the document write rolled back?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Коли клієнт має тайм-аут.",
+            "en": "Whenever the client times out."
+          },
+          "explanation": {
+            "uk": "Тайм-аут клієнта не контролює commit сервера.",
+            "en": "Client timeout does not control a server commit."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Лише під час помилки в UI.",
+            "en": "Only while the UI displays an error."
+          },
+          "explanation": {
+            "uk": "Відображення UI не відкочує сховище.",
+            "en": "UI display can't roll back persistence."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Коли обидва записи в одній невдалій транзакції.",
+            "en": "When both writes share the transaction that fails."
+          },
+          "explanation": {
+            "uk": "Межа commit спільна.",
+            "en": "The commit boundary is common to both writes."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q4",
+      "prompt": {
+        "uk": "Чому перевіряти міграцію на порожній і попередній схемах?",
+        "en": "Why verify migration on both blank and prior schema versions?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Окремо перевіряють створення й оновлення зі збереженням даних.",
+            "en": "They exercise creation and data-preserving upgrade separately."
+          },
+          "explanation": {
+            "uk": "Чистий запуск не показує проблем попередніх даних.",
+            "en": "A clean install cannot expose prior data shape problems."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Порожній старт доводить наявність колишніх рядків.",
+            "en": "Blank startup proves that every prior row exists."
+          },
+          "explanation": {
+            "uk": "Попередніх рядків немає.",
+            "en": "No prior row is present to check."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Назви команд гарантують дані.",
+            "en": "Migration commands guarantee data by their names."
+          },
+          "explanation": {
+            "uk": "Важливі дії та справжні фікстури.",
+            "en": "The operations and actual fixtures matter."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q5",
+      "prompt": {
+        "uk": "Хто може бачити результати іншого tenant за типової політики?",
+        "en": "Which actor may see another tenant's processing results in the default policy?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Кожен, хто бачить ID job.",
+            "en": "Anyone who observes a job identifier."
+          },
+          "explanation": {
+            "uk": "ID не встановлює авторизацію.",
+            "en": "Identifiers do not establish authorization."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Ніхто зі звичайних акторів без явного дозволу.",
+            "en": "No ordinary tenant actor without an explicit authorized exception."
+          },
+          "explanation": {
+            "uk": "Область tenant є частиною авторизації.",
+            "en": "Tenant scope remains part of authorization."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Будь-який автентифікований viewer.",
+            "en": "Every authenticated viewer."
+          },
+          "explanation": {
+            "uk": "Автентифікація не визначає область.",
+            "en": "Authentication doesn't define scope."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q6",
+      "prompt": {
+        "uk": "Що належить відповіді для невалідного синтетичного upload?",
+        "en": "What belongs in a rejection response for an invalid synthetic upload?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Повний traceback із credentials.",
+            "en": "A full traceback including credentials."
+          },
+          "explanation": {
+            "uk": "Він може показати приватну конфігурацію.",
+            "en": "It may disclose private configuration."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Сирий вміст і повний шлях.",
+            "en": "The raw upload content and full filesystem path."
+          },
+          "explanation": {
+            "uk": "Вони не потрібні для реакції на відмову.",
+            "en": "Neither is needed to act on rejection."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Стабільна обмежена публічна помилка без метаданих сховища.",
+            "en": "A stable bounded public error without private storage metadata."
+          },
+          "explanation": {
+            "uk": "Викликач потребує результат контракту без внутрішніх шляхів.",
+            "en": "The caller needs the contract outcome, not internal paths."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q7",
+      "prompt": {
+        "uk": "Який маршрут має показати недоступність потрібної БД?",
+        "en": "Which route should reflect a required DB dependency becoming unavailable?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Readiness.",
+            "en": "Readiness."
+          },
+          "explanation": {
+            "uk": "Вона показує спроможність приймати запити.",
+            "en": "It reports ability to serve normal requests."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Лише документація.",
+            "en": "Only documentation."
+          },
+          "explanation": {
+            "uk": "Документація не описує runtime-стан.",
+            "en": "Documentation does not describe runtime state."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Статична успішна відповідь upload.",
+            "en": "A static successful upload response."
+          },
+          "explanation": {
+            "uk": "Це не відповідало б неспроможності сервісу.",
+            "en": "That would be inconsistent with actual inability to serve."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q8",
+      "prompt": {
+        "uk": "Як тест завеликого upload доведе відсутність побічного ефекту?",
+        "en": "How can an over-limit upload test prove it caused no side effect?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Завантажувати до успіху.",
+            "en": "Upload until one attempt succeeds."
+          },
+          "explanation": {
+            "uk": "Це не перевіряє відмову.",
+            "en": "That does not verify the rejected branch."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Перевірити статус і незмінні БД та blob.",
+            "en": "Assert status and unchanged DB and blob state."
+          },
+          "explanation": {
+            "uk": "Відмова має зберегти стан сховища.",
+            "en": "The failure must preserve persistent state."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Лише перевірити код.",
+            "en": "Only check the status code."
+          },
+          "explanation": {
+            "uk": "Код не показує всі ефекти.",
+            "en": "A code does not reveal all effects."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q9",
+      "prompt": {
+        "uk": "Яке локальне демо доводить стійкість тому?",
+        "en": "Which local demonstration proves volume persistence?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Додати новий рядок після очищення БД.",
+            "en": "Load a fresh fixture row after clearing the database."
+          },
+          "explanation": {
+            "uk": "Заміна даних не є доказом збереження.",
+            "en": "Replacing data is not evidence of persistence."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Лише перелічити Dockerfile.",
+            "en": "List Dockerfiles only."
+          },
+          "explanation": {
+            "uk": "Визначення збірки не доводять збережені рядки.",
+            "en": "Build definitions cannot prove stored rows."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Перезапустити ту саму Compose-фікстуру й прочитати відомі дані.",
+            "en": "Restart the same Compose fixture and query known data again."
+          },
+          "explanation": {
+            "uk": "Той самий змонтований том має зберегти дані.",
+            "en": "The same mounted volume must retain data."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q10",
+      "prompt": {
+        "uk": "Що доводить локальний запуск Project A для релізу?",
+        "en": "What release statement is supported by a local Project A run?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Задокументовані локальні перевірки пройшли в цьому середовищі.",
+            "en": "The documented local checks and fixtures passed in that environment."
+          },
+          "explanation": {
+            "uk": "Це коректно обмежує доказ.",
+            "en": "This properly scopes the evidence."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Усі середовища готові.",
+            "en": "Every deployment location is ready."
+          },
+          "explanation": {
+            "uk": "Спостерігались лише протестовані середовища.",
+            "en": "Only tested environments are observed."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Тепер припустимі реальні особисті фікстури.",
+            "en": "Real personal inputs are now appropriate for fixtures."
+          },
+          "explanation": {
+            "uk": "Програма використовує синтетичні дані.",
+            "en": "The curriculum uses synthetic data."
+          }
+        }
+      ]
+    }
+  ],
+  "crosslinks": [
+    "SR-W04",
+    "SR-W05",
+    "SR-W06"
+  ]
+}

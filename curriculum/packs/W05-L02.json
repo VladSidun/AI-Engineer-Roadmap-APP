@@ -1,0 +1,510 @@
+{
+  "id": "W05-L02",
+  "contentVersion": 1,
+  "overview": {
+    "uk": "Роль надає тип дії. Tenant і правило власника обмежують об’єкт цієї дії. Поєднай обидві умови, отримуй область із довіреної ідентичності та застосовуй найменші привілеї для акторів і воркерів. Практика перетворює читабельну таблицю політики на чисту функцію. Окрема вправа Project A переносить область до запиту репозиторію, перевіряє дві синтетичні організації й фіксує дозволені та заборонені дії. Те саме правило має діяти для списку, деталей і оновлень.",
+    "en": "A role grants a kind of action. A tenant and ownership rule limits which object receives the action. Learn to combine both constraints, derive scope from trusted identity, and use least privilege for API actors and workers. The practice translates a readable policy table into a pure decision function. A separate Project A exercise moves the scope to the repository query, checks two synthetic organizations, and gives you a record of both allowed and denied actions. The same rule should hold for list, detail and update routes."
+  },
+  "theory": {
+    "uk": "### Дозвіл і область\n\nRBAC відображає ролі в можливості на кшталт читання, оновлення й адміністрування. Сама роль редактора не визначає, який документ можна змінити. Додай умови tenant і власності з автентифікованої ідентичності й збереженого ресурсу. У вправі viewer та editor мають різні дії, а admin обмежений tenant. Невідомі ролі й дії відхиляються. Таблиця політики описує комбінації та дає змогу перевірити їх.\n\n### Область на межі даних\n\nОбираючи документ, використай його ID і довірений tenant. Застосуй умови доступу до пагінації, підрахунку й пошуку jobs. Для зміни чи вилучення включи область у мутацію або заблокуй і перевір в одній транзакції. Tenant зі запиту лише селектор, звірений із членством. Деякі сервіси однаково показують відсутній і недоступний об’єкти. Застосовуй це й до дочірніх ресурсів та метаданих.\n\n### Обмеження сервісних акторів\n\nРозділи привілеї API-запитів, файлового сховища й обробки. Воркеру може бути потрібна заявка job і читання одного входу без адміністрування користувачів. PostgreSQL row-level policy дає додаткову межу БД. Знай ролі, які можуть її обходити, включно з типовим власником таблиці без додаткового налаштування. Прикладна політика лишається явною й тестується фактичною runtime-роллю. Unit-тести покривають рішення. Інтеграційні перевіряють застосування в запиті, сесії й endpoint.\n\n### Простеж дозволи на різних шляхах\n\nУяви два tenant із документами, заголовками й jobs. Viewer читає документ у своєму tenant, без зміни. Editor змінює власний. Admin керує документами лише у своєму tenant. Застосуй ту саму область для читання стану дочірнього job. Якщо пошук використовує тільки job ID і пропускає область батька, валідна сесія може побачити метадані поза політикою. Перевір два tenant для списків і деталей, також об’єкти сховища, які видають інші маршрути.\n\nЗміни авторизації впливають на довгі операції. Якщо воркер отримав job у дозволеній області, а членство потім змінилось, визнач дії з новою перевіркою й дії, що вже належать стійкому внутрішньому процесу. Обери обмежену ідентичність воркера й явне скасування. У PostgreSQL row-level policies обмежують запити за правильного runtime-актора. Тестуй цією роллю, а обслуговування окремо. Фікстура адміністратора БД може оминути саме ті перевірки, які ти тестуєш.",
+    "en": "### Separate capability and scope\n\nRBAC maps roles to capabilities such as view, update or administer. An editor role alone does not establish which document the actor may edit. Add conditions on tenant and ownership derived from authenticated identity and stored resource data. In the exercise, viewer and editor have different actions, and admin is tenant-scoped. Unknown roles and actions default to denial. A policy table documents the combinations and makes review and tests possible.\n\n### Carry scope to the data boundary\n\nWhen selecting a document, use both its identity and the trusted tenant. Apply permission constraints before list pagination, counts and job lookup. For update and delete, include scope in the mutation predicate or lock and verify within the same transaction. Client-supplied tenant is at most a selector validated against membership. Some services return the same not-found shape for missing and inaccessible objects. That choice applies consistently to descendants and metadata.\n\n### Constrain service actors\n\nSeparate the privileges of API requests, file storage and background processing. A worker may need to claim a job and read one input, without permission to administer users. PostgreSQL row-level policies can add a database boundary. Understand which roles can bypass them, including table owners by default unless configured otherwise. Application policy remains explicit and must be tested with the actual runtime identity. Unit tests cover pure decisions. Integration tests confirm the query, session and endpoint use the policy.\n\n### Trace permissions across access paths\n\nImagine two tenants have documents with visible titles and jobs. A viewer can read a document in their tenant but cannot modify it. An editor can modify an owned document. An administrator can manage all documents only in their assigned tenant. Apply the same scope when reading the status of a child job. If the job lookup uses only job ID and skips the parent scope, a valid session can see metadata that its policy never granted. Test two tenants for both list and detail, and include storage objects that are normally returned by alternate routes.\n\nAuthorization changes can affect a long-running request. If a worker claims a job under one authorized scope and membership changes later, decide which operations have to recheck scope and which already belong to a durable internal workflow. Choose a narrow worker identity and explicit cancellation rules. In PostgreSQL, row-level policies can constrain queries when the connection uses the correct runtime role. Run tests with that role and test maintenance tasks separately. A database administrator fixture can accidentally bypass the same checks you are attempting to verify."
+  },
+  "recap": {
+    "uk": "Ролі задають дії, довірені атрибути ресурсу — область. Забезпеч обидва в кожному доречному шляху.",
+    "en": "Roles define actions and trusted resource attributes restrict scope. Enforce both in every relevant path."
+  },
+  "objectives": [
+    {
+      "id": "O1",
+      "title": {
+        "uk": "Поєднувати ролі, власність актора й область tenant.",
+        "en": "Combine roles, actor ownership and tenant scope."
+      },
+      "skill": "systems"
+    },
+    {
+      "id": "O2",
+      "title": {
+        "uk": "Забезпечувати найменші привілеї для кожної операції.",
+        "en": "Enforce least privilege on every operation path."
+      },
+      "skill": "tooling"
+    }
+  ],
+  "sources": [
+    {
+      "title": {
+        "uk": "OWASP Authorization",
+        "en": "OWASP Authorization"
+      },
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html",
+      "version": "OWASP",
+      "checked": "2026-11-26"
+    },
+    {
+      "title": {
+        "uk": "PostgreSQL row security",
+        "en": "PostgreSQL row security"
+      },
+      "url": "https://www.postgresql.org/docs/17/ddl-rowsecurity.html",
+      "version": "PostgreSQL 17",
+      "checked": "2026-11-26"
+    }
+  ],
+  "examples": [
+    {
+      "file": "w05_l02_example.py",
+      "expected": "False\nTrue",
+      "explanation": {
+        "uk": "Мінімальна таблиця ролей показує дозволені дії. Додай перевірку tenant і власника перед використанням.",
+        "en": "A minimal role table shows allowed actions. Add tenant and owner checks before use."
+      },
+      "error": {
+        "uk": "Невідома роль переходить у порожній набір прав.",
+        "en": "An unrecognized role maps to an empty permission set."
+      }
+    }
+  ],
+  "interview": [
+    "Why is an admin role usually still tenant-scoped?",
+    "Where should the tenant filter run in a paginated list?"
+  ],
+  "interviewGuide": {
+    "uk": "Окремо поясни ефект у запиті та правило об’єкта.",
+    "en": "Explain the query effect and the object-level rule separately."
+  },
+  "exercises": [
+    {
+      "id": "W05-L02-E1",
+      "title": {
+        "uk": "Реалізувати політику ролей у tenant",
+        "en": "Implement a tenant-scoped role policy"
+      },
+      "kind": "code",
+      "objectives": [
+        "O1"
+      ],
+      "estimateMinutes": 75,
+      "criteria": [],
+      "example": {
+        "uk": "Admin з іншого tenant не може прочитати документ.",
+        "en": "An admin from another tenant cannot read the document."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(role, actor_id, tenant, owner_id, document_tenant, action). Усі ID — рядки. Відхиляй порожні actor або tenant, різні tenant і дії поза read, update, delete. У спільному tenant viewer читає, editor читає й оновлює свої, admin читає, оновлює й видаляє всі цього tenant. Інші ролі відхиляй. Поверни bool.\n\n**Синтетичні накладні**",
+            "en": "Implement solve(role, actor_id, tenant, owner_id, document_tenant, action). All identifiers are strings. Deny blank actor or tenant, mismatched tenant and actions outside read, update, delete. In the same tenant, viewer may read; editor may read and update owned documents; admin may read, update and delete any in that tenant. Deny other roles. Return bool.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "У більшості рішень спільна перевірка tenant і дії.",
+              "en": "Most decisions share tenant and known-action checks."
+            },
+            {
+              "uk": "Визнач права ролі після області.",
+              "en": "Derive a role's permission set after scope checks."
+            },
+            {
+              "uk": "Editor потребує власності для update, а read її не вимагає.",
+              "en": "An editor needs ownership for update, not for read."
+            }
+          ],
+          "solution": {
+            "uk": "Спочатку перевір довірену область, потім ролі й власність без неявного дозволу.\n\n```python\ndef solve(role: str, actor_id: str, tenant: str, owner_id: str, document_tenant: str, action: str) -> bool:\n    if not actor_id.strip() or not tenant.strip() or tenant != document_tenant:\n        return False\n    if role == 'admin':\n        return action in {'read', 'update', 'delete'}\n    if role == 'editor':\n        return action == 'read' or (action == 'update' and actor_id == owner_id)\n    return role == 'viewer' and action == 'read'\n```",
+            "en": "Gate the table on trusted scope first, then apply role and ownership rules without an implicit allow.\n\n```python\ndef solve(role: str, actor_id: str, tenant: str, owner_id: str, document_tenant: str, action: str) -> bool:\n    if not actor_id.strip() or not tenant.strip() or tenant != document_tenant:\n        return False\n    if role == 'admin':\n        return action in {'read', 'update', 'delete'}\n    if role == 'editor':\n        return action == 'read' or (action == 'update' and actor_id == owner_id)\n    return role == 'viewer' and action == 'read'\n```"
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(role, actor_id, tenant, owner_id, document_tenant, action). Усі ID — рядки. Відхиляй порожні actor або tenant, різні tenant і дії поза read, update, delete. У спільному tenant viewer читає, editor читає й оновлює свої, admin читає, оновлює й видаляє всі цього tenant. Інші ролі відхиляй. Поверни bool.\n\n**Синтетичні запити підтримки**",
+            "en": "Implement solve(role, actor_id, tenant, owner_id, document_tenant, action). All identifiers are strings. Deny blank actor or tenant, mismatched tenant and actions outside read, update, delete. In the same tenant, viewer may read; editor may read and update owned documents; admin may read, update and delete any in that tenant. Deny other roles. Return bool.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "У більшості рішень спільна перевірка tenant і дії.",
+              "en": "Most decisions share tenant and known-action checks."
+            },
+            {
+              "uk": "Визнач права ролі після області.",
+              "en": "Derive a role's permission set after scope checks."
+            },
+            {
+              "uk": "Editor потребує власності для update, а read її не вимагає.",
+              "en": "An editor needs ownership for update, not for read."
+            }
+          ],
+          "solution": {
+            "uk": "Спочатку перевір довірену область, потім ролі й власність без неявного дозволу.\n\n```python\ndef solve(role: str, actor_id: str, tenant: str, owner_id: str, document_tenant: str, action: str) -> bool:\n    if not actor_id.strip() or not tenant.strip() or tenant != document_tenant:\n        return False\n    if role == 'admin':\n        return action in {'read', 'update', 'delete'}\n    if role == 'editor':\n        return action == 'read' or (action == 'update' and actor_id == owner_id)\n    return role == 'viewer' and action == 'read'\n```",
+            "en": "Gate the table on trusted scope first, then apply role and ownership rules without an implicit allow.\n\n```python\ndef solve(role: str, actor_id: str, tenant: str, owner_id: str, document_tenant: str, action: str) -> bool:\n    if not actor_id.strip() or not tenant.strip() or tenant != document_tenant:\n        return False\n    if role == 'admin':\n        return action in {'read', 'update', 'delete'}\n    if role == 'editor':\n        return action == 'read' or (action == 'update' and actor_id == owner_id)\n    return role == 'viewer' and action == 'read'\n```"
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(role, actor_id, tenant, owner_id, document_tenant, action). Усі ID — рядки. Відхиляй порожні actor або tenant, різні tenant і дії поза read, update, delete. У спільному tenant viewer читає, editor читає й оновлює свої, admin читає, оновлює й видаляє всі цього tenant. Інші ролі відхиляй. Поверни bool.\n\n**Синтетичні документи політик**",
+            "en": "Implement solve(role, actor_id, tenant, owner_id, document_tenant, action). All identifiers are strings. Deny blank actor or tenant, mismatched tenant and actions outside read, update, delete. In the same tenant, viewer may read; editor may read and update owned documents; admin may read, update and delete any in that tenant. Deny other roles. Return bool.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "У більшості рішень спільна перевірка tenant і дії.",
+              "en": "Most decisions share tenant and known-action checks."
+            },
+            {
+              "uk": "Визнач права ролі після області.",
+              "en": "Derive a role's permission set after scope checks."
+            },
+            {
+              "uk": "Editor потребує власності для update, а read її не вимагає.",
+              "en": "An editor needs ownership for update, not for read."
+            }
+          ],
+          "solution": {
+            "uk": "Спочатку перевір довірену область, потім ролі й власність без неявного дозволу.\n\n```python\ndef solve(role: str, actor_id: str, tenant: str, owner_id: str, document_tenant: str, action: str) -> bool:\n    if not actor_id.strip() or not tenant.strip() or tenant != document_tenant:\n        return False\n    if role == 'admin':\n        return action in {'read', 'update', 'delete'}\n    if role == 'editor':\n        return action == 'read' or (action == 'update' and actor_id == owner_id)\n    return role == 'viewer' and action == 'read'\n```",
+            "en": "Gate the table on trusted scope first, then apply role and ownership rules without an implicit allow.\n\n```python\ndef solve(role: str, actor_id: str, tenant: str, owner_id: str, document_tenant: str, action: str) -> bool:\n    if not actor_id.strip() or not tenant.strip() or tenant != document_tenant:\n        return False\n    if role == 'admin':\n        return action in {'read', 'update', 'delete'}\n    if role == 'editor':\n        return action == 'read' or (action == 'update' and actor_id == owner_id)\n    return role == 'viewer' and action == 'read'\n```"
+          }
+        }
+      ]
+    },
+    {
+      "id": "W05-L02-E2",
+      "title": {
+        "uk": "Застосувати власність у репозиторії Project A",
+        "en": "Apply ownership to the Project A repository"
+      },
+      "kind": "rubric",
+      "objectives": [
+        "O2"
+      ],
+      "estimateMinutes": 70,
+      "criteria": [
+        {
+          "id": "C1",
+          "title": {
+            "uk": "Покрито дозволи й відмови для двох tenant.",
+            "en": "Cover allowed and denied action for two tenants."
+          }
+        },
+        {
+          "id": "C2",
+          "title": {
+            "uk": "Підтверджено область списку, підрахунку й зміни.",
+            "en": "Assert list, counts and mutation use trusted scope."
+          }
+        },
+        {
+          "id": "C3",
+          "title": {
+            "uk": "Пояснено окрему ідентичність воркера.",
+            "en": "Explain the separate worker identity."
+          }
+        }
+      ],
+      "example": {
+        "uk": "Viewer читає дозволений документ без права зміни. Інший tenant бачить нуль рядків і не змінює його.",
+        "en": "Viewer can read an allowed document but cannot update it. The other tenant has zero visible rows and cannot mutate it."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Створи два tenant, власника, редактора й читача як синтетичні дані. Перевір direct read, list та update для документів обох tenant. Перевір вплив області на підрахунок і курсор. Опиши доступ воркера й потрібні мінімальні привілеї.\n\n**Синтетичні накладні**",
+            "en": "Create two tenants, an owner, an editor and a viewer as synthetic data. Test direct read, list and update for documents in both tenants. Check how your scope affects counts and next page cursor. Document what your worker can access and the least privilege it needs.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Намалюй матрицю rolе/action з умовою tenant.",
+              "en": "Draw a role/action matrix with a tenant condition."
+            },
+            {
+              "uk": "Застосуй область у запиті та перевір до пагінації.",
+              "en": "Query scope and verify it before paging."
+            },
+            {
+              "uk": "Після відмови перевір статус і незмінний рядок.",
+              "en": "Assert both status and unchanged row after denial."
+            }
+          ],
+          "solution": {
+            "uk": "Обмеж кожен вибір і мутацію перевіреними tenant та роллю. Розділи права воркера. Перевір однакове правило репозиторію й маршруту фікстурами БД.",
+            "en": "Scope every selection and mutation by verified tenant and role. Separate worker permissions. Use DB fixtures to confirm the repository and route apply the same rule."
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Створи два tenant, власника, редактора й читача як синтетичні дані. Перевір direct read, list та update для документів обох tenant. Перевір вплив області на підрахунок і курсор. Опиши доступ воркера й потрібні мінімальні привілеї.\n\n**Синтетичні запити підтримки**",
+            "en": "Create two tenants, an owner, an editor and a viewer as synthetic data. Test direct read, list and update for documents in both tenants. Check how your scope affects counts and next page cursor. Document what your worker can access and the least privilege it needs.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Намалюй матрицю rolе/action з умовою tenant.",
+              "en": "Draw a role/action matrix with a tenant condition."
+            },
+            {
+              "uk": "Застосуй область у запиті та перевір до пагінації.",
+              "en": "Query scope and verify it before paging."
+            },
+            {
+              "uk": "Після відмови перевір статус і незмінний рядок.",
+              "en": "Assert both status and unchanged row after denial."
+            }
+          ],
+          "solution": {
+            "uk": "Обмеж кожен вибір і мутацію перевіреними tenant та роллю. Розділи права воркера. Перевір однакове правило репозиторію й маршруту фікстурами БД.",
+            "en": "Scope every selection and mutation by verified tenant and role. Separate worker permissions. Use DB fixtures to confirm the repository and route apply the same rule."
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Створи два tenant, власника, редактора й читача як синтетичні дані. Перевір direct read, list та update для документів обох tenant. Перевір вплив області на підрахунок і курсор. Опиши доступ воркера й потрібні мінімальні привілеї.\n\n**Синтетичні документи політик**",
+            "en": "Create two tenants, an owner, an editor and a viewer as synthetic data. Test direct read, list and update for documents in both tenants. Check how your scope affects counts and next page cursor. Document what your worker can access and the least privilege it needs.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Намалюй матрицю rolе/action з умовою tenant.",
+              "en": "Draw a role/action matrix with a tenant condition."
+            },
+            {
+              "uk": "Застосуй область у запиті та перевір до пагінації.",
+              "en": "Query scope and verify it before paging."
+            },
+            {
+              "uk": "Після відмови перевір статус і незмінний рядок.",
+              "en": "Assert both status and unchanged row after denial."
+            }
+          ],
+          "solution": {
+            "uk": "Обмеж кожен вибір і мутацію перевіреними tenant та роллю. Розділи права воркера. Перевір однакове правило репозиторію й маршруту фікстурами БД.",
+            "en": "Scope every selection and mutation by verified tenant and role. Separate worker permissions. Use DB fixtures to confirm the repository and route apply the same rule."
+          }
+        }
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "id": "Q1",
+      "prompt": {
+        "uk": "Чи може валідний admin типово змінити інший tenant?",
+        "en": "Can a valid admin edit a different tenant by default?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Завжди, бо admin глобальний.",
+            "en": "Always, because admin implies global access."
+          },
+          "explanation": {
+            "uk": "Область admin має бути задана.",
+            "en": "Administrator scope must be defined."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Так, якщо актор обере інший tenant у тілі.",
+            "en": "Yes, if the actor chooses a different tenant in the body."
+          },
+          "explanation": {
+            "uk": "Оголошена область потребує перевірки.",
+            "en": "A claimed scope requires verification."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Лише за явного міжтенантного дозволу політики.",
+            "en": "Only if policy explicitly grants that cross-tenant scope."
+          },
+          "explanation": {
+            "uk": "Роль і область ресурсу окремі.",
+            "en": "Role and resource scope are separate."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q2",
+      "prompt": {
+        "uk": "Яку ідентичність має використовувати воркер?",
+        "en": "Which identity should a worker use?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Власну обмежену ідентичність обробки.",
+            "en": "Its own limited processing identity."
+          },
+          "explanation": {
+            "uk": "Це обмежує наслідки помилок воркера.",
+            "en": "This reduces the effect of worker mistakes."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Будь-який ID актора з тексту job.",
+            "en": "Any actor ID that a job text includes."
+          },
+          "explanation": {
+            "uk": "Текст job є недовіреним вводом.",
+            "en": "Job text is untrusted input."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Спільного superuser з усіма правами.",
+            "en": "A shared superuser with all privileges."
+          },
+          "explanation": {
+            "uk": "Це перевищує потреби обробки.",
+            "en": "That exceeds the processing need."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q3",
+      "prompt": {
+        "uk": "Коли мають виконуватися правила найменших привілеїв?",
+        "en": "When must least-privilege rules execute?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Лише при створенні акаунта.",
+            "en": "Only when creating an account."
+          },
+          "explanation": {
+            "uk": "Область ресурсу потрібна під час операції.",
+            "en": "Resource scope is needed at operation time."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "На кожному доречному запиті й операції з даними.",
+            "en": "On each relevant request and data operation."
+          },
+          "explanation": {
+            "uk": "Шляхи API мають бути узгодженими.",
+            "en": "Paths through the API must agree."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Лише на сторінці деталей.",
+            "en": "Only on the detail page."
+          },
+          "explanation": {
+            "uk": "Список і зміна теж можуть показати чи змінити дані.",
+            "en": "List and edit can leak or mutate data too."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q4",
+      "prompt": {
+        "uk": "Що має робити невідома дія в deny-by-default?",
+        "en": "What should a new unknown action do under deny-by-default?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Автоматично вважати читанням.",
+            "en": "Evaluate it as read automatically."
+          },
+          "explanation": {
+            "uk": "Так можна відкрити невідомий запис.",
+            "en": "Unknown writes may be exposed."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Покластися лише на приховану кнопку.",
+            "en": "Depend only on the frontend hiding a button."
+          },
+          "explanation": {
+            "uk": "Backend має забезпечити політику.",
+            "en": "Backend must enforce policy."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Відхилити до появи явного правила й тестів.",
+            "en": "Deny until an explicit rule and tests allow it."
+          },
+          "explanation": {
+            "uk": "Для невідомих можливостей немає неявного дозволу.",
+            "en": "Unknown capabilities get no implicit permission."
+          }
+        }
+      ]
+    }
+  ],
+  "crosslinks": [
+    "W05-L01",
+    "W05-L03"
+  ]
+}

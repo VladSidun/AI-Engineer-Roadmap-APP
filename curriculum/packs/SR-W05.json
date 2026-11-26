@@ -1,0 +1,583 @@
+{
+  "id": "SR-W05",
+  "contentVersion": 1,
+  "overview": {
+    "uk": "Перевір ідентичність, область ресурсу й upload як один шлях захисту. Застосуй політику до двох синтетичних користувачів чи tenant. Додай матрицю, протокол upload і малий threat model межі, де unit-тест сам не виявить помилки інтеграції.",
+    "en": "Review identity, resource scope and upload validation as one defense path. Apply the policy to two synthetic users or tenants. Provide a test matrix, an upload transcript and a short threat model covering one boundary where a unit test alone would not find an integration mistake."
+  },
+  "theory": {
+    "uk": "### Перевір відмови через сховище\n\nОбери очікувані статуси для відсутніх credentials, забороненого актора, невалідного типу й завеликого тіла. Перевір відповідь та збережені значення. Проєкт має уникати зберігання й видачі зайвого та показати, що дозволена дія працює.",
+    "en": "### Verify denials through storage\n\nChoose the expected status for missing credentials, forbidden actor, invalid type and oversized body. Check response shape and persisted values. The project must avoid storing or returning unneeded data and must demonstrate that an allowed action is still possible."
+  },
+  "recap": {
+    "uk": "Подай власну трасу, поясни компроміс англійською й відмічай критерій лише за наявності доказу.",
+    "en": "Submit your own trace, explain the trade-off in English, and check each rubric item only when your artifact shows it."
+  },
+  "objectives": [
+    {
+      "id": "O1",
+      "title": {
+        "uk": "Продемонструвати ізоляцію ресурсу й обмеження upload.",
+        "en": "Demonstrate resource isolation and constrained uploads."
+      },
+      "skill": "systems"
+    },
+    {
+      "id": "O2",
+      "title": {
+        "uk": "Описати докази безпеки з явними межами довіри.",
+        "en": "Report security evidence with explicit trust boundaries."
+      },
+      "skill": "evaluation"
+    }
+  ],
+  "sources": [
+    {
+      "title": {
+        "uk": "OWASP Authorization",
+        "en": "OWASP Authorization"
+      },
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html",
+      "version": "OWASP",
+      "checked": "2026-11-26"
+    },
+    {
+      "title": {
+        "uk": "OWASP File Upload",
+        "en": "OWASP File Upload"
+      },
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html",
+      "version": "OWASP",
+      "checked": "2026-11-26"
+    }
+  ],
+  "examples": [],
+  "interview": [
+    "Describe the behavior you verified.",
+    "What limitation remains in your solution?"
+  ],
+  "interviewGuide": {
+    "uk": "Скористайся англійським поясненням з рубрики. Назви вхід, результат і обмеження.",
+    "en": "Use the English explanation from the rubric. Name an input, its result, and a limitation."
+  },
+  "exercises": [
+    {
+      "id": "SR-W05-E1",
+      "title": {
+        "uk": "Подати докази доступу W05",
+        "en": "Submit W05 access control evidence"
+      },
+      "kind": "rubric",
+      "objectives": [
+        "O1"
+      ],
+      "estimateMinutes": 115,
+      "criteria": [
+        {
+          "id": "C1",
+          "title": {
+            "uk": "Доведено дозволений доступ і ізоляцію tenant.",
+            "en": "Prove authorized access and cross-tenant isolation."
+          }
+        },
+        {
+          "id": "C2",
+          "title": {
+            "uk": "Є прийнятий і відхилений upload із перевіркою стану.",
+            "en": "Include accepted and rejected upload evidence and state checks."
+          }
+        },
+        {
+          "id": "C3",
+          "title": {
+            "uk": "Межу й залишкове обмеження пояснено англійською.",
+            "en": "Explain the threat boundary and residual limitation in English."
+          }
+        }
+      ],
+      "example": {
+        "uk": "Tenant B не бачить документ A. Завеликий upload дає 413, БД і сховище незмінні.",
+        "en": "Tenant B cannot see tenant A's document. Oversized upload returns 413 and leaves both DB and storage unchanged."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Запусти інтеграції Project A для двох tenant і ролей в області. Додай дозволений запит, міжтенантну відмову, невалідний upload і перевищення ліміту. Покажи БД і blob після відмови. Додай матрицю ролей і threat model із двома межами. Англійською у 60–90 словах поясни спостережену відмову й обмеження.\n\n**Синтетичні накладні**",
+            "en": "Run Project A integration checks for two tenants and scoped roles. Include one allowed request, one cross-tenant denial, one invalid upload and one over-limit upload. Show the database and blob state after failure. Attach the role matrix and a threat model with two trust boundaries. In 60–90 English words explain an observed denial and one residual limitation.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Застосуй різні tenant ID, щоб виявити пропуск умови.",
+              "en": "Use different tenant IDs to expose a missing scope predicate."
+            },
+            {
+              "uk": "Використай справжні адаптери сховища й репозиторію в тесті.",
+              "en": "Use real repository and storage adapters in the test."
+            },
+            {
+              "uk": "Записуй стабільні коди без сирих назв і тіл.",
+              "en": "Log stable status codes without raw filenames or contents."
+            }
+          ],
+          "solution": {
+            "uk": "Перевір область у репозиторії, зібраний маршрут з дозволеним і відхиленим актором та ефекти відмов у сховищах. Пов’яжи кожну межу з тестом.",
+            "en": "Verify scope at repo, test the composed route with both allowed and denied actors, and measure rejection effects in persistent stores. Link each boundary to a specific test."
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Запусти інтеграції Project A для двох tenant і ролей в області. Додай дозволений запит, міжтенантну відмову, невалідний upload і перевищення ліміту. Покажи БД і blob після відмови. Додай матрицю ролей і threat model із двома межами. Англійською у 60–90 словах поясни спостережену відмову й обмеження.\n\n**Синтетичні запити підтримки**",
+            "en": "Run Project A integration checks for two tenants and scoped roles. Include one allowed request, one cross-tenant denial, one invalid upload and one over-limit upload. Show the database and blob state after failure. Attach the role matrix and a threat model with two trust boundaries. In 60–90 English words explain an observed denial and one residual limitation.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Застосуй різні tenant ID, щоб виявити пропуск умови.",
+              "en": "Use different tenant IDs to expose a missing scope predicate."
+            },
+            {
+              "uk": "Використай справжні адаптери сховища й репозиторію в тесті.",
+              "en": "Use real repository and storage adapters in the test."
+            },
+            {
+              "uk": "Записуй стабільні коди без сирих назв і тіл.",
+              "en": "Log stable status codes without raw filenames or contents."
+            }
+          ],
+          "solution": {
+            "uk": "Перевір область у репозиторії, зібраний маршрут з дозволеним і відхиленим актором та ефекти відмов у сховищах. Пов’яжи кожну межу з тестом.",
+            "en": "Verify scope at repo, test the composed route with both allowed and denied actors, and measure rejection effects in persistent stores. Link each boundary to a specific test."
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Запусти інтеграції Project A для двох tenant і ролей в області. Додай дозволений запит, міжтенантну відмову, невалідний upload і перевищення ліміту. Покажи БД і blob після відмови. Додай матрицю ролей і threat model із двома межами. Англійською у 60–90 словах поясни спостережену відмову й обмеження.\n\n**Синтетичні документи політик**",
+            "en": "Run Project A integration checks for two tenants and scoped roles. Include one allowed request, one cross-tenant denial, one invalid upload and one over-limit upload. Show the database and blob state after failure. Attach the role matrix and a threat model with two trust boundaries. In 60–90 English words explain an observed denial and one residual limitation.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Застосуй різні tenant ID, щоб виявити пропуск умови.",
+              "en": "Use different tenant IDs to expose a missing scope predicate."
+            },
+            {
+              "uk": "Використай справжні адаптери сховища й репозиторію в тесті.",
+              "en": "Use real repository and storage adapters in the test."
+            },
+            {
+              "uk": "Записуй стабільні коди без сирих назв і тіл.",
+              "en": "Log stable status codes without raw filenames or contents."
+            }
+          ],
+          "solution": {
+            "uk": "Перевір область у репозиторії, зібраний маршрут з дозволеним і відхиленим актором та ефекти відмов у сховищах. Пов’яжи кожну межу з тестом.",
+            "en": "Verify scope at repo, test the composed route with both allowed and denied actors, and measure rejection effects in persistent stores. Link each boundary to a specific test."
+          }
+        }
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "id": "Q1",
+      "prompt": {
+        "uk": "Яке значення може підтвердити область tenant?",
+        "en": "Which value can authorize a tenant scope?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Будь-який наявний ID документа.",
+            "en": "Any existing document ID."
+          },
+          "explanation": {
+            "uk": "Існування не встановлює членства.",
+            "en": "Existence does not establish membership."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Членство з перевіреної ідентичності й довіреного стану.",
+            "en": "Membership from verified identity and trusted state."
+          },
+          "explanation": {
+            "uk": "Область визначається незалежно від довільних полів.",
+            "en": "Scope is determined independently of arbitrary request fields."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Будь-який tenant у тілі.",
+            "en": "Any tenant string sent in the body."
+          },
+          "explanation": {
+            "uk": "Заяви клієнта потребують перевірки.",
+            "en": "Client claims need validation."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q2",
+      "prompt": {
+        "uk": "Чому tenant-умова має діяти перед пагінацією?",
+        "en": "Why put a tenant predicate before pagination?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Сховати відхилені рядки в UI.",
+            "en": "Make the UI hide rejected rows after reading."
+          },
+          "explanation": {
+            "uk": "API вже показав би дані.",
+            "en": "The API would already expose data."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Ігнорувати tenant на наступних сторінках.",
+            "en": "Ignore the tenant on subsequent pages."
+          },
+          "explanation": {
+            "uk": "Кожна сторінка є новим запитом з областю.",
+            "en": "Each page is a new request with scope."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Формувати сторінки й курсори лише з видимих рядків.",
+            "en": "Produce pages and cursors based only on visible rows."
+          },
+          "explanation": {
+            "uk": "Кількість і межі рахуються в дозволеній області.",
+            "en": "The count and boundary must use authorized scope."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q3",
+      "prompt": {
+        "uk": "Credential не має валідного підпису. Де зупинити обробку?",
+        "en": "A credential lacks a valid signature. Where does processing stop?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "На перевірці ідентичності до політики ресурсу.",
+            "en": "At identity verification, before applying resource policy."
+          },
+          "explanation": {
+            "uk": "Довіреного актора немає.",
+            "en": "There is no trusted actor."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Лише після видачі приватних метаданих.",
+            "en": "Only after returning private metadata."
+          },
+          "explanation": {
+            "uk": "Це вже перетне межу.",
+            "en": "That would already cross the boundary."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Після типового призначення editor.",
+            "en": "After assigning a default editor role."
+          },
+          "explanation": {
+            "uk": "Хибні credentials не надають ролі.",
+            "en": "Invalid credentials provide no role."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q4",
+      "prompt": {
+        "uk": "Що має захищати справжній розмір файлу?",
+        "en": "What should guard a file's actual size?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Довжина назви.",
+            "en": "The filename length."
+          },
+          "explanation": {
+            "uk": "Назва не обмежує тіло.",
+            "en": "The name does not constrain body size."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Ліміти тіла сервера і перевірка потоку.",
+            "en": "Bounded server body and stream validation."
+          },
+          "explanation": {
+            "uk": "Фактичні байти забезпечують бюджет.",
+            "en": "Measured bytes enforce the real resource budget."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Лише заявлений клієнтом розмір.",
+            "en": "Only a client-reported size."
+          },
+          "explanation": {
+            "uk": "Значення може бути відсутнім або хибним.",
+            "en": "The value can be missing or wrong."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q5",
+      "prompt": {
+        "uk": "Як показати, що відмова запису не змінила документ іншого tenant?",
+        "en": "How do you show a denied write didn't mutate another tenant's document?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Перевірити лише недоступний перемикач UI.",
+            "en": "Check only that a UI toggle looks disabled."
+          },
+          "explanation": {
+            "uk": "Backend-операція все ще може бути доступна.",
+            "en": "The backend operation can still be reachable."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Перевірити колір помилки.",
+            "en": "Check the color of the error."
+          },
+          "explanation": {
+            "uk": "Візуальний вигляд не перевіряє сховище.",
+            "en": "Visual presentation does not verify storage."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Перевірити відповідь і точний збережений рядок.",
+            "en": "Check both the response and the exact stored row."
+          },
+          "explanation": {
+            "uk": "Це виявляє відмову відповіді за фактичної зміни.",
+            "en": "This detects a false denial response accompanying a write."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q6",
+      "prompt": {
+        "uk": "Який дозвіл потрібен воркеру обробки?",
+        "en": "Which permission should a processing worker have?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Лише потрібні ресурси й дії job.",
+            "en": "Only the resources and job actions it needs."
+          },
+          "explanation": {
+            "uk": "Мінімальні права обмежують наслідки помилок.",
+            "en": "Least privilege limits the effect of mistakes."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Усі можливості адміністрування.",
+            "en": "All user administration capabilities."
+          },
+          "explanation": {
+            "uk": "Вони не потрібні обробці.",
+            "en": "They are unrelated to processing."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Credentials кожного tenant.",
+            "en": "Every tenant's access credentials."
+          },
+          "explanation": {
+            "uk": "Ресурси належать окремій ідентичності в області.",
+            "en": "Resource access belongs to a separate, scoped identity."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q7",
+      "prompt": {
+        "uk": "Чому сирий документ не відображають у помилці валідації?",
+        "en": "Why avoid showing raw document content in a validation error?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Це валідує формат сервера.",
+            "en": "It validates the server's file format."
+          },
+          "explanation": {
+            "uk": "Валідація є окремою дією.",
+            "en": "Validation is a separate boundary action."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Вміст може містити чутливі дані й лишається недовіреним.",
+            "en": "Content can include sensitive information and remains untrusted."
+          },
+          "explanation": {
+            "uk": "Стабільного коду часто достатньо.",
+            "en": "A stable error code is enough for many callers."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Це зробить кожен запит повторюваним.",
+            "en": "It makes any HTTP request retryable."
+          },
+          "explanation": {
+            "uk": "Очищення помилок не визначає повтор.",
+            "en": "Error redaction does not establish retry safety."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q8",
+      "prompt": {
+        "uk": "Що має вказати інтеграція із підставленою перевіркою ідентичності?",
+        "en": "What should an integration test report when identity verification is mocked?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Усі потоки провайдера перевірено наживо.",
+            "en": "Every provider flow is proven live."
+          },
+          "explanation": {
+            "uk": "Verifier підставлено.",
+            "en": "The verifier was replaced."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Жодного корисного доказу немає.",
+            "en": "No test evidence is useful."
+          },
+          "explanation": {
+            "uk": "Справжні маршрут і сховище лишаються важливими.",
+            "en": "Real route and storage checks can still matter."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Що замінено фікстурою і що лишається справжнім.",
+            "en": "Which verification behavior the fixture replaces and what is still real."
+          },
+          "explanation": {
+            "uk": "Це не дає перебільшити доказ.",
+            "en": "This prevents overstating proof."
+          }
+        }
+      ]
+    }
+  ],
+  "crosslinks": [
+    "W05-L01",
+    "W05-L04"
+  ]
+}

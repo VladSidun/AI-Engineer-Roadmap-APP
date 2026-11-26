@@ -1,0 +1,246 @@
+{
+  "schemaVersion": 1,
+  "curriculumVersion": "1.2.0",
+  "campaigns": [
+    {"id":"main","title":{"uk":"Інженерія ШІ","en":"AI Engineering"}}
+  ],
+  "modules": [
+    {"id":"M0","campaignId":"main","title":{"uk":"Основи інженерії ШІ","en":"AI Engineering Fundamentals"},"stageIds":["W01"],"gateId":"G-M0","prerequisites":[],"estimateMinutes":1370,"availability":"published","contentVersion":1},
+    {"id":"M1","campaignId":"main","title":{"uk":"Професійний Python","en":"Professional Python"},"stageIds":["W02","W03"],"gateId":"G-M1","prerequisites":["G-M0"],"estimateMinutes":2760,"availability":"published","contentVersion":1},
+    {"id":"M2","campaignId":"main","title":{"uk":"Бекенд-інженерія","en":"Backend Engineering"},"stageIds":["W04","W05","W06"],"gateId":"G-M2","prerequisites":["G-M1"],"estimateMinutes":4080,"availability":"published","contentVersion":1},
+    {"id":"M3","campaignId":"main","title":{"uk":"Машинне та глибоке навчання","en":"Machine Learning & Deep Learning"},"stageIds":["W07","W08"],"gateId":"G-M3","prerequisites":["G-M2"],"estimateMinutes":2760,"availability":"planned","contentVersion":1},
+    {"id":"M4","campaignId":"main","title":{"uk":"Інженерія великих мовних моделей","en":"LLM Engineering"},"stageIds":["W09","W10"],"gateId":"G-M4","prerequisites":["G-M3"],"estimateMinutes":2760,"availability":"planned","contentVersion":1},
+    {"id":"M5","campaignId":"main","title":{"uk":"Оцінювання систем ШІ","en":"AI Evaluations"},"stageIds":["W11"],"gateId":"G-M5","prerequisites":["G-M4"],"estimateMinutes":1440,"availability":"planned","contentVersion":1},
+    {"id":"M6","campaignId":"main","title":{"uk":"RAG-системи","en":"RAG Systems"},"stageIds":["W12","W13","W14"],"gateId":"G-M6","prerequisites":["G-M5"],"estimateMinutes":4080,"availability":"planned","contentVersion":1},
+    {"id":"M7","campaignId":"main","title":{"uk":"Агентний ШІ та MCP","en":"Agentic AI & MCP"},"stageIds":["W15","W16"],"gateId":"G-M7","prerequisites":["G-M6"],"estimateMinutes":2760,"availability":"planned","contentVersion":1},
+    {"id":"M8","campaignId":"main","title":{"uk":"Інженерія ШІ у production","en":"Production AI Engineering"},"stageIds":["W17","W18","W19"],"gateId":"G-M8","prerequisites":["G-M7"],"estimateMinutes":4080,"availability":"planned","contentVersion":1},
+    {"id":"M9","campaignId":"main","title":{"uk":"Підготовка до міжнародної кар'єри","en":"International Career Readiness"},"stageIds":["W20"],"gateId":"G-M9","prerequisites":["G-M8"],"estimateMinutes":1440,"availability":"planned","contentVersion":1}
+  ],
+  "stages": [
+    {"id":"W01","moduleId":"M0","title":{"uk":"Карта ШІ та діагностика","en":"AI landscape and diagnostics"},"lessonIds":["W01-L01","W01-L02","W01-L03","W01-L04"],"reviewId":"SR-W01","prerequisites":[],"estimateMinutes":1215,"availability":"published","contentVersion":1},
+    {"id":"W02","moduleId":"M1","title":{"uk":"Підтримуваний Python","en":"Maintainable Python"},"lessonIds":["W02-L01","W02-L02","W02-L03","W02-L04"],"reviewId":"SR-W02","prerequisites":["G-M0"],"estimateMinutes":1320,"availability":"published","contentVersion":1},
+    {"id":"W03","moduleId":"M1","title":{"uk":"HTTP та асинхронний Python","en":"HTTP and asynchronous Python"},"lessonIds":["W03-L01","W03-L02","W03-L03","W03-L04"],"reviewId":"SR-W03","prerequisites":["SR-W02"],"estimateMinutes":1320,"availability":"published","contentVersion":1},
+    {"id":"W04","moduleId":"M2","title":{"uk":"Реляційні дані та API","en":"Relational data and API"},"lessonIds":["W04-L01","W04-L02","W04-L03","W04-L04"],"reviewId":"SR-W04","prerequisites":["G-M1"],"estimateMinutes":1320,"availability":"published","contentVersion":1},
+    {"id":"W05","moduleId":"M2","title":{"uk":"Доступ і безпека вхідних даних","en":"Access and input safety"},"lessonIds":["W05-L01","W05-L02","W05-L03","W05-L04"],"reviewId":"SR-W05","prerequisites":["SR-W04"],"estimateMinutes":1320,"availability":"published","contentVersion":1},
+    {"id":"W06","moduleId":"M2","title":{"uk":"Поставка бекенду","en":"Backend delivery"},"lessonIds":["W06-L01","W06-L02","W06-L03","W06-L04"],"reviewId":"SR-W06","prerequisites":["SR-W05"],"estimateMinutes":1320,"availability":"published","contentVersion":1},
+    {"id":"W07","moduleId":"M3","title":{"uk":"Основи машинного навчання","en":"Machine learning fundamentals"},"lessonIds":["W07-L01","W07-L02","W07-L03","W07-L04"],"reviewId":"SR-W07","prerequisites":["G-M2"],"estimateMinutes":1320,"availability":"planned","contentVersion":1},
+    {"id":"W08","moduleId":"M3","title":{"uk":"Нейронні мережі й трансформери","en":"Neural networks and Transformers"},"lessonIds":["W08-L01","W08-L02","W08-L03","W08-L04"],"reviewId":"SR-W08","prerequisites":["SR-W07"],"estimateMinutes":1320,"availability":"planned","contentVersion":1},
+    {"id":"W09","moduleId":"M4","title":{"uk":"LLM API та витягування даних","en":"LLM APIs and extraction"},"lessonIds":["W09-L01","W09-L02","W09-L03","W09-L04"],"reviewId":"SR-W09","prerequisites":["G-M3"],"estimateMinutes":1320,"availability":"planned","contentVersion":1},
+    {"id":"W10","moduleId":"M4","title":{"uk":"Інструменти й детерміновані процеси","en":"Tools and deterministic workflows"},"lessonIds":["W10-L01","W10-L02","W10-L03","W10-L04"],"reviewId":"SR-W10","prerequisites":["SR-W09"],"estimateMinutes":1320,"availability":"planned","contentVersion":1},
+    {"id":"W11","moduleId":"M5","title":{"uk":"Стенд оцінювання та базовий рівень","en":"Evaluation harness and baseline"},"lessonIds":["W11-L01","W11-L02","W11-L03","W11-L04"],"reviewId":"SR-W11","prerequisites":["G-M4"],"estimateMinutes":1320,"availability":"planned","contentVersion":1},
+    {"id":"W12","moduleId":"M6","title":{"uk":"Завантаження даних і пошук","en":"Ingestion and retrieval"},"lessonIds":["W12-L01","W12-L02","W12-L03","W12-L04"],"reviewId":"SR-W12","prerequisites":["G-M5"],"estimateMinutes":1320,"availability":"planned","contentVersion":1},
+    {"id":"W13","moduleId":"M6","title":{"uk":"Якість пошуку й відповіді з опорою на джерела","en":"Search quality and grounded answers"},"lessonIds":["W13-L01","W13-L02","W13-L03","W13-L04"],"reviewId":"SR-W13","prerequisites":["SR-W12"],"estimateMinutes":1320,"availability":"planned","contentVersion":1},
+    {"id":"W14","moduleId":"M6","title":{"uk":"Аналіз помилок RAG і бета-версія","en":"RAG failure analysis and beta"},"lessonIds":["W14-L01","W14-L02","W14-L03","W14-L04"],"reviewId":"SR-W14","prerequisites":["SR-W13"],"estimateMinutes":1320,"availability":"planned","contentVersion":1},
+    {"id":"W15","moduleId":"M7","title":{"uk":"Агентні процеси з обмеженнями","en":"Bounded agent workflows"},"lessonIds":["W15-L01","W15-L02","W15-L03","W15-L04"],"reviewId":"SR-W15","prerequisites":["G-M6"],"estimateMinutes":1320,"availability":"planned","contentVersion":1},
+    {"id":"W16","moduleId":"M7","title":{"uk":"MCP та оркестрація","en":"MCP and orchestration"},"lessonIds":["W16-L01","W16-L02","W16-L03","W16-L04"],"reviewId":"SR-W16","prerequisites":["SR-W15"],"estimateMinutes":1320,"availability":"planned","contentVersion":1},
+    {"id":"W17","moduleId":"M8","title":{"uk":"Розгортання й відновлення","en":"Deployment and recovery"},"lessonIds":["W17-L01","W17-L02","W17-L03","W17-L04"],"reviewId":"SR-W17","prerequisites":["G-M7"],"estimateMinutes":1320,"availability":"planned","contentVersion":1},
+    {"id":"W18","moduleId":"M8","title":{"uk":"Спостережуваність і надійність","en":"Observability and reliability"},"lessonIds":["W18-L01","W18-L02","W18-L03","W18-L04"],"reviewId":"SR-W18","prerequisites":["SR-W17"],"estimateMinutes":1320,"availability":"planned","contentVersion":1},
+    {"id":"W19","moduleId":"M8","title":{"uk":"Безпека ШІ й докази готовності до релізу","en":"AI security and release evidence"},"lessonIds":["W19-L01","W19-L02","W19-L03","W19-L04"],"reviewId":"SR-W19","prerequisites":["SR-W18"],"estimateMinutes":1320,"availability":"planned","contentVersion":1},
+    {"id":"W20","moduleId":"M9","title":{"uk":"Співбесіди та фінальне випробування","en":"Interviews and final challenge"},"lessonIds":["W20-L01","W20-L02","W20-L03","W20-L04"],"reviewId":"SR-W20","prerequisites":["G-M8"],"estimateMinutes":1320,"availability":"planned","contentVersion":1}
+  ],
+  "lessons": [
+    {"id":"W01-L01","stageId":"W01","title":{"uk":"Карта ШІ: символічний ШІ, ML, DL, GenAI, модель і система","en":"AI landscape: symbolic AI, ML, DL, GenAI; model vs system"},"prerequisites":[],"estimateMinutes":130,"availability":"published","contentVersion":1},
+    {"id":"W01-L02","stageId":"W01","title":{"uk":"Навчання, inference, оцінювання й ролі в ШІ","en":"Training, inference, evaluation; AI job roles"},"prerequisites":["W01-L01"],"estimateMinutes":165,"availability":"published","contentVersion":1},
+    {"id":"W01-L03","stageId":"W01","title":{"uk":"Середовище Python, Git, CLI та фікстури","en":"Python environment, Git, CLI, fixtures; brief refresher"},"prerequisites":["W01-L02"],"estimateMinutes":240,"availability":"published","contentVersion":1},
+    {"id":"W01-L04","stageId":"W01","title":{"uk":"Діагностика JSON/CSV, SQL, HTTP і pytest та звіт про прогалини","en":"Diagnostic: independent JSON/CSV, SQL, HTTP, pytest; gap report"},"prerequisites":["W01-L03"],"estimateMinutes":420,"availability":"published","contentVersion":1},
+    {"id":"W02-L01","stageId":"W02","title":{"uk":"Типи, колекції, складність, dataclasses","en":"Types, collections, complexity, dataclasses"},"prerequisites":["G-M0"],"estimateMinutes":300,"availability":"published","contentVersion":1},
+    {"id":"W02-L02","stageId":"W02","title":{"uk":"Валідація, Pydantic, винятки та файлова система","en":"Validation, Pydantic, exceptions, filesystem"},"prerequisites":["W02-L01"],"estimateMinutes":300,"availability":"published","contentVersion":1},
+    {"id":"W02-L03","stageId":"W02","title":{"uk":"Ітератори, генератори, контекстні менеджери, структура пакета","en":"Iterators, generators, context managers, package structure"},"prerequisites":["W02-L02"],"estimateMinutes":300,"availability":"published","contentVersion":1},
+    {"id":"W02-L04","stageId":"W02","title":{"uk":"Тестована CLI-нормалізація, pytest, Ruff і відтворювані залежності","en":"Testable CLI normalization, pytest, Ruff and reproducible deps"},"prerequisites":["W02-L03"],"estimateMinutes":300,"availability":"published","contentVersion":1},
+    {"id":"W03-L01","stageId":"W03","title":{"uk":"HTTP, JSON, контракти REST і коди стану","en":"HTTP, JSON, REST contracts and status codes"},"prerequisites":["SR-W02"],"estimateMinutes":300,"availability":"published","contentVersion":1},
+    {"id":"W03-L02","stageId":"W03","title":{"uk":"AsyncIO, конкурентність, паралельність і httpx","en":"AsyncIO, concurrency vs parallelism, httpx"},"prerequisites":["W03-L01"],"estimateMinutes":300,"availability":"published","contentVersion":1},
+    {"id":"W03-L03","stageId":"W03","title":{"uk":"Тайм-аути, повтори з затримкою, ідемпотентність і ліміти конкурентності","en":"Timeouts, retry/backoff, idempotency and bounded concurrency"},"prerequisites":["W03-L02"],"estimateMinutes":300,"availability":"published","contentVersion":1},
+    {"id":"W03-L04","stageId":"W03","title":{"uk":"Моки, логи, налагодження та CI, асинхронний клієнт","en":"Mocking, logging, debugging and CI; async client lab"},"prerequisites":["W03-L03"],"estimateMinutes":300,"availability":"published","contentVersion":1},
+    {"id":"W04-L01","stageId":"W04","title":{"uk":"Реляційна модель, JOIN, обмеження та індекси","en":"Relational data model, joins, constraints, indexes"},"prerequisites":["G-M1"],"estimateMinutes":300,"availability":"published","contentVersion":1},
+    {"id":"W04-L02","stageId":"W04","title":{"uk":"Транзакції, SQLAlchemy і міграції Alembic","en":"Transactions, SQLAlchemy, Alembic migrations"},"prerequisites":["W04-L01"],"estimateMinutes":300,"availability":"published","contentVersion":1},
+    {"id":"W04-L03","stageId":"W04","title":{"uk":"Контракти FastAPI, Pydantic, ін'єкція залежностей та HTTP-помилки","en":"FastAPI contracts, Pydantic, dependency injection, HTTP errors"},"prerequisites":["W04-L02"],"estimateMinutes":300,"availability":"published","contentVersion":1},
+    {"id":"W04-L04","stageId":"W04","title":{"uk":"CRUD, пагінація та тести БД, початок проєкту A","en":"CRUD + pagination and database tests; Project A starts"},"prerequisites":["W04-L03"],"estimateMinutes":300,"availability":"published","contentVersion":1},
+    {"id":"W05-L01","stageId":"W05","title":{"uk":"Автентифікація, авторизація, хешування паролів та IdP","en":"Authentication vs authorization, password hashing / IdP"},"prerequisites":["SR-W04"],"estimateMinutes":300,"availability":"published","contentVersion":1},
+    {"id":"W05-L02","stageId":"W05","title":{"uk":"RBAC, власність, ізоляція клієнтів і найменші привілеї","en":"RBAC, ownership, tenancy, least privilege"},"prerequisites":["W05-L01"],"estimateMinutes":300,"availability":"published","contentVersion":1},
+    {"id":"W05-L03","stageId":"W05","title":{"uk":"Валідація файлів, ліміти, PII, основи OWASP і секрети","en":"File validation, limits, PII, OWASP basics and secrets"},"prerequisites":["W05-L02"],"estimateMinutes":300,"availability":"published","contentVersion":1},
+    {"id":"W05-L04","stageId":"W05","title":{"uk":"Інтеграційні тести контролю доступу й модель загроз","en":"Integration tests for access control and threat model"},"prerequisites":["W05-L03"],"estimateMinutes":300,"availability":"published","contentVersion":1},
+    {"id":"W06-L01","stageId":"W06","title":{"uk":"Образи, томи, мережі Docker і Compose","en":"Docker images, volumes, networking and Compose"},"prerequisites":["SR-W05"],"estimateMinutes":300,"availability":"published","contentVersion":1},
+    {"id":"W06-L02","stageId":"W06","title":{"uk":"Фонові завдання, статус та ідемпотентна обробка","en":"Background jobs, status and idempotent processing"},"prerequisites":["W06-L01"],"estimateMinutes":300,"availability":"published","contentVersion":1},
+    {"id":"W06-L03","stageId":"W06","title":{"uk":"Health, readiness, CI й вимірювання затримки","en":"Health/readiness, CI and basic latency measurements"},"prerequisites":["W06-L02"],"estimateMinutes":300,"availability":"published","contentVersion":1},
+    {"id":"W06-L04","stageId":"W06","title":{"uk":"Інтеграція бекенду проєкту A й демо з чистого клону","en":"Project A backend integration and clean-clone demo"},"prerequisites":["W06-L03"],"estimateMinutes":300,"availability":"published","contentVersion":1},
+    {"id":"W07-L01","stageId":"W07","title":{"uk":"NumPy, pandas, вектори, матриці й описова статистика","en":"NumPy, pandas, vectors/matrices, descriptive stats"},"prerequisites":["G-M2"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W07-L02","stageId":"W07","title":{"uk":"Навчання з учителем і без, регресія, класифікація та базові моделі","en":"Supervised/unsupervised, regression/classification, baselines"},"prerequisites":["W07-L01"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W07-L03","stageId":"W07","title":{"uk":"Train/val/test, витік даних, перенавчання та pipeline sklearn","en":"Train/val/test, leakage, overfitting, sklearn pipeline"},"prerequisites":["W07-L02"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W07-L04","stageId":"W07","title":{"uk":"Матриця помилок, precision, recall, F1 і відтворювана ML-лабораторна","en":"Confusion matrix, precision/recall/F1; reproducible ML lab"},"prerequisites":["W07-L03"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W08-L01","stageId":"W08","title":{"uk":"Нейронні мережі, функція втрат, градієнти, backprop","en":"Neural networks, loss, gradients, backprop"},"prerequisites":["SR-W07"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W08-L02","stageId":"W08","title":{"uk":"Тензори PyTorch, autograd і навчання малого MLP","en":"PyTorch tensors, autograd, tiny MLP training loop"},"prerequisites":["W08-L01"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W08-L03","stageId":"W08","title":{"uk":"Токени, ембеддинги та косинусна подібність","en":"Tokens, embeddings and cosine similarity"},"prerequisites":["W08-L02"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W08-L04","stageId":"W08","title":{"uk":"Attention, Transformer, переднавчання, SFT/RL і декодування","en":"Attention, Transformer, pretraining vs SFT/RL and decoding"},"prerequisites":["W08-L03"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W09-L01","stageId":"W09","title":{"uk":"Хостовані й локальні моделі, запити API, токени, семплінг, стримінг","en":"Hosted/local models, API requests, tokens, sampling, streaming"},"prerequisites":["G-M3"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W09-L02","stageId":"W09","title":{"uk":"Структурований вивід, JSON Schema, валідація та відмови","en":"Structured output, JSON Schema, validation and refusal"},"prerequisites":["W09-L01"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W09-L03","stageId":"W09","title":{"uk":"Контекст, промпти, галюцинації, затримка та вартість","en":"Context, prompts, hallucination, latency and cost"},"prerequisites":["W09-L02"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W09-L04","stageId":"W09","title":{"uk":"Адаптер провайдера, endpoint витягування і стан ручної перевірки","en":"Provider adapter + extraction endpoint and review-required state"},"prerequisites":["W09-L03"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W10-L01","stageId":"W10","title":{"uk":"Виклик інструментів: схема, пропозиція, валідація та виконання","en":"Tool calling: schemas, proposal, validation, execution"},"prerequisites":["SR-W09"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W10-L02","stageId":"W10","title":{"uk":"Пошук для читання, списки дозволів, права та бюджет контексту","en":"Read-only lookup, allowlists, permission and context budget"},"prerequisites":["W10-L01"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W10-L03","stageId":"W10","title":{"uk":"Повтори, резервні стратегії, кеш, ін'єкції та детерміновані процеси","en":"Retry/fallback/cache, injection and deterministic workflows"},"prerequisites":["W10-L02"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W10-L04","stageId":"W10","title":{"uk":"Інтеграція інструмента проєкту A, фікстури та порівняння конфігурацій","en":"Project A tool integration, fixtures and config comparison"},"prerequisites":["W10-L03"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W11-L01","stageId":"W11","title":{"uk":"Детерміновані тести, імовірнісне оцінювання й побудова рубрик","en":"Deterministic tests vs probabilistic eval, rubric design"},"prerequisites":["G-M4"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W11-L02","stageId":"W11","title":{"uk":"Мітки даних, поділ dev/test, упередженість і версіювання","en":"Dataset labels, dev/test split, bias and versioning"},"prerequisites":["W11-L01"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W11-L03","stageId":"W11","title":{"uk":"Якість, класифікація помилок, метрики затримки й вартості","en":"Quality, error taxonomy, latency and cost metrics"},"prerequisites":["W11-L02"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W11-L04","stageId":"W11","title":{"uk":"Стенд проєкту A, baseline і звіт на відкладених даних","en":"Project A eval harness, baseline and held-out reporting"},"prerequisites":["W11-L03"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W12-L01","stageId":"W12","title":{"uk":"RAG, довгий контекст і донавчання, цикл завантаження","en":"RAG vs long context vs fine-tuning; ingestion lifecycle"},"prerequisites":["G-M5"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W12-L02","stageId":"W12","title":{"uk":"Парсинг, поділ на фрагменти, метадані, ID та версіювання","en":"Parsing, chunking, metadata, IDs and versioning"},"prerequisites":["W12-L01"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W12-L03","stageId":"W12","title":{"uk":"Ембеддинги, косинусна подібність, top-k, pgvector і фільтри доступу","en":"Embeddings, cosine/top-k, pgvector and access filters"},"prerequisites":["W12-L02"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W12-L04","stageId":"W12","title":{"uk":"Пошук у проєкті B, завантаження, видалення та ідемпотентність","en":"Project B retrieval-only lab; ingest/delete/idempotency"},"prerequisites":["W12-L03"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W13-L01","stageId":"W13","title":{"uk":"Лексичний і гібридний пошук, переранжування та переформулювання","en":"Lexical search, hybrid retrieval, reranking and rewriting"},"prerequisites":["SR-W12"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W13-L02","stageId":"W13","title":{"uk":"Recall@k/MRR, позначені релевантні фрагменти та baseline","en":"Recall@k/MRR, labelled relevant chunks and baseline"},"prerequisites":["W13-L01"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W13-L03","stageId":"W13","title":{"uk":"Підбір контексту, цитування, опора на джерела й утримання від відповіді","en":"Context packing, source citations, grounding and abstention"},"prerequisites":["W13-L02"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W13-L04","stageId":"W13","title":{"uk":"RAG endpoint і окреме оцінювання пошуку та відповідей","en":"RAG endpoint and separate retrieval/answer evaluation"},"prerequisites":["W13-L03"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W14-L01","stageId":"W14","title":{"uk":"Аналіз помилок і абляція одного параметра","en":"Failure analysis and single-variable ablation"},"prerequisites":["SR-W13"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W14-L02","stageId":"W14","title":{"uk":"Непрямі ін'єкції, PII, ізоляція клієнтів та актуальність","en":"Indirect injection, PII, tenant isolation, freshness"},"prerequisites":["W14-L01"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W14-L03","stageId":"W14","title":{"uk":"Мінімальний UI, демо й відгуки про продукт","en":"Minimal UI/demo and product feedback"},"prerequisites":["W14-L02"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W14-L04","stageId":"W14","title":{"uk":"Бета проєкту B, англомовне демо, чернетка CV й перші заявки","en":"Project B beta, English demo, CV draft and first applications"},"prerequisites":["W14-L03"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W15-L01","stageId":"W15","title":{"uk":"Робочий процес, агент, цикл, автомат станів і зупинка","en":"Workflow vs agent, loop, state machine and termination"},"prerequisites":["G-M6"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W15-L02","stageId":"W15","title":{"uk":"Стан і сесія, довготривала пам'ять, бюджети та ідемпотентність","en":"State/session, long-term memory, budgets, idempotency"},"prerequisites":["W15-L01"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W15-L03","stageId":"W15","title":{"uk":"Межі виконання інструментів і підтвердження людиною","en":"Tool execution boundaries and human approval"},"prerequisites":["W15-L02"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W15-L04","stageId":"W15","title":{"uk":"Обмежений агент проєкту B із імітацією нагадування","en":"Project B bounded agent with mock reminder action"},"prerequisites":["W15-L03"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W16-L01","stageId":"W16","title":{"uk":"MCP host/client/server, інструменти, ресурси й промпти","en":"MCP host/client/server, tools/resources/prompts"},"prerequisites":["SR-W15"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W16-L02","stageId":"W16","title":{"uk":"Транспорт, межі довіри, авторизація та обробка збоїв","en":"Transport, trust boundaries, auth and failure handling"},"prerequisites":["W16-L01"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W16-L03","stageId":"W16","title":{"uk":"Опційний оркестратор і ручний цикл, порівняння компромісів","en":"One optional orchestrator vs manual loop; compare trade-offs"},"prerequisites":["W16-L02"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W16-L04","stageId":"W16","title":{"uk":"Локальний MCP-сервер лише для читання, оцінювання задач і демо агента","en":"Local read-only MCP server, task eval, agent demo"},"prerequisites":["W16-L03"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W17-L01","stageId":"W17","title":{"uk":"Хмара, IAM, мережі, HTTPS і керовані сервіси","en":"Cloud/IAM/network/HTTPS and managed services"},"prerequisites":["G-M7"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W17-L02","stageId":"W17","title":{"uk":"Керування секретами, квоти, конфігурація й міграції","en":"Secret management, quotas, config and migrations"},"prerequisites":["W17-L01"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W17-L03","stageId":"W17","title":{"uk":"Pipeline розгортання, health, відкат і резервні копії","en":"Deployment pipeline, health, rollback and backups"},"prerequisites":["W17-L02"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W17-L04","stageId":"W17","title":{"uk":"Розгортання проєкту із синтетичними даними й репетиція відновлення","en":"Deploy one project with synthetic data; restore rehearsal"},"prerequisites":["W17-L03"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W18-L01","stageId":"W18","title":{"uk":"Структуровані логи, ідентифікатори кореляції, traces і spans","en":"Structured logs, correlation IDs, traces and spans"},"prerequisites":["SR-W17"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W18-L02","stageId":"W18","title":{"uk":"Метрики p50/p95, витрати, версіювання й безпечне логування","en":"Metrics, p50/p95, costs, versioning and privacy-safe logs"},"prerequisites":["W18-L01"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W18-L03","stageId":"W18","title":{"uk":"Черги, backpressure, навантаження й імітація збоїв","en":"Queues, backpressure, load and fault injection"},"prerequisites":["W18-L02"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W18-L04","stageId":"W18","title":{"uk":"Панель бюджету, тест деградації й операційна інструкція","en":"Budget dashboard, degradation test and runbook"},"prerequisites":["W18-L03"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W19-L01","stageId":"W19","title":{"uk":"Модель загроз ШІ: ін'єкції, витік даних та надмірні повноваження","en":"AI threat model: injection, exfiltration, excessive agency"},"prerequisites":["SR-W18"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W19-L02","stageId":"W19","title":{"uk":"Обробка виводу, перевірки залежностей, зберігання й врядування","en":"Output handling, dependency checks, retention and governance"},"prerequisites":["W19-L01"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W19-L03","stageId":"W19","title":{"uk":"Регресійне оцінювання, критерій релізу й фікстури захисних тестів","en":"Regression eval, release gate and red-team test fixtures"},"prerequisites":["W19-L02"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W19-L04","stageId":"W19","title":{"uk":"Замороження проєктів A/B, звіт з безпеки та версійний реліз","en":"Project A/B freeze, security report and versioned release"},"prerequisites":["W19-L03"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W20-L01","stageId":"W20","title":{"uk":"Вправи зі співбесід з коду, SQL, бекенду й налагодження","en":"Coding/SQL/backend interview and debugging drills"},"prerequisites":["G-M8"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W20-L02","stageId":"W20","title":{"uk":"Проєктування RAG і агентів, компроміси й безпека","en":"RAG/agent system design, trade-offs and security"},"prerequisites":["W20-L01"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W20-L03","stageId":"W20","title":{"uk":"Технічна англійська, STAR, CV, GitHub і віддалена комунікація","en":"Technical English, STAR, CV, GitHub and remote communication"},"prerequisites":["W20-L02"],"estimateMinutes":300,"availability":"planned","contentVersion":1},
+    {"id":"W20-L04","stageId":"W20","title":{"uk":"Самостійне тестове завдання, фінальне демо, пробні співбесіди й рубрика","en":"Independent take-home, final demo, mock interviews and rubric"},"prerequisites":["W20-L03"],"estimateMinutes":300,"availability":"planned","contentVersion":1}
+  ],
+  "reviews": [
+    {"id":"SR-W01","stageId":"W01","title":{"uk":"Перевірка етапу","en":"Stage review"},"prerequisites":["W01-L01","W01-L02","W01-L03","W01-L04"],"estimateMinutes":105,"availability":"published","contentVersion":1},
+    {"id":"SR-W02","stageId":"W02","title":{"uk":"Перевірка етапу","en":"Stage review"},"prerequisites":["W02-L01","W02-L02","W02-L03","W02-L04"],"estimateMinutes":120,"availability":"published","contentVersion":1},
+    {"id":"SR-W03","stageId":"W03","title":{"uk":"Перевірка етапу","en":"Stage review"},"prerequisites":["W03-L01","W03-L02","W03-L03","W03-L04"],"estimateMinutes":120,"availability":"published","contentVersion":1},
+    {"id":"SR-W04","stageId":"W04","title":{"uk":"Перевірка етапу","en":"Stage review"},"prerequisites":["W04-L01","W04-L02","W04-L03","W04-L04"],"estimateMinutes":120,"availability":"published","contentVersion":1},
+    {"id":"SR-W05","stageId":"W05","title":{"uk":"Перевірка етапу","en":"Stage review"},"prerequisites":["W05-L01","W05-L02","W05-L03","W05-L04"],"estimateMinutes":120,"availability":"published","contentVersion":1},
+    {"id":"SR-W06","stageId":"W06","title":{"uk":"Перевірка етапу","en":"Stage review"},"prerequisites":["W06-L01","W06-L02","W06-L03","W06-L04"],"estimateMinutes":120,"availability":"published","contentVersion":1},
+    {"id":"SR-W07","stageId":"W07","title":{"uk":"Перевірка етапу","en":"Stage review"},"prerequisites":["W07-L01","W07-L02","W07-L03","W07-L04"],"estimateMinutes":120,"availability":"planned","contentVersion":1},
+    {"id":"SR-W08","stageId":"W08","title":{"uk":"Перевірка етапу","en":"Stage review"},"prerequisites":["W08-L01","W08-L02","W08-L03","W08-L04"],"estimateMinutes":120,"availability":"planned","contentVersion":1},
+    {"id":"SR-W09","stageId":"W09","title":{"uk":"Перевірка етапу","en":"Stage review"},"prerequisites":["W09-L01","W09-L02","W09-L03","W09-L04"],"estimateMinutes":120,"availability":"planned","contentVersion":1},
+    {"id":"SR-W10","stageId":"W10","title":{"uk":"Перевірка етапу","en":"Stage review"},"prerequisites":["W10-L01","W10-L02","W10-L03","W10-L04"],"estimateMinutes":120,"availability":"planned","contentVersion":1},
+    {"id":"SR-W11","stageId":"W11","title":{"uk":"Перевірка етапу","en":"Stage review"},"prerequisites":["W11-L01","W11-L02","W11-L03","W11-L04"],"estimateMinutes":120,"availability":"planned","contentVersion":1},
+    {"id":"SR-W12","stageId":"W12","title":{"uk":"Перевірка етапу","en":"Stage review"},"prerequisites":["W12-L01","W12-L02","W12-L03","W12-L04"],"estimateMinutes":120,"availability":"planned","contentVersion":1},
+    {"id":"SR-W13","stageId":"W13","title":{"uk":"Перевірка етапу","en":"Stage review"},"prerequisites":["W13-L01","W13-L02","W13-L03","W13-L04"],"estimateMinutes":120,"availability":"planned","contentVersion":1},
+    {"id":"SR-W14","stageId":"W14","title":{"uk":"Перевірка етапу","en":"Stage review"},"prerequisites":["W14-L01","W14-L02","W14-L03","W14-L04"],"estimateMinutes":120,"availability":"planned","contentVersion":1},
+    {"id":"SR-W15","stageId":"W15","title":{"uk":"Перевірка етапу","en":"Stage review"},"prerequisites":["W15-L01","W15-L02","W15-L03","W15-L04"],"estimateMinutes":120,"availability":"planned","contentVersion":1},
+    {"id":"SR-W16","stageId":"W16","title":{"uk":"Перевірка етапу","en":"Stage review"},"prerequisites":["W16-L01","W16-L02","W16-L03","W16-L04"],"estimateMinutes":120,"availability":"planned","contentVersion":1},
+    {"id":"SR-W17","stageId":"W17","title":{"uk":"Перевірка етапу","en":"Stage review"},"prerequisites":["W17-L01","W17-L02","W17-L03","W17-L04"],"estimateMinutes":120,"availability":"planned","contentVersion":1},
+    {"id":"SR-W18","stageId":"W18","title":{"uk":"Перевірка етапу","en":"Stage review"},"prerequisites":["W18-L01","W18-L02","W18-L03","W18-L04"],"estimateMinutes":120,"availability":"planned","contentVersion":1},
+    {"id":"SR-W19","stageId":"W19","title":{"uk":"Перевірка етапу","en":"Stage review"},"prerequisites":["W19-L01","W19-L02","W19-L03","W19-L04"],"estimateMinutes":120,"availability":"planned","contentVersion":1},
+    {"id":"SR-W20","stageId":"W20","title":{"uk":"Перевірка етапу","en":"Stage review"},"prerequisites":["W20-L01","W20-L02","W20-L03","W20-L04"],"estimateMinutes":120,"availability":"planned","contentVersion":1}
+  ],
+  "gates": [
+    {"id":"G-M0","moduleId":"M0","title":{"uk":"Середовище й план усунення прогалин","en":"Environment and gap plan"},"prerequisites":["SR-W01"],"estimateMinutes":155,"availability":"published","contentVersion":1},
+    {"id":"G-M1","moduleId":"M1","title":{"uk":"Випробування модуля · Професійний Python","en":"Module challenge · Professional Python"},"prerequisites":["SR-W02","SR-W03"],"estimateMinutes":120,"availability":"published","contentVersion":1},
+    {"id":"G-M2","moduleId":"M2","title":{"uk":"Випробування модуля · Бекенд-інженерія","en":"Module challenge · Backend Engineering"},"prerequisites":["SR-W04","SR-W05","SR-W06"],"estimateMinutes":120,"availability":"published","contentVersion":1},
+    {"id":"G-M3","moduleId":"M3","title":{"uk":"Випробування модуля · Машинне та глибоке навчання","en":"Module challenge · Machine Learning & Deep Learning"},"prerequisites":["SR-W07","SR-W08"],"estimateMinutes":120,"availability":"planned","contentVersion":1},
+    {"id":"G-M4","moduleId":"M4","title":{"uk":"Випробування модуля · Інженерія великих мовних моделей","en":"Module challenge · LLM Engineering"},"prerequisites":["SR-W09","SR-W10"],"estimateMinutes":120,"availability":"planned","contentVersion":1},
+    {"id":"G-M5","moduleId":"M5","title":{"uk":"Випробування модуля · Оцінювання систем ШІ","en":"Module challenge · AI Evaluations"},"prerequisites":["SR-W11"],"estimateMinutes":120,"availability":"planned","contentVersion":1},
+    {"id":"G-M6","moduleId":"M6","title":{"uk":"Випробування модуля · RAG-системи","en":"Module challenge · RAG Systems"},"prerequisites":["SR-W12","SR-W13","SR-W14"],"estimateMinutes":120,"availability":"planned","contentVersion":1},
+    {"id":"G-M7","moduleId":"M7","title":{"uk":"Випробування модуля · Агентний ШІ та MCP","en":"Module challenge · Agentic AI & MCP"},"prerequisites":["SR-W15","SR-W16"],"estimateMinutes":120,"availability":"planned","contentVersion":1},
+    {"id":"G-M8","moduleId":"M8","title":{"uk":"Випробування модуля · Інженерія ШІ у production","en":"Module challenge · Production AI Engineering"},"prerequisites":["SR-W17","SR-W18","SR-W19"],"estimateMinutes":120,"availability":"planned","contentVersion":1},
+    {"id":"G-M9","moduleId":"M9","title":{"uk":"Випробування модуля · Підготовка до міжнародної кар'єри","en":"Module challenge · International Career Readiness"},"prerequisites":["SR-W20"],"estimateMinutes":120,"availability":"planned","contentVersion":1}
+  ],
+  "projects": [
+    {
+      "id": "A",
+      "start": "W04",
+      "title": {
+        "uk": "API обробки документів і витягування даних",
+        "en": "Document Processing & Extraction API"
+      },
+      "availability": "published",
+      "milestones": [
+        {
+          "id": "A-SCAFFOLD",
+          "stageId": "W04",
+          "evidenceId": "SR-W04",
+          "title": {
+            "uk": "API, схема й міграції",
+            "en": "API, schema and migrations"
+          },
+          "artifacts": [
+            {
+              "uk": "CRUD документів із наскрізними тестами PostgreSQL",
+              "en": "Document CRUD with PostgreSQL integration tests"
+            },
+            {
+              "uk": "Міграції з чистої й попередньої схеми",
+              "en": "Migrations from blank and prior schemas"
+            },
+            {
+              "uk": "README, діаграма зв’язків і дві сторінки з курсором",
+              "en": "README, schema diagram and a two-page cursor trace"
+            }
+          ]
+        },
+        {
+          "id": "A-ACCESS",
+          "stageId": "W05",
+          "evidenceId": "SR-W05",
+          "title": {
+            "uk": "Контроль доступу й завантаження",
+            "en": "Access control and uploads"
+          },
+          "artifacts": [
+            {
+              "uk": "Матриця ролей, власників і tenant",
+              "en": "Role, owner and tenant matrix"
+            },
+            {
+              "uk": "Обмежене завантаження й тести незмінного стану при відмові",
+              "en": "Bounded uploads and unchanged-state checks after denial"
+            },
+            {
+              "uk": "Threat model і підтверджені міжтенантні відмови",
+              "en": "Threat model and verified cross-tenant denials"
+            }
+          ]
+        },
+        {
+          "id": "A-BACKEND-V0",
+          "stageId": "W06",
+          "evidenceId": "SR-W06",
+          "title": {
+            "uk": "Backend v0 і демо з чистої копії",
+            "en": "Backend v0 and clean-clone demo"
+          },
+          "artifacts": [
+            {
+              "uk": "Compose, міграції й перевірки готовності",
+              "en": "Compose, migrations and readiness checks"
+            },
+            {
+              "uk": "Стан завдання та один результат після повтору й рестарту",
+              "en": "Job status and a single result after replay and restart"
+            },
+            {
+              "uk": "Демо, CI й виміряний зразок затримок",
+              "en": "Demo, CI and a measured latency sample"
+            }
+          ]
+        }
+      ]
+    },
+    {"id":"B","start":"W12","title":{"uk":"Асистент знань і операцій SOVA","en":"SOVA Knowledge & Operations Assistant"},"availability":"planned"}
+  ],
+  "skills": [
+    "systems",
+    "evaluation",
+    "tooling",
+    "diagnostics"
+  ]
+}

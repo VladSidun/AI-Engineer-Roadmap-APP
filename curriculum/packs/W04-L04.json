@@ -1,0 +1,510 @@
+{
+  "id": "W04-L04",
+  "contentVersion": 1,
+  "overview": {
+    "uk": "Project A потребує малого API документів до обробки вмісту. Реалізуй контракт створення, читання, оновлення й видалення зі стабільними сторінками. Простеж сторінку синтетичних рядків під час вставки документа й обери зрозумілу клієнту політику. Ти реалізуєш keyset-запит з областю доступу й перевіриш просування курсора без дублікатів для сталої фікстури. Перенесення створює scaffold у твоєму репозиторії і запускає справжні міграції PostgreSQL та тести БД. Узгодь помилки з правилами HTTP з W04-L03.",
+    "en": "Project A needs a small document API before it processes content. Implement a create, read, update, and delete contract with stable list pages. Follow a page of synthetic rows while another document is inserted, then choose a policy the client can explain. You will implement a scoped keyset query and verify that the cursor advances without duplicates for the fixed fixture. The transfer creates the backend scaffold in your own repository and runs actual PostgreSQL migrations and database tests. Keep errors consistent with the status and validation rules from W04-L03."
+  },
+  "theory": {
+    "uk": "### Явна поведінка CRUD\n\nСтворення перевіряє поля, визначає власника й повертає ID. Оновлення задає змінні поля і відповіді для відсутніх чи конфліктних записів. Видалення може прибрати рядок, позначити його або відхилити поки виконується job. Переходи стану мають відповідати API та foreign keys. Створи документ і job однією транзакцією або передай роботу через надійний запис. Тестуй відсутність ефекту невалідного вводу та успішний шлях.\n\n### Стабільна пагінація потребує порядку\n\nLIMIT без ORDER BY не визначає повернені рядки. OFFSET простий, та великий відступ усе ще проходить пропущені рядки. Вставки до першої сторінки можуть зсунути наступні. Keyset cursor з унікального незмінного ID рухається через WHERE id > cursor ORDER BY id. Для created_at із рівними значеннями додай ID для розв’язання рівності й кодуй обидва в курсорі. Keyset рухається від позиції. Глобальний знімок окремих запитів потребує власного контракту.\n\n### Перевірка області й меж сторінок\n\nЗастосуй tenant й інші фільтри до ліміту. Вибери ще один рядок, щоб визначити, чи є наступна сторінка. Якщо запитано два й запит отримав три, видай перші два, а курсором буде ID другого. Курсор третього пропустив би цей документ. Відхиляй некоректні й дуже великі розміри. Перевір порожню, точно повну й міжтенантну фікстури. Для схеми, міграцій і справжньої транзакційної поведінки використовуй інтеграційні тести PostgreSQL.\n\n### Простеж зміни даних між сторінками\n\nНехай tenant A бачить ID 3, 5, 8, а tenant B має 4. Запит двох рядків дає 3 і 5. Фільтр tenant після ліміту міг би зайняти слот невидимим рядком. Тепер перед наступним запитом встав дозволений ID 7. Keyset після 5 може дати 7 і 8. Запис перед курсором не з’явиться в русі вперед. Визнач, чи нові вставки мають з’являтись у новому скануванні, чи їх треба відсіювати явним правилом snapshot.\n\nОпиши часткові оновлення до публікації. Відсутній title може означати залишити, а null — відмову валідації. Явний новий заголовок оновлює рядок. За конкурентних записів поле версії дозволяє умовну зміну з конфліктом після іншого записувача. Перевір точний стан до й після успіхів та відмов. Окремими випадками тестуй відсутній ID, хибний tenant, невалідне поле, застарілу версію й сторінку понад бюджет сервісу.",
+    "en": "### Define CRUD behavior explicitly\n\nCreation validates fields, applies ownership and returns an ID. Updates specify which fields may change and how missing and conflicting records are reported. A delete can remove a row, set a tombstone, or reject while a job is running. State transitions must agree with the API contract and foreign keys. Design create and job insertion as one transaction or schedule work through a durable handoff. Test the no-effect branch of invalid input as well as the successful path.\n\n### Stable pagination needs an order\n\nLIMIT without ORDER BY does not define which rows appear. OFFSET can be simple but large offsets still traverse skipped rows. Insertions before the first page can shift later offsets. A keyset cursor based on a unique immutable ID advances using WHERE id > cursor ORDER BY id. If sorting by created_at where ties exist, add an ID tie-breaker and encode both in the cursor. Keyset paging advances from a position. It cannot promise a global snapshot across separate requests unless you implement a snapshot contract.\n\n### Test scope and page boundaries\n\nApply tenant and other filters before limiting rows. Fetch one extra row to determine whether there is a next page. If the client asks for two and the query returns three, deliver the first two and issue the second ID as the next cursor. Returning the third as cursor would skip that document. Reject invalid or huge page sizes. Exercise empty, exactly full and overlapping-tenant fixtures. Use PostgreSQL integration tests for schema, migration and actual transactional behavior.\n\n### Trace changing data between two pages\n\nAssume tenant A can see IDs 3, 5 and 8, while tenant B owns 4. A request for two rows returns 3 and 5. Filtering tenant after limiting could instead consume one of the slots on a row the user may never see. Now insert a new allowed row 7 before the next call. A keyset after 5 can return 7 and 8. If a row below the saved cursor is inserted, forward traversal does not revisit it. Decide whether fresh inserts must be visible in a new scan or excluded by an explicit snapshot rule.\n\nSpecify partial updates before exposing them. For a title field, missing can mean leave unchanged, while null can be rejected by validation. An explicit new title updates the row. In a concurrent application, a version field can allow conditional updates that report conflict if another writer changed the resource. Verify the exact pre- and post-state of successful and rejected requests. Test independent concerns with cases for missing IDs, wrong tenant, invalid field value, stale version and page size beyond your service's resource policy."
+  },
+  "recap": {
+    "uk": "Сортуй за стабільним ключем, застосовуй область перед лімітом і перевір межі БД у scaffold.",
+    "en": "Order by a stable key, apply scope before the limit, and check real database boundaries in your scaffold."
+  },
+  "objectives": [
+    {
+      "id": "O1",
+      "title": {
+        "uk": "Реалізувати стабільну обмежену пагінацію за унікальним порядком.",
+        "en": "Implement stable bounded list pagination over a unique order."
+      },
+      "skill": "tooling"
+    },
+    {
+      "id": "O2",
+      "title": {
+        "uk": "Перевіряти CRUD проти схеми PostgreSQL Project A.",
+        "en": "Verify CRUD behavior against the Project A PostgreSQL schema."
+      },
+      "skill": "evaluation"
+    }
+  ],
+  "sources": [
+    {
+      "title": {
+        "uk": "PostgreSQL pagination",
+        "en": "PostgreSQL pagination"
+      },
+      "url": "https://www.postgresql.org/docs/17/queries-limit.html",
+      "version": "PostgreSQL 17",
+      "checked": "2026-11-26"
+    },
+    {
+      "title": {
+        "uk": "RFC 9110 · HTTP",
+        "en": "RFC 9110 · HTTP"
+      },
+      "url": "https://www.rfc-editor.org/rfc/rfc9110.html",
+      "version": "RFC 9110",
+      "checked": "2026-11-26"
+    }
+  ],
+  "examples": [
+    {
+      "file": "w04_l04_example.py",
+      "expected": "[(3,), (5,)]",
+      "explanation": {
+        "uk": "Форма SQL повертає рядки після відомого ключа в детермінованому порядку.",
+        "en": "The SQL shape returns rows after a known key in a deterministic order."
+      },
+      "error": {
+        "uk": "Курсор 8 дає порожню сторінку. Застосунок має відхиляти невалідні типи до SQL.",
+        "en": "Using a cursor of 8 gives an empty page. Applications should reject invalid cursor types before SQL execution."
+      }
+    }
+  ],
+  "interview": [
+    "What can change between two offset pages?",
+    "Why fetch one extra row beyond the requested page size?"
+  ],
+  "interviewGuide": {
+    "uk": "Покажи точний ID, який повернеш курсором другої сторінки.",
+    "en": "Show exactly which ID you return as the second-page cursor."
+  },
+  "exercises": [
+    {
+      "id": "W04-L04-E1",
+      "title": {
+        "uk": "Розбити документи на сторінки ID у tenant",
+        "en": "Page documents by ID within a tenant"
+      },
+      "kind": "code",
+      "objectives": [
+        "O1"
+      ],
+      "estimateMinutes": 75,
+      "criteria": [],
+      "example": {
+        "uk": "Для ID 3,5,8 і limit 2 перша сторінка ([3,5],5), після 5 — ([8],None).",
+        "en": "For IDs 3,5,8 and limit 2, first page returns ([3,5],5); after 5 returns ([8],None)."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(db, tenant, after, limit) для SQLite documents(id INTEGER PRIMARY KEY, tenant TEXT). Вимагай int after >= 0 та int limit від 1 до 50. Bool відхиляй ValueError. Поверни (ids, next_cursor) за зростанням, в області tenant і строго після after. Курсор дорівнює останньому поверненому ID тільки за наявності наступного рядка. Використай параметри й не змінюй дані.\n\n**Синтетичні накладні**",
+            "en": "Implement solve(db, tenant, after, limit) for SQLite documents(id INTEGER PRIMARY KEY, tenant TEXT). Require int after >= 0 and int limit between 1 and 50; reject bool by ValueError. Return (ids, next_cursor), sorted ascending, tenant-scoped and strictly greater than after. Return a cursor equal to the last returned ID only if another row exists. Bind parameters and do not mutate data.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Фільтруй дозволені рядки до LIMIT.",
+              "en": "Filter authorized rows before LIMIT."
+            },
+            {
+              "uk": "Запитай limit + 1 рядків і обріж до limit.",
+              "en": "Request limit + 1 rows and slice to limit."
+            },
+            {
+              "uk": "Зайвий рядок показує наявність даних, а курсор є останнім виданим.",
+              "en": "The extra row is evidence of more data, not the cursor."
+            }
+          ],
+          "solution": {
+            "uk": "Під’єднай параметри tenant, курсор і кількість. Поверни останній видимий ключ лише за наявності додаткового рядка.\n\n```python\nimport sqlite3\n\ndef solve(db: sqlite3.Connection, tenant: str, after: int, limit: int) -> tuple[list[int], int | None]:\n    if type(after) is not int or type(limit) is not int or after < 0 or not 1 <= limit <= 50:\n        raise ValueError('invalid pagination')\n    rows = db.execute('SELECT id FROM documents WHERE tenant = ? AND id > ? ORDER BY id LIMIT ?',\n                      (tenant, after, limit + 1)).fetchall()\n    ids = [row[0] for row in rows[:limit]]\n    return ids, ids[-1] if len(rows) > limit else None\n```",
+            "en": "Bind tenant, cursor and count. Return the last visible key only when the lookahead row exists.\n\n```python\nimport sqlite3\n\ndef solve(db: sqlite3.Connection, tenant: str, after: int, limit: int) -> tuple[list[int], int | None]:\n    if type(after) is not int or type(limit) is not int or after < 0 or not 1 <= limit <= 50:\n        raise ValueError('invalid pagination')\n    rows = db.execute('SELECT id FROM documents WHERE tenant = ? AND id > ? ORDER BY id LIMIT ?',\n                      (tenant, after, limit + 1)).fetchall()\n    ids = [row[0] for row in rows[:limit]]\n    return ids, ids[-1] if len(rows) > limit else None\n```"
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(db, tenant, after, limit) для SQLite documents(id INTEGER PRIMARY KEY, tenant TEXT). Вимагай int after >= 0 та int limit від 1 до 50. Bool відхиляй ValueError. Поверни (ids, next_cursor) за зростанням, в області tenant і строго після after. Курсор дорівнює останньому поверненому ID тільки за наявності наступного рядка. Використай параметри й не змінюй дані.\n\n**Синтетичні запити підтримки**",
+            "en": "Implement solve(db, tenant, after, limit) for SQLite documents(id INTEGER PRIMARY KEY, tenant TEXT). Require int after >= 0 and int limit between 1 and 50; reject bool by ValueError. Return (ids, next_cursor), sorted ascending, tenant-scoped and strictly greater than after. Return a cursor equal to the last returned ID only if another row exists. Bind parameters and do not mutate data.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Фільтруй дозволені рядки до LIMIT.",
+              "en": "Filter authorized rows before LIMIT."
+            },
+            {
+              "uk": "Запитай limit + 1 рядків і обріж до limit.",
+              "en": "Request limit + 1 rows and slice to limit."
+            },
+            {
+              "uk": "Зайвий рядок показує наявність даних, а курсор є останнім виданим.",
+              "en": "The extra row is evidence of more data, not the cursor."
+            }
+          ],
+          "solution": {
+            "uk": "Під’єднай параметри tenant, курсор і кількість. Поверни останній видимий ключ лише за наявності додаткового рядка.\n\n```python\nimport sqlite3\n\ndef solve(db: sqlite3.Connection, tenant: str, after: int, limit: int) -> tuple[list[int], int | None]:\n    if type(after) is not int or type(limit) is not int or after < 0 or not 1 <= limit <= 50:\n        raise ValueError('invalid pagination')\n    rows = db.execute('SELECT id FROM documents WHERE tenant = ? AND id > ? ORDER BY id LIMIT ?',\n                      (tenant, after, limit + 1)).fetchall()\n    ids = [row[0] for row in rows[:limit]]\n    return ids, ids[-1] if len(rows) > limit else None\n```",
+            "en": "Bind tenant, cursor and count. Return the last visible key only when the lookahead row exists.\n\n```python\nimport sqlite3\n\ndef solve(db: sqlite3.Connection, tenant: str, after: int, limit: int) -> tuple[list[int], int | None]:\n    if type(after) is not int or type(limit) is not int or after < 0 or not 1 <= limit <= 50:\n        raise ValueError('invalid pagination')\n    rows = db.execute('SELECT id FROM documents WHERE tenant = ? AND id > ? ORDER BY id LIMIT ?',\n                      (tenant, after, limit + 1)).fetchall()\n    ids = [row[0] for row in rows[:limit]]\n    return ids, ids[-1] if len(rows) > limit else None\n```"
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(db, tenant, after, limit) для SQLite documents(id INTEGER PRIMARY KEY, tenant TEXT). Вимагай int after >= 0 та int limit від 1 до 50. Bool відхиляй ValueError. Поверни (ids, next_cursor) за зростанням, в області tenant і строго після after. Курсор дорівнює останньому поверненому ID тільки за наявності наступного рядка. Використай параметри й не змінюй дані.\n\n**Синтетичні документи політик**",
+            "en": "Implement solve(db, tenant, after, limit) for SQLite documents(id INTEGER PRIMARY KEY, tenant TEXT). Require int after >= 0 and int limit between 1 and 50; reject bool by ValueError. Return (ids, next_cursor), sorted ascending, tenant-scoped and strictly greater than after. Return a cursor equal to the last returned ID only if another row exists. Bind parameters and do not mutate data.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Фільтруй дозволені рядки до LIMIT.",
+              "en": "Filter authorized rows before LIMIT."
+            },
+            {
+              "uk": "Запитай limit + 1 рядків і обріж до limit.",
+              "en": "Request limit + 1 rows and slice to limit."
+            },
+            {
+              "uk": "Зайвий рядок показує наявність даних, а курсор є останнім виданим.",
+              "en": "The extra row is evidence of more data, not the cursor."
+            }
+          ],
+          "solution": {
+            "uk": "Під’єднай параметри tenant, курсор і кількість. Поверни останній видимий ключ лише за наявності додаткового рядка.\n\n```python\nimport sqlite3\n\ndef solve(db: sqlite3.Connection, tenant: str, after: int, limit: int) -> tuple[list[int], int | None]:\n    if type(after) is not int or type(limit) is not int or after < 0 or not 1 <= limit <= 50:\n        raise ValueError('invalid pagination')\n    rows = db.execute('SELECT id FROM documents WHERE tenant = ? AND id > ? ORDER BY id LIMIT ?',\n                      (tenant, after, limit + 1)).fetchall()\n    ids = [row[0] for row in rows[:limit]]\n    return ids, ids[-1] if len(rows) > limit else None\n```",
+            "en": "Bind tenant, cursor and count. Return the last visible key only when the lookahead row exists.\n\n```python\nimport sqlite3\n\ndef solve(db: sqlite3.Connection, tenant: str, after: int, limit: int) -> tuple[list[int], int | None]:\n    if type(after) is not int or type(limit) is not int or after < 0 or not 1 <= limit <= 50:\n        raise ValueError('invalid pagination')\n    rows = db.execute('SELECT id FROM documents WHERE tenant = ? AND id > ? ORDER BY id LIMIT ?',\n                      (tenant, after, limit + 1)).fetchall()\n    ids = [row[0] for row in rows[:limit]]\n    return ids, ids[-1] if len(rows) > limit else None\n```"
+          }
+        }
+      ]
+    },
+    {
+      "id": "W04-L04-E2",
+      "title": {
+        "uk": "Зібрати API scaffold Project A",
+        "en": "Deliver the Project A API scaffold"
+      },
+      "kind": "rubric",
+      "objectives": [
+        "O2"
+      ],
+      "estimateMinutes": 70,
+      "criteria": [
+        {
+          "id": "C1",
+          "title": {
+            "uk": "Наведено відтворюваний локальний старт і докази міграцій.",
+            "en": "Provide reproducible local startup and migration evidence."
+          }
+        },
+        {
+          "id": "C2",
+          "title": {
+            "uk": "Показано гілки контракту фактичними HTTP і DB тестами.",
+            "en": "Show all contract branches with actual HTTP and DB tests."
+          }
+        },
+        {
+          "id": "C3",
+          "title": {
+            "uk": "Перевірено стабільний курсор на двох сторінках без дублікатів.",
+            "en": "Verify a stable cursor across two pages without data duplication."
+          }
+        }
+      ],
+      "example": {
+        "uk": "Синтетичний список із трьох рядків дає 2 рядки, курсор і ще 1 на наступній сторінці. Невалідне оновлення не змінює стан.",
+        "en": "A synthetic three-row collection gives 2 rows, a cursor and 1 row on the next page. An invalid update leaves state unchanged."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Створи окремий репозиторій із CRUD документів FastAPI, списком з областю доступу, схемою PostgreSQL, міграціями Alembic і README. Покажи точні запити й тести БД для create/read/update/delete, 400 або 422, 404, конфлікту унікальності й двох сусідніх сторінок. Використай синтетичні документи й очищені докази.\n\n**Синтетичні накладні**",
+            "en": "Create a separate repository with FastAPI document CRUD, a scoped list, PostgreSQL schema, Alembic migrations and a README. Show the exact requests and database test results for valid create/read/update/delete, 400 or 422, 404, a uniqueness conflict and two adjacent pages. Use synthetic documents and record sanitized evidence.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Фіксуй залежності для чистого середовища.",
+              "en": "Keep setup dependencies reproducible in a clean workspace."
+            },
+            {
+              "uk": "Перевір API й збережені записи разом.",
+              "en": "Exercise the API and persistent records together."
+            },
+            {
+              "uk": "Використай додатковий рядок для визначення кінця.",
+              "en": "Use a lookahead row to tell whether a page is final."
+            }
+          ],
+          "solution": {
+            "uk": "Запусти міграції на одноразовій PostgreSQL. У тестах створи синтетичні рядки, прочитай сторінки й онови їх, а потім порівняй фінальний стан БД після прийнятих і відхилених запитів.",
+            "en": "Run the migrations on a disposable PostgreSQL instance. In tests, create synthetic rows, page and update them, then compare final DB state after successful and rejected requests."
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Створи окремий репозиторій із CRUD документів FastAPI, списком з областю доступу, схемою PostgreSQL, міграціями Alembic і README. Покажи точні запити й тести БД для create/read/update/delete, 400 або 422, 404, конфлікту унікальності й двох сусідніх сторінок. Використай синтетичні документи й очищені докази.\n\n**Синтетичні запити підтримки**",
+            "en": "Create a separate repository with FastAPI document CRUD, a scoped list, PostgreSQL schema, Alembic migrations and a README. Show the exact requests and database test results for valid create/read/update/delete, 400 or 422, 404, a uniqueness conflict and two adjacent pages. Use synthetic documents and record sanitized evidence.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Фіксуй залежності для чистого середовища.",
+              "en": "Keep setup dependencies reproducible in a clean workspace."
+            },
+            {
+              "uk": "Перевір API й збережені записи разом.",
+              "en": "Exercise the API and persistent records together."
+            },
+            {
+              "uk": "Використай додатковий рядок для визначення кінця.",
+              "en": "Use a lookahead row to tell whether a page is final."
+            }
+          ],
+          "solution": {
+            "uk": "Запусти міграції на одноразовій PostgreSQL. У тестах створи синтетичні рядки, прочитай сторінки й онови їх, а потім порівняй фінальний стан БД після прийнятих і відхилених запитів.",
+            "en": "Run the migrations on a disposable PostgreSQL instance. In tests, create synthetic rows, page and update them, then compare final DB state after successful and rejected requests."
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Створи окремий репозиторій із CRUD документів FastAPI, списком з областю доступу, схемою PostgreSQL, міграціями Alembic і README. Покажи точні запити й тести БД для create/read/update/delete, 400 або 422, 404, конфлікту унікальності й двох сусідніх сторінок. Використай синтетичні документи й очищені докази.\n\n**Синтетичні документи політик**",
+            "en": "Create a separate repository with FastAPI document CRUD, a scoped list, PostgreSQL schema, Alembic migrations and a README. Show the exact requests and database test results for valid create/read/update/delete, 400 or 422, 404, a uniqueness conflict and two adjacent pages. Use synthetic documents and record sanitized evidence.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Фіксуй залежності для чистого середовища.",
+              "en": "Keep setup dependencies reproducible in a clean workspace."
+            },
+            {
+              "uk": "Перевір API й збережені записи разом.",
+              "en": "Exercise the API and persistent records together."
+            },
+            {
+              "uk": "Використай додатковий рядок для визначення кінця.",
+              "en": "Use a lookahead row to tell whether a page is final."
+            }
+          ],
+          "solution": {
+            "uk": "Запусти міграції на одноразовій PostgreSQL. У тестах створи синтетичні рядки, прочитай сторінки й онови їх, а потім порівняй фінальний стан БД після прийнятих і відхилених запитів.",
+            "en": "Run the migrations on a disposable PostgreSQL instance. In tests, create synthetic rows, page and update them, then compare final DB state after successful and rejected requests."
+          }
+        }
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "id": "Q1",
+      "prompt": {
+        "uk": "Чому сторінковий запит має забезпечити унікальний порядок?",
+        "en": "Why must a paginated query provide a unique ordering?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Рядки з рівним ключем можуть змінити порядок.",
+            "en": "Rows tied on the sort key can otherwise change order."
+          },
+          "explanation": {
+            "uk": "Додатковий ключ прибирає неоднозначність порядку й курсора.",
+            "en": "A tie-breaker makes the cursor and ordering unambiguous."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "LIMIT автоматично сортує за primary key.",
+            "en": "LIMIT automatically sorts by primary key."
+          },
+          "explanation": {
+            "uk": "LIMIT лише обмежує кількість.",
+            "en": "LIMIT only restricts the count."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Інтервал часу гарантує унікальні timestamps.",
+            "en": "A time interval guarantees distinct timestamps."
+          },
+          "explanation": {
+            "uk": "Два записи можуть мати однакову позначку часу.",
+            "en": "Two writes can share a timestamp."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q2",
+      "prompt": {
+        "uk": "Який запис дає наступний курсор за наявності додаткового рядка?",
+        "en": "Which record gives the next cursor if a lookahead exists?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Перший виданий запис.",
+            "en": "The first visible record."
+          },
+          "explanation": {
+            "uk": "Це може повторити решту виданих рядків.",
+            "en": "That can repeat later visible rows."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Останній виданий запис поточної сторінки.",
+            "en": "The last visible record on the current page."
+          },
+          "explanation": {
+            "uk": "Додатковий рядок ще має з’явитись на наступній сторінці.",
+            "en": "The lookahead should still appear on the next page."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Сам додатковий рядок.",
+            "en": "The lookahead record itself."
+          },
+          "explanation": {
+            "uk": "Виключний курсор пропустить рядок.",
+            "en": "An exclusive cursor would skip that row."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q3",
+      "prompt": {
+        "uk": "Коли має працювати tenant-фільтр?",
+        "en": "When should the tenant filter run?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Після видачі всіх рядків клієнту.",
+            "en": "After returning all rows to the client."
+          },
+          "explanation": {
+            "uk": "Це покаже недозволені дані.",
+            "en": "That would expose unauthorized data."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Лише на першій сторінці.",
+            "en": "Only on page one."
+          },
+          "explanation": {
+            "uk": "Кожен запит потребує окремої перевірки області.",
+            "en": "Each request needs independent scoping."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "У запиті з областю доступу, до limit.",
+            "en": "Inside the scoped query, before limit."
+          },
+          "explanation": {
+            "uk": "Лише дозволені рядки займають місце на сторінці.",
+            "en": "Only allowed rows count toward the page."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q4",
+      "prompt": {
+        "uk": "Що доводить відсутність змін стану після відхиленого оновлення?",
+        "en": "What proves a rejected update did not change persistent state?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Порівняй значення БД до й після відхиленого запиту.",
+            "en": "Compare the database values before and after the rejected request."
+          },
+          "explanation": {
+            "uk": "Сам статус не доводить відсутність записів.",
+            "en": "The response code alone says nothing about unintended writes."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Перевір лише HTTP 422.",
+            "en": "Check only that the HTTP response is 422."
+          },
+          "explanation": {
+            "uk": "Відповідь про помилку може приховати побічний ефект.",
+            "en": "A failed response can still mask a bad side effect."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Прочитай лише вивід консолі.",
+            "en": "Read only the console output."
+          },
+          "explanation": {
+            "uk": "Логи можуть не показати зміни й не є канонічним станом БД.",
+            "en": "Logging can omit changes and is not canonical DB state."
+          }
+        }
+      ]
+    }
+  ],
+  "crosslinks": [
+    "W04-L03",
+    "SR-W04"
+  ]
+}

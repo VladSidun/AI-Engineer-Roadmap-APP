@@ -1,0 +1,560 @@
+{
+  "id": "W01-L04",
+  "contentVersion": 1,
+  "objectives": [
+    {
+      "id": "O1",
+      "skill": "diagnostics",
+      "title": {
+        "en": "Convert JSON and CSV with explicit validation",
+        "uk": "Конвертувати JSON і CSV з явною валідацією"
+      }
+    },
+    {
+      "id": "O2",
+      "skill": "tooling",
+      "title": {
+        "en": "Check a JOIN and a mocked HTTP contract",
+        "uk": "Перевірити JOIN та HTTP-контракт із підміною"
+      }
+    },
+    {
+      "id": "O3",
+      "skill": "diagnostics",
+      "title": {
+        "en": "Document observed gaps and measurable repairs",
+        "uk": "Записувати спостережені прогалини та вимірювані кроки"
+      }
+    }
+  ],
+  "overview": {
+    "en": "Set a timer and try both exercises before opening a solution. This lesson measures what you can do independently today. You will convert JSON and CSV, query a tiny relational dataset, parse an HTTP response, and write three tests. Start with a clean workspace. Record your interpreter version, the commands you ran, elapsed time, and the first surprising result. Every input is synthetic and the HTTP response is mocked. A complete suite with failed checks can record a diagnostic gap. A timeout, collection error, skipped check, or empty run requires a retry. You can keep a low initial score and still progress. The quiz checks your reasoning and the final gate checks your reproducible setup and plan for the skills you want to strengthen.",
+    "uk": "Постав таймер і спробуй обидві вправи до відкриття розв’язання. Урок вимірює, що ти можеш зробити самостійно сьогодні. Ти конвертуєш JSON і CSV, виконаєш запит до малої реляційної вибірки, розбереш HTTP-відповідь і напишеш три тести. Почни з чистої робочої папки. Запиши версію інтерпретатора, команди, витрачений час і перший несподіваний результат. Усі дані синтетичні, HTTP-відповідь підмінна. Повний набір із невдалими перевірками може зафіксувати прогалину. Тайм-аут, збій збору тестів, пропущена перевірка або порожній запуск потребують повтору. З низькою першою оцінкою можна рухатися далі. Квіз перевіряє міркування, а випробування — відтворюваність середовища і план розвитку навичок."
+  },
+  "theory": {
+    "en": "### Validate data at the boundary\n\nCSV fields can contain delimiters, quotes and newlines. Splitting a line on commas corrupts a name such as `\"beans,rice\"`. Use the CSV library with `newline=\"\"` and specify UTF-8. CSV gives you a string for a count, whereas JSON may give you a number, Boolean, null, or string. Normalize each input format to the same record with a nonblank name and a nonnegative integer. Python treats a Boolean as a subclass of int, so checking `isinstance(True, int)` does not protect a numeric field from a Boolean. Preserve zero and input order deliberately. This makes the conversion predictable for the next program that reads the file.\n\nThe sequence is **parse → normalize → validate → write**. For example, a valid first row followed by a negative count should cause code 2 and leave no newly created output. That is a stronger guarantee than printing an error after writing the first row. For disk failures in a production system you might need a temporary file and atomic replacement. The diagnostic tests focus on data and argument validation.\n\n### Check a join and an HTTP contract in isolation\n\nAn inner join emits one row per matching pair. A result with no topic disappears. Add a second result for a matching topic to observe that the join preserves multiplicity. Use explicit `ORDER BY` when a sequence matters, and bind values as query parameters. The example uses SQLite in memory. The schema and rows are created afresh for every run.\n\nAn HTTP test has separate transport and payload concerns. Set a timeout, close the response through a context manager, parse JSON and check the top-level value against the contract. A body of `[]` parses successfully and still violates the requirement for an object. Replace the opener in the test and supply a fixed byte stream. The mock checks behavior under conditions you control. DNS, certificate handling, and a production service require separate checks.\n\n### Turn the result into a plan\n\nWrite independent tests for an empty join, a valid object, and an invalid array. Give each a fresh fixture and one outcome you can explain. When debugging, vary one input at a time. A useful log row records the observed case, expected result, actual result, time spent, and a next experiment. An example: `CSV quoting | expected one name | saw two columns | 20 min | use DictReader and run a round trip with the same fixture`.\n\nIf you get stuck, run the downloadable trace, print the keys and types of one JSON row, or inspect the type produced by parsing a mocked response. Then try the actual suite and record where you stopped. Keep the first results in your log and give each next step a measurable finish. A later success against a different fixture gives better evidence of transfer than running just the old example.",
+    "uk": "### Валідуй дані на вході\n\nПоля CSV можуть містити роздільники, лапки й переноси рядків. Поділ за комою зіпсує назву на кшталт `\"beans,rice\"`. Використовуй бібліотеку CSV з `newline=\"\"` і вказуй UTF-8. Для кількості CSV дає рядок, а JSON може дати число, булеве значення, null або рядок. Нормалізуй обидва формати до запису з непорожньою назвою й невід’ємним цілим числом. У Python булевий тип успадковано від int, тому `isinstance(True, int)` не відхиляє True у числовому полі. Явно зберігай нуль і порядок входу, щоб наступна програма одержала передбачуваний результат.\n\nПослідовність дій **читання → нормалізація → валідація → запис**. Валідний перший рядок і від’ємна кількість у другому мають дати код 2 без створення нового виходу. Простий вивід помилки після запису першого рядка цього не гарантує. Для збоїв диска в робочій системі можуть знадобитися тимчасовий файл і атомарна заміна. Діагностичні тести зосереджені на даних та аргументах.\n\n### Ізолюй JOIN та HTTP-контракт\n\nВнутрішнє з’єднання повертає рядок на кожну пару зі збігом. Якщо теми для результату немає, він зникає. Додай другий результат до відповідної теми, щоб побачити кратність. Явно задавай `ORDER BY`, якщо важлива послідовність, і передавай значення параметрами запиту. Приклад використовує SQLite у пам’яті. Схема і рядки створюються для кожного запуску.\n\nHTTP-тест має окремі питання транспорту й контракту даних. Задай тайм-аут, закрий відповідь контекстним менеджером, розбери JSON та перевір тип верхнього рівня. Тіло `[]` успішно парситься, але порушує вимогу об’єкта. Підміни функцію відкриття і передай фіксовані байти. Підміна перевіряє поведінку в контрольованих умовах. DNS, сертифікати й робочий сервіс потребують окремої перевірки.\n\n### Перетвори результат на план\n\nНапиши незалежні тести порожнього з’єднання, валідного об’єкта й невалідного масиву. Для кожного створи свіжу фікстуру й перевір один результат, який можеш пояснити. Для налагодження змінюй по одному входу. Корисний запис містить випадок, очікування, фактичний результат, витрачений час і наступний експеримент. Наприклад: `Лапки CSV | очікував одну назву | побачив два стовпці | 20 хв | використати DictReader і перевірити перетворення в обидва боки`.\n\nЯкщо застряг, запусти завантажуваний приклад, виведи ключі й типи одного рядка JSON або перевір тип розібраної підмінної відповіді. Потім запусти справжній набір і занотуй, де зупинився. Збережи перший результат і визнач критерій завершення наступного кроку. Успіх на іншій фікстурі краще демонструє перенесення навички, ніж сам повтор старого прикладу."
+  },
+  "recap": {
+    "en": "Use format-aware parsing, explicit join ordering, mocked transport and small fixtures. Convert each observed gap into a time-boxed action with a measurable result.",
+    "uk": "Використовуй парсинг за форматом, явне сортування JOIN, підмінний транспорт і малі фікстури. Перетворюй кожну спостережену прогалину на обмежену в часі дію з вимірюваним результатом."
+  },
+  "interview": [
+    "How would you test an HTTP payload contract without a network?",
+    "Why does an inner join omit unmatched records?",
+    "What would prove that CSV quoting survives a round trip?"
+  ],
+  "interviewGuide": {
+    "en": "Include a fixture, expected result and one limit of your check.",
+    "uk": "Назви фікстуру, очікуваний результат і одне обмеження перевірки."
+  },
+  "sources": [
+    {
+      "title": {
+        "en": "CSV",
+        "uk": "CSV"
+      },
+      "url": "https://docs.python.org/3.12/library/csv.html",
+      "version": "Python 3.12",
+      "checked": "2026-11-26"
+    },
+    {
+      "title": {
+        "en": "SQLite",
+        "uk": "SQLite"
+      },
+      "url": "https://docs.python.org/3.12/library/sqlite3.html",
+      "version": "Python 3.12",
+      "checked": "2026-11-26"
+    },
+    {
+      "title": {
+        "en": "HTTP requests",
+        "uk": "Запити HTTP"
+      },
+      "url": "https://docs.python.org/3.12/library/urllib.request.html",
+      "version": "Python 3.12",
+      "checked": "2026-11-26"
+    }
+  ],
+  "examples": [
+    {
+      "file": "join_trace.py",
+      "explanation": {
+        "en": "The in-memory tables contain one matched result and one orphan. The JOIN emits only the matched pair.",
+        "uk": "Таблиці в пам’яті містять результат зі збігом і запис без теми. JOIN повертає лише пару зі збігом."
+      },
+      "expected": "[('SQL', 2)]",
+      "error": {
+        "en": "Run `python join_trace.py --topic 99` for `[]`. Run `python join_trace.py --topic xyz` for an argument validation error.",
+        "uk": "Запусти `python join_trace.py --topic 99` для `[]` і `python join_trace.py --topic xyz` для помилки валідації аргументу."
+      }
+    }
+  ],
+  "questions": [
+    {
+      "id": "Q1",
+      "prompt": {
+        "en": "Which approach preserves a quoted comma?",
+        "uk": "Що збереже кому в лапках?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "en": "Split at every comma",
+            "uk": "Поділ за кожною комою"
+          },
+          "explanation": {
+            "en": "A quoted delimiter belongs to the field.",
+            "uk": "Роздільник у лапках належить полю."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "en": "Strip every quote first",
+            "uk": "Спочатку прибрати лапки"
+          },
+          "explanation": {
+            "en": "Quotes carry field boundary information.",
+            "uk": "Лапки допомагають визначити межі поля."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "en": "Use csv.DictReader",
+            "uk": "Використати csv.DictReader"
+          },
+          "explanation": {
+            "en": "The reader handles quoting and maps column names.",
+            "uk": "Парсер обробляє лапки й назви стовпців."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q2",
+      "prompt": {
+        "en": "An inner join sees a result with no topic. What happens?",
+        "uk": "Результат не має теми. Що робить внутрішнє з’єднання?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "en": "The result is omitted",
+            "uk": "Результат пропущено"
+          },
+          "explanation": {
+            "en": "Only matching pairs appear.",
+            "uk": "З’являються лише пари зі збігом."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "en": "A NULL topic is generated",
+            "uk": "Створюється тема NULL"
+          },
+          "explanation": {
+            "en": "Unmatched rows require an outer join.",
+            "uk": "Записи без збігу потребують зовнішнього з’єднання."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "en": "A new topic is inserted",
+            "uk": "Додається нова тема"
+          },
+          "explanation": {
+            "en": "SELECT does not insert records.",
+            "uk": "SELECT не додає записи."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q3",
+      "prompt": {
+        "en": "Which actions belong in a deterministic payload contract test?",
+        "uk": "Які дії доречні в детермінованій перевірці вмісту?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "B",
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "en": "Query a public service",
+            "uk": "Запитати публічний сервіс"
+          },
+          "explanation": {
+            "en": "The public service can change.",
+            "uk": "Зовнішній сервіс може змінитися."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "en": "Substitute fixed response bytes",
+            "uk": "Підмінити байти фіксованою відповіддю"
+          },
+          "explanation": {
+            "en": "The test controls the input.",
+            "uk": "Тест контролює вхід."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "en": "Assert rejection of a top-level array",
+            "uk": "Перевірити відхилення масиву верхнього рівня"
+          },
+          "explanation": {
+            "en": "This exercises the object boundary.",
+            "uk": "Так перевіряється вимога об’єкта."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q4",
+      "prompt": {
+        "en": "What is most useful after one complete suite fails?",
+        "uk": "Що найкорисніше після невдалого повного запуску?"
+      },
+      "objectives": [
+        "O3"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "en": "Only the success percentage",
+            "uk": "Лише відсоток успіху"
+          },
+          "explanation": {
+            "en": "A percentage cannot reproduce the case.",
+            "uk": "Відсоток не відтворює випадок."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "en": "The observed case and a measurable next check",
+            "uk": "Спостережений випадок і вимірювана наступна перевірка"
+          },
+          "explanation": {
+            "en": "It connects the gap to an experiment.",
+            "uk": "Це пов’язує прогалину з експериментом."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "en": "A run using the reference implementation",
+            "uk": "Запуск еталонної реалізації"
+          },
+          "explanation": {
+            "en": "That checks the suite rather than your skill gap.",
+            "uk": "Так перевіряють набір тестів, а не власну прогалину."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q5",
+      "prompt": {
+        "en": "Why validate every row before writing?",
+        "uk": "Навіщо перевіряти всі рядки до запису?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "en": "Avoid new output on an input validation error",
+            "uk": "Не створювати вихід за невалідного вводу"
+          },
+          "explanation": {
+            "en": "Validation can stop before output is touched.",
+            "uk": "Валідація може зупинити роботу до запису."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "en": "Make the input file smaller",
+            "uk": "Зменшити вхідний файл"
+          },
+          "explanation": {
+            "en": "Validation does not change its size.",
+            "uk": "Валідація не змінює розміру."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "en": "Hide errors from the caller",
+            "uk": "Приховати помилки від виклику"
+          },
+          "explanation": {
+            "en": "Return the specified error status.",
+            "uk": "Поверни визначений статус помилки."
+          }
+        }
+      ]
+    }
+  ],
+  "exercises": [
+    {
+      "id": "W01-L04-E1",
+      "title": {
+        "en": "JSON/CSV converter",
+        "uk": "Конвертер JSON/CSV"
+      },
+      "kind": "code",
+      "diagnostic": true,
+      "criteria": [],
+      "objectives": [
+        "O1",
+        "O3"
+      ],
+      "estimateMinutes": 95,
+      "example": {
+        "en": "A row named `beans,rice` with count 0 survives a round trip. A negative count returns 2.",
+        "uk": "Рядок `beans,rice` з кількістю 0 переживає конвертацію в обидва боки. Від’ємне число дає 2."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "en": "Orchid",
+            "uk": "Орхідея"
+          },
+          "prompt": {
+            "en": "Implement `main(argv: list[str]) -> int` in `convert.py`. Read exactly two paths and convert .json to .csv or .csv to .json. Records have a nonblank string `name` and a nonnegative integer `count`. Use UTF-8 and CSV columns `name,count`. Preserve order, Unicode, quoting and zero. Return 0 on success, 2 for invalid input or arguments. Validate before opening the output. Record time and case results.\n\nTry an orchid row with count 1 first.",
+            "uk": "Реалізуй `main(argv: list[str]) -> int` у `convert.py`. Прийми рівно два шляхи й конвертуй .json у .csv або .csv у .json. Записи мають непорожній рядок `name` і невід’ємне ціле `count`. Використовуй UTF-8 і стовпці `name,count`. Зберігай порядок, Unicode, лапки й нуль. Повертай 0 за успіху, 2 за помилки вводу або аргументів. Валідуй до відкриття виходу. Запиши час і результати.\n\nПочни з orchid і кількості 1."
+          },
+          "hints": [
+            {
+              "en": "Normalize both inputs before writing.",
+              "uk": "Нормалізуй обидва входи до запису."
+            },
+            {
+              "en": "Use DictReader and convert CSV counts to integers.",
+              "uk": "Використовуй DictReader і перетворюй числа з CSV на цілі."
+            },
+            {
+              "en": "Reject booleans with `type(count) is not int` beyond CSV parsing.",
+              "uk": "Після парсингу відхиляй булеві через `type(count) is not int`."
+            }
+          ],
+          "solution": {
+            "en": "Read by suffix. Normalize and validate all rows. Write using DictWriter or json.dump with fixed fields and UTF-8. Try an orchid row with count 1 first.",
+            "uk": "Читай за суфіксом. Нормалізуй і перевір всі рядки. Запиши через DictWriter або json.dump із заданими полями й UTF-8. Почни з orchid і кількості 1."
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "en": "Maple",
+            "uk": "Клен"
+          },
+          "prompt": {
+            "en": "Implement `main(argv: list[str]) -> int` in `convert.py`. Read exactly two paths and convert .json to .csv or .csv to .json. Records have a nonblank string `name` and a nonnegative integer `count`. Use UTF-8 and CSV columns `name,count`. Preserve order, Unicode, quoting and zero. Return 0 on success, 2 for invalid input or arguments. Validate before opening the output. Record time and case results.\n\nTry a maple CSV row with count 2.",
+            "uk": "Реалізуй `main(argv: list[str]) -> int` у `convert.py`. Прийми рівно два шляхи й конвертуй .json у .csv або .csv у .json. Записи мають непорожній рядок `name` і невід’ємне ціле `count`. Використовуй UTF-8 і стовпці `name,count`. Зберігай порядок, Unicode, лапки й нуль. Повертай 0 за успіху, 2 за помилки вводу або аргументів. Валідуй до відкриття виходу. Запиши час і результати.\n\nСпробуй рядок CSV maple з кількістю 2."
+          },
+          "hints": [
+            {
+              "en": "Normalize both inputs before writing.",
+              "uk": "Нормалізуй обидва входи до запису."
+            },
+            {
+              "en": "Use DictReader and convert CSV counts to integers.",
+              "uk": "Використовуй DictReader і перетворюй числа з CSV на цілі."
+            },
+            {
+              "en": "Reject booleans with `type(count) is not int` beyond CSV parsing.",
+              "uk": "Після парсингу відхиляй булеві через `type(count) is not int`."
+            }
+          ],
+          "solution": {
+            "en": "Read by suffix. Normalize and validate all rows. Write using DictWriter or json.dump with fixed fields and UTF-8. Try a maple CSV row with count 2.",
+            "uk": "Читай за суфіксом. Нормалізуй і перевір всі рядки. Запиши через DictWriter або json.dump із заданими полями й UTF-8. Спробуй рядок CSV maple з кількістю 2."
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "en": "Cedar",
+            "uk": "Кедр"
+          },
+          "prompt": {
+            "en": "Implement `main(argv: list[str]) -> int` in `convert.py`. Read exactly two paths and convert .json to .csv or .csv to .json. Records have a nonblank string `name` and a nonnegative integer `count`. Use UTF-8 and CSV columns `name,count`. Preserve order, Unicode, quoting and zero. Return 0 on success, 2 for invalid input or arguments. Validate before opening the output. Record time and case results.\n\nTry a name containing a separator, such as cedar,iris.",
+            "uk": "Реалізуй `main(argv: list[str]) -> int` у `convert.py`. Прийми рівно два шляхи й конвертуй .json у .csv або .csv у .json. Записи мають непорожній рядок `name` і невід’ємне ціле `count`. Використовуй UTF-8 і стовпці `name,count`. Зберігай порядок, Unicode, лапки й нуль. Повертай 0 за успіху, 2 за помилки вводу або аргументів. Валідуй до відкриття виходу. Запиши час і результати.\n\nСпробуй назву з роздільником, наприклад cedar,iris."
+          },
+          "hints": [
+            {
+              "en": "Normalize both inputs before writing.",
+              "uk": "Нормалізуй обидва входи до запису."
+            },
+            {
+              "en": "Use DictReader and convert CSV counts to integers.",
+              "uk": "Використовуй DictReader і перетворюй числа з CSV на цілі."
+            },
+            {
+              "en": "Reject booleans with `type(count) is not int` beyond CSV parsing.",
+              "uk": "Після парсингу відхиляй булеві через `type(count) is not int`."
+            }
+          ],
+          "solution": {
+            "en": "Read by suffix. Normalize and validate all rows. Write using DictWriter or json.dump with fixed fields and UTF-8. Try a name containing a separator, such as cedar,iris.",
+            "uk": "Читай за суфіксом. Нормалізуй і перевір всі рядки. Запиши через DictWriter або json.dump із заданими полями й UTF-8. Спробуй назву з роздільником, наприклад cedar,iris."
+          }
+        }
+      ]
+    },
+    {
+      "id": "W01-L04-E2",
+      "title": {
+        "en": "SQL, HTTP and independent tests",
+        "uk": "SQL, HTTP і самостійні тести"
+      },
+      "kind": "code",
+      "diagnostic": true,
+      "criteria": [],
+      "objectives": [
+        "O2",
+        "O3"
+      ],
+      "estimateMinutes": 120,
+      "example": {
+        "en": "One matched row and one orphan produce one joined pair. Mock a valid object and expect ValueError for an array.",
+        "uk": "Один збіг і один запис без теми дають одну пару. Підміни валідний об’єкт і очікуй ValueError для масиву."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "en": "Orchid",
+            "uk": "Орхідея"
+          },
+          "prompt": {
+            "en": "Complete `diagnostic.py`. Implement `join_scores(connection)` for `topics(id, name)` and `results(topic_id, score)`: return inner-joined (name, score) ordered by name and score. Implement `fetch_json(url)` with `urllib.request.urlopen(url, timeout=2)` and a context manager. Raise ValueError for a non-object JSON payload. Write three tests named `test_empty_join`, `test_valid_payload`, `test_invalid_payload`. Use SQLite in memory and fake HTTP bytes. Log the gaps and one follow-up per gap.\n\nCheck a single matched orchid topic.",
+            "uk": "Доповни `diagnostic.py`. Реалізуй `join_scores(connection)` для `topics(id, name)` і `results(topic_id, score)`: поверни пари (назва, оцінка) через внутрішнє з’єднання з сортуванням за обома полями. Реалізуй `fetch_json(url)` через `urllib.request.urlopen(url, timeout=2)` і контекстний менеджер. Для JSON без об’єкта повертай помилку ValueError. Напиши `test_empty_join`, `test_valid_payload`, `test_invalid_payload`. Використай SQLite в пам’яті й підмінні байти HTTP. Занотуй прогалини й наступні дії.\n\nПеревір один збіг теми orchid."
+          },
+          "hints": [
+            {
+              "en": "Match two IDs and check the payload separately.",
+              "uk": "Зістав два ID і перевір тіло окремо."
+            },
+            {
+              "en": "Use `patch('urllib.request.urlopen', ...)` with a byte stream.",
+              "uk": "Використай `patch('urllib.request.urlopen', ...)` з потоком байтів."
+            },
+            {
+              "en": "Join on `topics.id = results.topic_id`; load JSON inside `with`.",
+              "uk": "З’єднуй за `topics.id = results.topic_id`; завантаж JSON у `with`."
+            }
+          ],
+          "solution": {
+            "en": "Use JOIN and ORDER BY. In the client, close the byte stream and require a dict. Seed independent fixtures for each of the three tests. Check a single matched orchid topic.",
+            "uk": "Використай JOIN і ORDER BY. У клієнті закривай потік і вимагай dict. Побудуй незалежні фікстури для трьох тестів. Перевір один збіг теми orchid."
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "en": "Maple",
+            "uk": "Клен"
+          },
+          "prompt": {
+            "en": "Complete `diagnostic.py`. Implement `join_scores(connection)` for `topics(id, name)` and `results(topic_id, score)`: return inner-joined (name, score) ordered by name and score. Implement `fetch_json(url)` with `urllib.request.urlopen(url, timeout=2)` and a context manager. Raise ValueError for a non-object JSON payload. Write three tests named `test_empty_join`, `test_valid_payload`, `test_invalid_payload`. Use SQLite in memory and fake HTTP bytes. Log the gaps and one follow-up per gap.\n\nCheck two maple scores and an orphan.",
+            "uk": "Доповни `diagnostic.py`. Реалізуй `join_scores(connection)` для `topics(id, name)` і `results(topic_id, score)`: поверни пари (назва, оцінка) через внутрішнє з’єднання з сортуванням за обома полями. Реалізуй `fetch_json(url)` через `urllib.request.urlopen(url, timeout=2)` і контекстний менеджер. Для JSON без об’єкта повертай помилку ValueError. Напиши `test_empty_join`, `test_valid_payload`, `test_invalid_payload`. Використай SQLite в пам’яті й підмінні байти HTTP. Занотуй прогалини й наступні дії.\n\nПеревір дві оцінки maple й запис без теми."
+          },
+          "hints": [
+            {
+              "en": "Match two IDs and check the payload separately.",
+              "uk": "Зістав два ID і перевір тіло окремо."
+            },
+            {
+              "en": "Use `patch('urllib.request.urlopen', ...)` with a byte stream.",
+              "uk": "Використай `patch('urllib.request.urlopen', ...)` з потоком байтів."
+            },
+            {
+              "en": "Join on `topics.id = results.topic_id`; load JSON inside `with`.",
+              "uk": "З’єднуй за `topics.id = results.topic_id`; завантаж JSON у `with`."
+            }
+          ],
+          "solution": {
+            "en": "Use JOIN and ORDER BY. In the client, close the byte stream and require a dict. Seed independent fixtures for each of the three tests. Check two maple scores and an orphan.",
+            "uk": "Використай JOIN і ORDER BY. У клієнті закривай потік і вимагай dict. Побудуй незалежні фікстури для трьох тестів. Перевір дві оцінки maple й запис без теми."
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "en": "Cedar",
+            "uk": "Кедр"
+          },
+          "prompt": {
+            "en": "Complete `diagnostic.py`. Implement `join_scores(connection)` for `topics(id, name)` and `results(topic_id, score)`: return inner-joined (name, score) ordered by name and score. Implement `fetch_json(url)` with `urllib.request.urlopen(url, timeout=2)` and a context manager. Raise ValueError for a non-object JSON payload. Write three tests named `test_empty_join`, `test_valid_payload`, `test_invalid_payload`. Use SQLite in memory and fake HTTP bytes. Log the gaps and one follow-up per gap.\n\nCheck that a nested array inside an object is valid.",
+            "uk": "Доповни `diagnostic.py`. Реалізуй `join_scores(connection)` для `topics(id, name)` і `results(topic_id, score)`: поверни пари (назва, оцінка) через внутрішнє з’єднання з сортуванням за обома полями. Реалізуй `fetch_json(url)` через `urllib.request.urlopen(url, timeout=2)` і контекстний менеджер. Для JSON без об’єкта повертай помилку ValueError. Напиши `test_empty_join`, `test_valid_payload`, `test_invalid_payload`. Використай SQLite в пам’яті й підмінні байти HTTP. Занотуй прогалини й наступні дії.\n\nПеревір, що вкладений масив всередині об’єкта валідний."
+          },
+          "hints": [
+            {
+              "en": "Match two IDs and check the payload separately.",
+              "uk": "Зістав два ID і перевір тіло окремо."
+            },
+            {
+              "en": "Use `patch('urllib.request.urlopen', ...)` with a byte stream.",
+              "uk": "Використай `patch('urllib.request.urlopen', ...)` з потоком байтів."
+            },
+            {
+              "en": "Join on `topics.id = results.topic_id`; load JSON inside `with`.",
+              "uk": "З’єднуй за `topics.id = results.topic_id`; завантаж JSON у `with`."
+            }
+          ],
+          "solution": {
+            "en": "Use JOIN and ORDER BY. In the client, close the byte stream and require a dict. Seed independent fixtures for each of the three tests. Check that a nested array inside an object is valid.",
+            "uk": "Використай JOIN і ORDER BY. У клієнті закривай потік і вимагай dict. Побудуй незалежні фікстури для трьох тестів. Перевір, що вкладений масив всередині об’єкта валідний."
+          }
+        }
+      ]
+    }
+  ],
+  "crosslinks": [
+    "W01-L03",
+    "SR-W01",
+    "G-M0"
+  ]
+}

@@ -1,0 +1,817 @@
+{
+  "id": "G-M0",
+  "contentVersion": 1,
+  "objectives": [
+    {
+      "id": "O1",
+      "skill": "systems",
+      "title": {
+        "en": "Explain the model and system boundary with evidence",
+        "uk": "Пояснити межу між моделлю і системою з доказами"
+      }
+    },
+    {
+      "id": "O2",
+      "skill": "tooling",
+      "title": {
+        "en": "Reproduce a small environment and check a new fixture",
+        "uk": "Відтворити мале середовище й перевірити нову фікстуру"
+      }
+    },
+    {
+      "id": "O3",
+      "skill": "diagnostics",
+      "title": {
+        "en": "Defend a result and turn a gap into a measurable step",
+        "uk": "Обґрунтувати результат і перетворити прогалину на вимірюваний крок"
+      }
+    }
+  ],
+  "sources": [
+    {
+      "title": {
+        "en": "Recording Git changes",
+        "uk": "Запис змін у Git"
+      },
+      "url": "https://git-scm.com/book/en/v2/Git-Basics-Recording-Changes-to-the-Repository",
+      "version": "Pro Git 2",
+      "checked": "2026-11-26"
+    },
+    {
+      "title": {
+        "en": "Assertions in pytest",
+        "uk": "Перевірки в pytest"
+      },
+      "url": "https://docs.pytest.org/en/stable/how-to/assert.html",
+      "version": "pytest stable",
+      "checked": "2026-11-26"
+    }
+  ],
+  "examples": [],
+  "overview": {
+    "en": "Complete M0 by making your learning setup reproducible and turning your diagnostic findings into a concrete plan. The final challenge exercises a small workspace check locally in your own IDE. In your private learning log, keep the setup commands, one real run, the diagnostic evidence and the next experiment for each gap. Use the rubric to attest to those artifacts and pass the cumulative quiz. Your original diagnostic correctness is not part of the gate score.",
+    "uk": "Заверши M0, відтворивши навчальне середовище та перетворивши діагностичні результати на конкретний план. Фінальна вправа запускає перевірку робочої папки локально у твоєму IDE. У приватному learning log збережи команди налаштування, реальний запуск, діагностичні докази й наступний експеримент для кожної прогалини. Підтвердь артефакти за рубрикою і склади підсумковий квіз. Правильність першої діагностики не впливає на оцінку випробування."
+  },
+  "theory": {
+    "en": "### Reproduce, observe, decide\n\nCreate a learning-log repository with instructions that start in an empty directory or a fresh local clone. Name the interpreter and how to install dependencies. Run the workspace smoke test, then repeat the documented process in a fresh directory. Keep any real tokens outside version control. A smoke test verifies that the shared path can read, validate and summarize a small fixture. Document the result and limits of the check. A passing smoke test says little about production behavior or hiring readiness.\n\nWrite each gap as a testable hypothesis. If quoting caused an error, arrange another quoted input and specify the expected count and name. If a skill was untested, record that explicitly and schedule a first observation. Pick a short task that fits your week and name the signal for completion. Keep the original diagnostic observations beside the new plan so you can see what changed.",
+    "uk": "### Відтвори, спостерігай, виріши\n\nСтвори репозиторій learning-log з інструкціями від порожньої папки або свіжого локального клону. Назви інтерпретатор і спосіб встановлення залежностей. Запусти smoke test робочої папки, потім повтори задокументований процес у свіжій папці. Справжні токени тримай поза Git. Smoke test перевіряє, що спільний шлях читає, валідує та підсумовує малу фікстуру. Занотуй результат і межі. Така перевірка мало говорить про робочу систему чи готовність до найму.\n\nСформулюй кожну прогалину як гіпотезу для перевірки. Якщо лапки дали помилку, створи інший вхід у лапках і вкажи очікувані назву й кількість. Якщо навичка не перевірялася, явно запиши це й заплануй перше спостереження. Обери коротку задачу в межах тижня й назви ознаку завершення. Збережи перші діагностичні записи поряд із новим планом, щоб бачити, що змінилося."
+  },
+  "recap": {
+    "en": "Finish the smoke test, rehearse a clean start, and use actual diagnostic evidence for a focused weekly plan.",
+    "uk": "Заверши smoke test, відтвори запуск з нуля і побудуй фокусований тижневий план на фактичних діагностичних доказах."
+  },
+  "interview": [
+    "How can someone reproduce your lab in a new directory?",
+    "What is the most important gap from the diagnostic, and how will you verify progress?"
+  ],
+  "interviewGuide": {
+    "en": "Explain how the new run can be checked and include a limit of your evidence.",
+    "uk": "Поясни, як перевірити новий запуск, і назви обмеження доказу."
+  },
+  "questions": [
+    {
+      "id": "Q1",
+      "prompt": {
+        "en": "The smoke test reads one 15-minute item and one 30-minute item. Which summary is correct?",
+        "uk": "Smoke test читає один пункт на 15 хв і один на 30 хв. Який підсумок правильний?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "en": "2 items, 30 minutes",
+            "uk": "2 пункти, 30 хв"
+          },
+          "explanation": {
+            "en": "That is the last value rather than the total.",
+            "uk": "Це останнє значення замість суми."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "en": "2 items, 45 minutes",
+            "uk": "2 пункти, 45 хв"
+          },
+          "explanation": {
+            "en": "Both records count and their minutes sum to 45.",
+            "uk": "Враховано обидва записи, сума дорівнює 45."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "en": "45 items, 2 minutes",
+            "uk": "45 пунктів, 2 хв"
+          },
+          "explanation": {
+            "en": "The two output quantities have different meanings.",
+            "uk": "Дві вихідні величини мають різний зміст."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q2",
+      "prompt": {
+        "en": "Your JSON fixture has minutes: true. What outcome fits the workspace contract?",
+        "uk": "У фікстурі JSON є minutes: true. Що відповідає контракту?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "en": "ValueError",
+            "uk": "ValueError"
+          },
+          "explanation": {
+            "en": "A Boolean does not represent an allowed duration.",
+            "uk": "Булеве значення не є допустимою тривалістю."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "en": "Accept as one minute",
+            "uk": "Прийняти як одну хвилину"
+          },
+          "explanation": {
+            "en": "Python's numeric relationship is wider than this contract.",
+            "uk": "Числові правила Python ширші за цей контракт."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "en": "Ignore the row silently",
+            "uk": "Мовчки пропустити рядок"
+          },
+          "explanation": {
+            "en": "The task calls for a clear validation failure.",
+            "uk": "Задача вимагає явної помилки валідації."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q3",
+      "prompt": {
+        "en": "Which two things help a new local clone reproduce the smoke test?",
+        "uk": "Які дві речі допомагають повторити smoke test зі свіжого локального клону?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "A",
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "en": "Document interpreter and dependency installation",
+            "uk": "Описати інтерпретатор і встановлення залежностей"
+          },
+          "explanation": {
+            "en": "The next run can rebuild the environment.",
+            "uk": "Наступний запуск може відтворити середовище."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "en": "Save a live runner token in Git",
+            "uk": "Зберегти активний токен Runner у Git"
+          },
+          "explanation": {
+            "en": "Credentials should stay in the terminal environment.",
+            "uk": "Облікові дані мають лишатися у змінних термінала."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "en": "Keep a synthetic input and the exact test command",
+            "uk": "Зберегти синтетичний вхід і точну команду тесту"
+          },
+          "explanation": {
+            "en": "The input and command define what to reproduce.",
+            "uk": "Вхід і команда визначають, що відтворити."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q4",
+      "prompt": {
+        "en": "This time every diagnostic case ran and two failed. What should remain in the learning log?",
+        "uk": "Цього разу усі діагностичні випадки виконались, а два не пройшли. Що лишити в learning log?"
+      },
+      "objectives": [
+        "O3"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "en": "Only the final competency level",
+            "uk": "Лише фінальний рівень компетентності"
+          },
+          "explanation": {
+            "en": "This small suite cannot establish overall competence.",
+            "uk": "Малий набір не визначає загальної компетентності."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "en": "A newer success in place of the baseline",
+            "uk": "Новий успіх замість початкового результату"
+          },
+          "explanation": {
+            "en": "Keep both observations for a useful comparison.",
+            "uk": "Обидва спостереження потрібні для порівняння."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "en": "Initial failures, conditions and a separate follow-up",
+            "uk": "Початкові помилки, умови й окремий наступний крок"
+          },
+          "explanation": {
+            "en": "The original outcome shows which repair to test.",
+            "uk": "Початковий результат показує, яке виправлення перевірити."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q5",
+      "prompt": {
+        "en": "A deterministic rule catches empty fields after generation. Which part generates the text?",
+        "uk": "Після генерації детерміноване правило відхиляє порожні поля. Яка частина генерує текст?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "en": "The format checker",
+            "uk": "Перевірка формату"
+          },
+          "explanation": {
+            "en": "The checker applies a rule to existing output.",
+            "uk": "Перевірка застосовує правило до вже створеного результату."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "en": "The model during inference",
+            "uk": "Модель під час inference"
+          },
+          "explanation": {
+            "en": "Inference produces outputs from an input and learned parameters.",
+            "uk": "Inference створює результат із входу й навчених параметрів."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "en": "The eval dataset",
+            "uk": "Набір оцінювання"
+          },
+          "explanation": {
+            "en": "The dataset supplies cases and expectations.",
+            "uk": "Набір постачає приклади й очікування."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q6",
+      "prompt": {
+        "en": "Which outcome can you actually claim after a clean run with mocked HTTP?",
+        "uk": "Що можна стверджувати після чистого запуску з підмінним HTTP?"
+      },
+      "objectives": [
+        "O3"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "en": "A documented local response contract was exercised",
+            "uk": "Задокументований локальний контракт відповіді перевірено"
+          },
+          "explanation": {
+            "en": "The fixture controls transport and tests the programmed expectation.",
+            "uk": "Підміна контролює транспорт і перевіряє задане очікування."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "en": "Provider uptime is known",
+            "uk": "Доступність провайдера відома"
+          },
+          "explanation": {
+            "en": "The provider was not contacted.",
+            "uk": "Звернення до провайдера не було."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "en": "All possible inputs work",
+            "uk": "Працюють усі можливі входи"
+          },
+          "explanation": {
+            "en": "The checked examples cover a subset of inputs.",
+            "uk": "Перевірені приклади охоплюють частину входів."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q7",
+      "prompt": {
+        "en": "The plan file is missing. How should the smoke-test function signal it?",
+        "uk": "Файл плану відсутній. Як функція smoke test має це повідомити?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "en": "Return an empty plan",
+            "uk": "Повернути порожній план"
+          },
+          "explanation": {
+            "en": "An absent file differs observably from a valid empty list.",
+            "uk": "Відсутній файл відрізняється від валідного порожнього списку."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "en": "Prompt for an arbitrary URL",
+            "uk": "Попросити довільну URL"
+          },
+          "explanation": {
+            "en": "The contract takes a local path.",
+            "uk": "Контракт приймає локальний шлях."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "en": "Propagate FileNotFoundError",
+            "uk": "Передати FileNotFoundError назовні"
+          },
+          "explanation": {
+            "en": "The caller can distinguish missing input from malformed content.",
+            "uk": "Виклик розрізнить відсутність вводу та невалідний вміст."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q8",
+      "prompt": {
+        "en": "An empty JOIN is your biggest SQL gap. Which next step has a completion signal?",
+        "uk": "Порожній JOIN — головна прогалина SQL. Який крок має ознаку завершення?"
+      },
+      "objectives": [
+        "O3"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "en": "Watch SQL videos with no time limit",
+            "uk": "Дивитися відео SQL без обмеження часу"
+          },
+          "explanation": {
+            "en": "The task lacks a measurable outcome.",
+            "uk": "Бракує вимірюваного результату."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "en": "Spend 25 minutes on a two-row fixture and assert only the matching row",
+            "uk": "Витратити 25 хв на дворядкову фікстуру і перевірити лише рядок зі збігом"
+          },
+          "explanation": {
+            "en": "The time and expected result are explicit.",
+            "uk": "Час і очікуваний результат явні."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "en": "Mark SQL as mastered from the gate score",
+            "uk": "Позначити SQL засвоєним за оцінкою гейта"
+          },
+          "explanation": {
+            "en": "The quiz score does not resolve the observed SQL gap.",
+            "uk": "Оцінка квізу не усуває спостережену прогалину SQL."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q9",
+      "prompt": {
+        "en": "The team keeps model weights fixed and switches from local to hosted inference. What can still change?",
+        "uk": "Команда не змінює ваги моделі й переходить із локального на хмарний inference. Що може змінитися?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "B",
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "en": "The training objective necessarily changes",
+            "uk": "Обов’язково змінюється навчальна ціль"
+          },
+          "explanation": {
+            "en": "Deployment changes do not imply retraining.",
+            "uk": "Зміна розгортання не означає перенавчання."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "en": "Transport latency",
+            "uk": "Мережева затримка"
+          },
+          "explanation": {
+            "en": "Requests now cross a different boundary.",
+            "uk": "Запит проходить через іншу межу."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "en": "System error modes",
+            "uk": "Режими помилок системи"
+          },
+          "explanation": {
+            "en": "Hosting adds service and network dependencies.",
+            "uk": "Хостинг додає залежності від сервісу й мережі."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q10",
+      "prompt": {
+        "en": "You have strong JSON results and no HTTP attempt. How should the gap plan describe HTTP?",
+        "uk": "Ти маєш добрі результати JSON, а спроби HTTP немає. Як описати HTTP у плані?"
+      },
+      "objectives": [
+        "O3"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "en": "Untested, with a first small check scheduled",
+            "uk": "Не перевірено, заплановано першу малу перевірку"
+          },
+          "explanation": {
+            "en": "An unobserved skill should get its own first experiment.",
+            "uk": "Неспостережена навичка потребує власного першого експерименту."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "en": "Mastered from the JSON result",
+            "uk": "Засвоєно за результатом JSON"
+          },
+          "explanation": {
+            "en": "JSON parsing does not cover HTTP transport.",
+            "uk": "Парсинг JSON не охоплює транспорт HTTP."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "en": "Failed without evidence",
+            "uk": "Не пройдено без доказів"
+          },
+          "explanation": {
+            "en": "Failure requires an observed attempt.",
+            "uk": "Для помилки потрібна спостережена спроба."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q11",
+      "prompt": {
+        "en": "What distinguishes a fresh reproduction from rerunning one command in the old shell?",
+        "uk": "Що відрізняє чисте відтворення від повтору команди в старому терміналі?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "en": "Keeping the existing virtual environment",
+            "uk": "Зберегти старе віртуальне середовище"
+          },
+          "explanation": {
+            "en": "It can hide dependencies absent from the instructions.",
+            "uk": "Воно може приховувати залежності, відсутні в інструкції."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "en": "Showing one known output from history",
+            "uk": "Показати один відомий результат з історії"
+          },
+          "explanation": {
+            "en": "This records a previous run rather than reconstructing setup.",
+            "uk": "Це запис попереднього запуску без відтворення середовища."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "en": "Rebuilding the environment from the documented steps",
+            "uk": "Відновити середовище за задокументованими кроками"
+          },
+          "explanation": {
+            "en": "This tests the setup as well as the application behavior.",
+            "uk": "Так перевіряється налаштування і поведінка застосунку."
+          }
+        }
+      ]
+    }
+  ],
+  "exercises": [
+    {
+      "id": "G-M0-E1",
+      "title": {
+        "en": "Clean-workspace smoke test",
+        "uk": "Smoke test чистої робочої папки"
+      },
+      "kind": "code",
+      "criteria": [],
+      "objectives": [
+        "O2",
+        "O3"
+      ],
+      "estimateMinutes": 35,
+      "example": {
+        "en": "A JSON list with one topic of 15 minutes produces `{'items': 1, 'minutes': 15}`. A Boolean minute value raises ValueError.",
+        "uk": "Список JSON з однією темою на 15 хв дає `{'items': 1, 'minutes': 15}`. Булеве значення хвилин дає ValueError."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "en": "Orchid",
+            "uk": "Орхідея"
+          },
+          "prompt": {
+            "en": "Implement `check_workspace(path: Path) -> dict[str, int]` in `doctor.py`. Read UTF-8 JSON as a list of objects. Each object has a nonblank string `topic` and integer `minutes` above zero. Return keys `items` and `minutes` with count and total. Raise ValueError for invalid data. Let FileNotFoundError propagate. Run the suite in a fresh workspace and record the command. Start with one item of 15 minutes.",
+            "uk": "Реалізуй `check_workspace(path: Path) -> dict[str, int]` у `doctor.py`. Прочитай UTF-8 JSON як список об’єктів. Кожен має непорожній рядок `topic` і ціле `minutes` понад нуль. Поверни ключі `items` і `minutes` з кількістю і сумою. Для невалідних даних очікується ValueError, а FileNotFoundError має пройти назовні. Запусти набір у чистій папці й запиши команду. Почни з одного пункту на 15 хв."
+          },
+          "hints": [
+            {
+              "en": "Validate the container before looping.",
+              "uk": "Перевір контейнер до циклу."
+            },
+            {
+              "en": "Check the type and value of both fields per record.",
+              "uk": "Перевір тип і значення обох полів запису."
+            },
+            {
+              "en": "Use `type(minutes) is int` to exclude Boolean values.",
+              "uk": "Застосуй `type(minutes) is int`, щоб відхилити булеві значення."
+            }
+          ],
+          "solution": {
+            "en": "Read with an explicit encoding. Validate each object, accumulate positive minutes, and return item count plus the sum.",
+            "uk": "Прочитай із явним кодуванням. Валідуй кожен об’єкт, накопичуй додатні хвилини й поверни кількість пунктів та суму."
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "en": "Maple",
+            "uk": "Клен"
+          },
+          "prompt": {
+            "en": "Implement `check_workspace(path: Path) -> dict[str, int]` in `doctor.py`. Read UTF-8 JSON as a list of objects. Each object has a nonblank string `topic` and integer `minutes` above zero. Return keys `items` and `minutes` with count and total. Raise ValueError for invalid data. Let FileNotFoundError propagate. Run the suite in a fresh workspace and record the command. Start with one item of 30 minutes and then try an empty plan.",
+            "uk": "Реалізуй `check_workspace(path: Path) -> dict[str, int]` у `doctor.py`. Прочитай UTF-8 JSON як список об’єктів. Кожен має непорожній рядок `topic` і ціле `minutes` понад нуль. Поверни ключі `items` і `minutes` з кількістю і сумою. Для невалідних даних очікується ValueError, а FileNotFoundError має пройти назовні. Запусти набір у чистій папці й запиши команду. Почни з пункту на 30 хв, потім спробуй порожній план."
+          },
+          "hints": [
+            {
+              "en": "Validate the container before looping.",
+              "uk": "Перевір контейнер до циклу."
+            },
+            {
+              "en": "Check the type and value of both fields per record.",
+              "uk": "Перевір тип і значення обох полів запису."
+            },
+            {
+              "en": "Use `type(minutes) is int` to exclude Boolean values.",
+              "uk": "Застосуй `type(minutes) is int`, щоб відхилити булеві значення."
+            }
+          ],
+          "solution": {
+            "en": "Read with an explicit encoding. Validate each object, accumulate positive minutes, and return item count plus the sum.",
+            "uk": "Прочитай із явним кодуванням. Валідуй кожен об’єкт, накопичуй додатні хвилини й поверни кількість пунктів та суму."
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "en": "Cedar",
+            "uk": "Кедр"
+          },
+          "prompt": {
+            "en": "Implement `check_workspace(path: Path) -> dict[str, int]` in `doctor.py`. Read UTF-8 JSON as a list of objects. Each object has a nonblank string `topic` and integer `minutes` above zero. Return keys `items` and `minutes` with count and total. Raise ValueError for invalid data. Let FileNotFoundError propagate. Run the suite in a fresh workspace and record the command. Try a non-ASCII path and two topics with different durations.",
+            "uk": "Реалізуй `check_workspace(path: Path) -> dict[str, int]` у `doctor.py`. Прочитай UTF-8 JSON як список об’єктів. Кожен має непорожній рядок `topic` і ціле `minutes` понад нуль. Поверни ключі `items` і `minutes` з кількістю і сумою. Для невалідних даних очікується ValueError, а FileNotFoundError має пройти назовні. Запусти набір у чистій папці й запиши команду. Спробуй шлях із не-ASCII символами й дві теми різної тривалості."
+          },
+          "hints": [
+            {
+              "en": "Validate the container before looping.",
+              "uk": "Перевір контейнер до циклу."
+            },
+            {
+              "en": "Check the type and value of both fields per record.",
+              "uk": "Перевір тип і значення обох полів запису."
+            },
+            {
+              "en": "Use `type(minutes) is int` to exclude Boolean values.",
+              "uk": "Застосуй `type(minutes) is int`, щоб відхилити булеві значення."
+            }
+          ],
+          "solution": {
+            "en": "Read with an explicit encoding. Validate each object, accumulate positive minutes, and return item count plus the sum.",
+            "uk": "Прочитай із явним кодуванням. Валідуй кожен об’єкт, накопичуй додатні хвилини й поверни кількість пунктів та суму."
+          }
+        }
+      ]
+    },
+    {
+      "id": "G-M0-E2",
+      "title": {
+        "en": "Learning log and gap plan",
+        "uk": "Learning log і план усунення прогалин"
+      },
+      "kind": "rubric",
+      "objectives": [
+        "O2",
+        "O3"
+      ],
+      "estimateMinutes": 30,
+      "criteria": [
+        {
+          "id": "repro",
+          "title": {
+            "en": "I recorded the clean setup and an observed local test run.",
+            "uk": "Я записав чисте налаштування й результат локальних тестів."
+          }
+        },
+        {
+          "id": "diagnosis",
+          "title": {
+            "en": "My learning-log repository links or summarizes both independent diagnostic attempts.",
+            "uk": "У репозиторії learning-log є посилання або підсумки обох самостійних діагностичних спроб."
+          }
+        },
+        {
+          "id": "plan",
+          "title": {
+            "en": "I chose measurable next checks, with time boxes, based on the actual gaps.",
+            "uk": "Я обрав вимірювані наступні перевірки з часовими межами за фактичними прогалинами."
+          }
+        }
+      ],
+      "example": {
+        "en": "Example summary: fresh clone → venv → pinned dependencies → suite ran. Original gap: CSV quoting. Next: 30 minutes for a fresh comma fixture, success when name and zero count survive a round trip. Record your actual outcomes in the learning log.",
+        "uk": "Приклад звіту: чистий клон → venv → зафіксовані залежності → запуск набору. Початкова прогалина: лапки CSV. Далі: 30 хв на нову фікстуру з комою, успіх коли назва й нуль зберігаються в обидва боки. Запиши фактичні результати в learning log."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "en": "First scenario",
+            "uk": "Перший сценарій"
+          },
+          "prompt": {
+            "en": "Create a learning-log repository. Write setup steps and repeat them from a clean directory. Record both diagnostics and a time-boxed plan with observable outcomes. Submit a short summary without secrets.",
+            "uk": "Створи learning-log. Запиши налаштування й повтори з чистої папки. Зафіксуй обидві діагностики та план із часовими межами й ознаками успіху. Подай короткий підсумок без секретів."
+          },
+          "hints": [
+            {
+              "en": "Identify the observable outcome.",
+              "uk": "Визнач спостережуваний результат."
+            },
+            {
+              "en": "Write down the input and the comparison you will make.",
+              "uk": "Запиши вхід і те, з чим порівняєш результат."
+            },
+            {
+              "en": "Use an evidence row with command, expected, observed and next action.",
+              "uk": "Зроби запис із командою, очікуванням, спостереженням і наступною дією."
+            }
+          ],
+          "solution": {
+            "en": "Example summary: fresh clone → venv → pinned dependencies → suite ran. Original gap: CSV quoting. Next: 30 minutes for a fresh comma fixture, success when name and zero count survive a round trip. Record your actual outcomes in the learning log.",
+            "uk": "Приклад звіту: чистий клон → venv → зафіксовані залежності → запуск набору. Початкова прогалина: лапки CSV. Далі: 30 хв на нову фікстуру з комою, успіх коли назва й нуль зберігаються в обидва боки. Запиши фактичні результати в learning log."
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "en": "Transfer scenario",
+            "uk": "Сценарій перенесення"
+          },
+          "prompt": {
+            "en": "Rehearse setup under a different workspace path. Record which steps stayed identical and update the gap plan after trying one different diagnostic input.",
+            "uk": "Відтвори налаштування з іншим шляхом до папки. Запиши, які кроки залишилися тими самими, та онови план після спроби з іншим діагностичним входом."
+          },
+          "hints": [
+            {
+              "en": "Identify what changed from your first scenario.",
+              "uk": "Визнач, що змінилося від першого сценарію."
+            },
+            {
+              "en": "Predict the new outcome before running anything.",
+              "uk": "Перед запуском спрогнозуй новий результат."
+            },
+            {
+              "en": "Record both the checked behavior and one limitation.",
+              "uk": "Зафіксуй перевірену поведінку й одне обмеження."
+            }
+          ],
+          "solution": {
+            "en": "Example summary: fresh clone → venv → pinned dependencies → suite ran. Original gap: CSV quoting. Next: 30 minutes for a fresh comma fixture, success when name and zero count survive a round trip. Record your actual outcomes in the learning log.",
+            "uk": "Приклад звіту: чистий клон → venv → зафіксовані залежності → запуск набору. Початкова прогалина: лапки CSV. Далі: 30 хв на нову фікстуру з комою, успіх коли назва й нуль зберігаються в обидва боки. Запиши фактичні результати в learning log."
+          }
+        }
+      ]
+    }
+  ],
+  "crosslinks": [
+    "W01-L03",
+    "W01-L04",
+    "SR-W01"
+  ]
+}

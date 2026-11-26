@@ -1,0 +1,510 @@
+{
+  "id": "W03-L04",
+  "contentVersion": 1,
+  "overview": {
+    "uk": "Надійна вправа з клієнтом відтворює збої на вимогу. У цьому уроці під’єднаний транспорт дає повну відповідь, тайм-аут або зламаний об’єкт, а журнал залишає лише потрібне для діагностики. Ти напишеш тести викликів і результатів без залежності від часу чи production-сервісу. Простеж один запит через тести й короткий CI, що відтворює середовище. Мета — пояснити відмову без повного запиту, секрету чи тіла документа.",
+    "en": "A dependable client lab reproduces failures on demand. In this lesson an injected transport produces a complete response, timeout, or malformed object while a logger records only what an engineer needs for diagnosis. You will write tests for calls and output, not for a wall-clock delay or a production service. Then you will trace a single request through tests and a small CI workflow that recreates the development environment. The goal is to make a failure explainable without recording a full request, a secret, or a user's document body."
+  },
+  "theory": {
+    "uk": "### Межа транспорту\n\nТест може дати клієнту функцію або HTTPX MockTransport. Mock-обробник отримує побудований запит, тому перевіряй метод, шлях, очікувані заголовки й стабільний ключ ідемпотентності. Поверни синтетичну відповідь або підніми виняток тайм-ауту транспорту. Це перевіряє контракт клієнта без DNS і реальних облікових даних. Unit-тест може викликати декодер прямо. Тест транспорту перевіряє побудову запиту й обробку відповіді разом. Окремий інтеграційний тест пізніше перевірить справжню мережу в ізольованому середовищі.\n\n### Запис результату й кореляційного ID\n\nСтруктурована подія може включати операцію, результат, статус, номер спроби й виміряні мілісекунди. Створи кореляційний ID для однієї операції. Кілька спроб можуть ділити цей ID. Дозволяй лише визначені поля й зберігай узгоджені типи. Сире тіло або текст винятку може містити особисті поля, підписані URL чи токени. Вправа записує код події із синтетичним ID, тому тест перевіряє відсутність сирого тіла при відмові. Для діагностики зістав очікуваний запит і підставлену відповідь.\n\n### Перетвори діагностику на регресійний тест\n\nПочни з невдалої фікстури, що описує спостережену поведінку. Перевір результат для викликача й межу залежності. Під’єднай керований час і заміни sleep записом пауз, якщо перевіряєш повтори. Дай тестам конкретні назви, щоб CI указував порушене правило. Workflow може підготувати підтримуваний Python, установити фіксовані залежності, запустити Ruff і pytest та зберегти очищену діагностику. Тримай віддалені API поза обов’язковим набором.\n\n### Діагностуй за малими спостереженнями\n\nПочни з трьох спостережень: задуманий метод і шлях, фактичний статус і результат декодування. Невідповідний шлях указує на побудову запиту. 503 із подальшою відповіддю вказує на розклад повторів. 200 без обов’язкових полів — на контракт відповіді. Тримай випадки незалежними. Фікстура з постійним успіхом може приховати неправильний запит і не пройти жодної гілки відмови. Перевір, що mock-транспорт отримав очікуваний запит рівно стільки разів, скільки дозволяє правило.\n\nДля діагностики додай сталу назву події й кореляційний ID, тоді лише безпечні дані на кшталт мілісекунд і класу статусу. Краще створити ID до спроб. Якщо upstream має свій ID, додавай його лише за відповідності політиці логів. Перевір набір ключів і типи значень регресійним тестом. У CI захищай артефакти трасування так само, як логи. Прибери сирі HTTP-звіти до вкладення в результат. Ім’я фікстури й твердження зазвичай ідентифікують відтворення.",
+    "en": "### Put a seam at the transport\n\nTests can feed the client a callable or HTTPX MockTransport. A mock handler receives the built request, so assert method, path, expected headers and stable idempotency key. Then return a synthetic response or raise a transport-specific timeout. This observes the client contract while leaving out DNS and live credentials. Unit tests can exercise a decoder directly. A transport-level test checks request construction and response handling together. A separate integration test can later verify real networking in an isolated environment.\n\n### Log an outcome and a correlation ID\n\nA structured event can include operation, outcome, status, attempt and measured elapsed milliseconds. Use a generated correlation ID for one user operation. Several attempts can share that ID. Keep fields allowlisted and types consistent. A raw body or exception string can contain sensitive fields, signed URLs or tokens. The exercise logs an event code with a synthetic identifier, so a test can assert no raw body appears on failure. During debugging, compare expected request and injected response to narrow the failing boundary.\n\n### Turn diagnosis into a regression test\n\nStart with a failing fixture that describes observed behavior. Add an assertion for what the caller sees and an assertion about the dependency boundary. Inject timing and replace sleep with a recorder if you check retries. Give tests specific names so CI output points to the broken rule. A workflow can create the supported Python environment, install the resolved dependencies, run Ruff and pytest, and save failing test diagnostics after redaction. Keep remote APIs out of the mandatory suite.\n\n### Debug from small observations\n\nBegin with three observations: the intended method and path, the actual status and the outcome after decoding. A path mismatch points to construction. A 503 followed by another response points to the retry schedule. A 200 with an object missing required fields points to the response contract. Keep cases independent. A fixture that always returns the same success may conceal the wrong request and skip every failure branch. Assert that the mocked transport received the expected request exactly as often as the policy allows.\n\nFor failure diagnosis, add a stable event name and a correlation ID, then report defensive data like milliseconds and status class. Prefer an ID generated before attempts begin. If the upstream provider has its own request ID, include it only when it satisfies your logging policy. Verify the event's key set and value types in a regression test. During CI, protect trace artifacts as well as application logs. Redact or exclude raw HTTP debug dumps before attaching them to a job result. The test runner can usually identify the reproduction from the fixture name and assertion."
+  },
+  "recap": {
+    "uk": "Під’єднай мережеву межу, відтвори помилку локально й записуй коди подій лише з контрольованим контекстом.",
+    "en": "Inject the network boundary, reproduce a failure locally, and log event codes with only controlled context."
+  },
+  "objectives": [
+    {
+      "id": "O1",
+      "title": {
+        "uk": "Перевіряти тайм-аути й невалідні відповіді через під’єднані транспорти.",
+        "en": "Exercise timeouts and invalid responses with injectable transports."
+      },
+      "skill": "evaluation"
+    },
+    {
+      "id": "O2",
+      "title": {
+        "uk": "Залишати корисні структуровані докази без витоку тіла.",
+        "en": "Publish useful structured evidence without payload leaks."
+      },
+      "skill": "diagnostics"
+    }
+  ],
+  "sources": [
+    {
+      "title": {
+        "uk": "Python logging",
+        "en": "Python logging"
+      },
+      "url": "https://docs.python.org/3.12/library/logging.html",
+      "version": "Python 3.12",
+      "checked": "2026-11-26"
+    },
+    {
+      "title": {
+        "uk": "HTTPX transports",
+        "en": "HTTPX transports"
+      },
+      "url": "https://www.python-httpx.org/advanced/transports/",
+      "version": "HTTPX",
+      "checked": "2026-11-26"
+    }
+  ],
+  "examples": [
+    {
+      "file": "w03_l04_example.py",
+      "expected": "200 True",
+      "explanation": {
+        "uk": "Перевір шлях без сокета. Python 3.12, стандартна бібліотека.",
+        "en": "Verify the path without opening a socket. Python 3.12, standard library."
+      },
+      "error": {
+        "uk": "Зміни шлях у виклику, збережи твердження. Mock підніме AssertionError.",
+        "en": "Change the observed path but keep the assertion. Mock raises an AssertionError."
+      }
+    }
+  ],
+  "interview": [
+    "How would you test a timeout without waiting for the network?",
+    "Which request details would you intentionally omit from a diagnostic event?"
+  ],
+  "interviewGuide": {
+    "uk": "Опиши синтетичний транспорт і безпечну форму події.",
+    "en": "Describe the synthetic transport and the safe event shape."
+  },
+  "exercises": [
+    {
+      "id": "W03-L04-E1",
+      "title": {
+        "uk": "Записувати безпечні результати клієнта",
+        "en": "Record privacy-safe client outcomes"
+      },
+      "kind": "code",
+      "objectives": [
+        "O1"
+      ],
+      "estimateMinutes": 75,
+      "criteria": [],
+      "example": {
+        "uk": "Fetch піднімає TimeoutError('temporary') → одна подія timeout і результат None.",
+        "en": "Fetch raises TimeoutError('temporary') → one timeout event and a None result."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(request_id, fetch, emit), де fetch() повертає JSON-рядок або піднімає TimeoutError. При успішному об’єкті передай emit {'request_id': request_id, 'outcome': 'ok'} і поверни dict. При тайм-ауті — outcome timeout і None. При зламаному JSON або не-об’єкті — invalid_response і None. Записуй рівно одну подію без тіла й тексту винятку. Інші винятки передавай.\n\n**Синтетичні накладні**",
+            "en": "Implement solve(request_id, fetch, emit) where fetch() returns a JSON string or raises TimeoutError. On object success emit {'request_id': request_id, 'outcome': 'ok'} and return the dict. On timeout emit outcome timeout and return None. On malformed JSON or decoded non-object emit invalid_response and return None. Emit exactly one event and keep the body and exception text out of it. Other exceptions propagate.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Перехоплюй відмови на межі, де відоме значення.",
+              "en": "Catch failures at the boundary where their meaning is known."
+            },
+            {
+              "uk": "Нормалізуй результати до запису події.",
+              "en": "Normalize outcomes before emitting the event."
+            },
+            {
+              "uk": "Створи подію з двох фіксованих полів.",
+              "en": "Build the event from a fixed pair of fields."
+            }
+          ],
+          "solution": {
+            "uk": "Явний результат і визначені поля роблять тести й наступну фільтрацію надійними.\n\n```python\nimport json\nfrom collections.abc import Callable\n\ndef solve(request_id: str, fetch: Callable[[], str], emit: Callable[[dict[str, str]], None]) -> dict[str, object] | None:\n    value = None\n    try:\n        value = json.loads(fetch())\n    except TimeoutError:\n        outcome = 'timeout'\n    except json.JSONDecodeError:\n        outcome = 'invalid_response'\n    else:\n        outcome = 'ok' if isinstance(value, dict) else 'invalid_response'\n    emit({'request_id': request_id, 'outcome': outcome})\n    return value if isinstance(value, dict) else None\n```",
+            "en": "An explicit outcome and fixed fields make tests and downstream filtering reliable.\n\n```python\nimport json\nfrom collections.abc import Callable\n\ndef solve(request_id: str, fetch: Callable[[], str], emit: Callable[[dict[str, str]], None]) -> dict[str, object] | None:\n    value = None\n    try:\n        value = json.loads(fetch())\n    except TimeoutError:\n        outcome = 'timeout'\n    except json.JSONDecodeError:\n        outcome = 'invalid_response'\n    else:\n        outcome = 'ok' if isinstance(value, dict) else 'invalid_response'\n    emit({'request_id': request_id, 'outcome': outcome})\n    return value if isinstance(value, dict) else None\n```"
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(request_id, fetch, emit), де fetch() повертає JSON-рядок або піднімає TimeoutError. При успішному об’єкті передай emit {'request_id': request_id, 'outcome': 'ok'} і поверни dict. При тайм-ауті — outcome timeout і None. При зламаному JSON або не-об’єкті — invalid_response і None. Записуй рівно одну подію без тіла й тексту винятку. Інші винятки передавай.\n\n**Синтетичні запити підтримки**",
+            "en": "Implement solve(request_id, fetch, emit) where fetch() returns a JSON string or raises TimeoutError. On object success emit {'request_id': request_id, 'outcome': 'ok'} and return the dict. On timeout emit outcome timeout and return None. On malformed JSON or decoded non-object emit invalid_response and return None. Emit exactly one event and keep the body and exception text out of it. Other exceptions propagate.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Перехоплюй відмови на межі, де відоме значення.",
+              "en": "Catch failures at the boundary where their meaning is known."
+            },
+            {
+              "uk": "Нормалізуй результати до запису події.",
+              "en": "Normalize outcomes before emitting the event."
+            },
+            {
+              "uk": "Створи подію з двох фіксованих полів.",
+              "en": "Build the event from a fixed pair of fields."
+            }
+          ],
+          "solution": {
+            "uk": "Явний результат і визначені поля роблять тести й наступну фільтрацію надійними.\n\n```python\nimport json\nfrom collections.abc import Callable\n\ndef solve(request_id: str, fetch: Callable[[], str], emit: Callable[[dict[str, str]], None]) -> dict[str, object] | None:\n    value = None\n    try:\n        value = json.loads(fetch())\n    except TimeoutError:\n        outcome = 'timeout'\n    except json.JSONDecodeError:\n        outcome = 'invalid_response'\n    else:\n        outcome = 'ok' if isinstance(value, dict) else 'invalid_response'\n    emit({'request_id': request_id, 'outcome': outcome})\n    return value if isinstance(value, dict) else None\n```",
+            "en": "An explicit outcome and fixed fields make tests and downstream filtering reliable.\n\n```python\nimport json\nfrom collections.abc import Callable\n\ndef solve(request_id: str, fetch: Callable[[], str], emit: Callable[[dict[str, str]], None]) -> dict[str, object] | None:\n    value = None\n    try:\n        value = json.loads(fetch())\n    except TimeoutError:\n        outcome = 'timeout'\n    except json.JSONDecodeError:\n        outcome = 'invalid_response'\n    else:\n        outcome = 'ok' if isinstance(value, dict) else 'invalid_response'\n    emit({'request_id': request_id, 'outcome': outcome})\n    return value if isinstance(value, dict) else None\n```"
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(request_id, fetch, emit), де fetch() повертає JSON-рядок або піднімає TimeoutError. При успішному об’єкті передай emit {'request_id': request_id, 'outcome': 'ok'} і поверни dict. При тайм-ауті — outcome timeout і None. При зламаному JSON або не-об’єкті — invalid_response і None. Записуй рівно одну подію без тіла й тексту винятку. Інші винятки передавай.\n\n**Синтетичні документи політик**",
+            "en": "Implement solve(request_id, fetch, emit) where fetch() returns a JSON string or raises TimeoutError. On object success emit {'request_id': request_id, 'outcome': 'ok'} and return the dict. On timeout emit outcome timeout and return None. On malformed JSON or decoded non-object emit invalid_response and return None. Emit exactly one event and keep the body and exception text out of it. Other exceptions propagate.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Перехоплюй відмови на межі, де відоме значення.",
+              "en": "Catch failures at the boundary where their meaning is known."
+            },
+            {
+              "uk": "Нормалізуй результати до запису події.",
+              "en": "Normalize outcomes before emitting the event."
+            },
+            {
+              "uk": "Створи подію з двох фіксованих полів.",
+              "en": "Build the event from a fixed pair of fields."
+            }
+          ],
+          "solution": {
+            "uk": "Явний результат і визначені поля роблять тести й наступну фільтрацію надійними.\n\n```python\nimport json\nfrom collections.abc import Callable\n\ndef solve(request_id: str, fetch: Callable[[], str], emit: Callable[[dict[str, str]], None]) -> dict[str, object] | None:\n    value = None\n    try:\n        value = json.loads(fetch())\n    except TimeoutError:\n        outcome = 'timeout'\n    except json.JSONDecodeError:\n        outcome = 'invalid_response'\n    else:\n        outcome = 'ok' if isinstance(value, dict) else 'invalid_response'\n    emit({'request_id': request_id, 'outcome': outcome})\n    return value if isinstance(value, dict) else None\n```",
+            "en": "An explicit outcome and fixed fields make tests and downstream filtering reliable.\n\n```python\nimport json\nfrom collections.abc import Callable\n\ndef solve(request_id: str, fetch: Callable[[], str], emit: Callable[[dict[str, str]], None]) -> dict[str, object] | None:\n    value = None\n    try:\n        value = json.loads(fetch())\n    except TimeoutError:\n        outcome = 'timeout'\n    except json.JSONDecodeError:\n        outcome = 'invalid_response'\n    else:\n        outcome = 'ok' if isinstance(value, dict) else 'invalid_response'\n    emit({'request_id': request_id, 'outcome': outcome})\n    return value if isinstance(value, dict) else None\n```"
+          }
+        }
+      ]
+    },
+    {
+      "id": "W03-L04-E2",
+      "title": {
+        "uk": "Відтворити відмову клієнта в CI",
+        "en": "Reproduce one client failure in CI"
+      },
+      "kind": "rubric",
+      "objectives": [
+        "O2"
+      ],
+      "estimateMinutes": 70,
+      "criteria": [
+        {
+          "id": "C1",
+          "title": {
+            "uk": "Відтворено відмову через синтетичні відповіді.",
+            "en": "Reproduce failure using synthetic responses."
+          }
+        },
+        {
+          "id": "C2",
+          "title": {
+            "uk": "Додано результати тесту до й після із очищеною подією.",
+            "en": "Attach before-and-after test output with a redacted event."
+          }
+        },
+        {
+          "id": "C3",
+          "title": {
+            "uk": "Наведено локальний еквівалент workflow, який можна запустити.",
+            "en": "Provide a runnable local equivalent of the workflow."
+          }
+        }
+      ],
+      "example": {
+        "uk": "Фікстура повертає зламаний текст зі статусом 200. Перевір помилку клієнта й одну подію invalid_response.",
+        "en": "A fixture returns malformed text with status 200. Assert a client error and one invalid_response event."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Підключи транспортну фікстуру HTTPX до малого клієнта або перевір її декодер офлайн unit-тестом. Покрий успіх, тайм-аут і зламаний JSON. Запиши невдале твердження до виправлення й успішний результат після нього. Додай CI для Ruff і pytest із заданим Python та фіксованими залежностями.\n\n**Синтетичні накладні**",
+            "en": "Connect an HTTPX transport fixture to a small client or wrap its decoder in an offline unit test. Cover success, timeout and invalid JSON. Record the failing assertion before the fix and the passing outcome afterward. Add a CI job for Ruff and pytest with declared Python and pinned dependencies.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Відтвори відмову до зміни коду.",
+              "en": "Reproduce the failure before changing the code."
+            },
+            {
+              "uk": "Заміни зовнішній транспорт детермінованою функцією.",
+              "en": "Replace the external transport with a deterministic function."
+            },
+            {
+              "uk": "Перевір точний набір ключів події.",
+              "en": "Assert the exact set of keys in the log event."
+            }
+          ],
+          "solution": {
+            "uk": "Підстав відповідь на межі, перевір декодований вихід й очищені події, далі запусти однакове встановлення за lock і команди локально й у CI.",
+            "en": "Mock the response boundary, assert decoded outputs and sanitized events, then run the same lock-based install and commands in local and CI environments."
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Підключи транспортну фікстуру HTTPX до малого клієнта або перевір її декодер офлайн unit-тестом. Покрий успіх, тайм-аут і зламаний JSON. Запиши невдале твердження до виправлення й успішний результат після нього. Додай CI для Ruff і pytest із заданим Python та фіксованими залежностями.\n\n**Синтетичні запити підтримки**",
+            "en": "Connect an HTTPX transport fixture to a small client or wrap its decoder in an offline unit test. Cover success, timeout and invalid JSON. Record the failing assertion before the fix and the passing outcome afterward. Add a CI job for Ruff and pytest with declared Python and pinned dependencies.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Відтвори відмову до зміни коду.",
+              "en": "Reproduce the failure before changing the code."
+            },
+            {
+              "uk": "Заміни зовнішній транспорт детермінованою функцією.",
+              "en": "Replace the external transport with a deterministic function."
+            },
+            {
+              "uk": "Перевір точний набір ключів події.",
+              "en": "Assert the exact set of keys in the log event."
+            }
+          ],
+          "solution": {
+            "uk": "Підстав відповідь на межі, перевір декодований вихід й очищені події, далі запусти однакове встановлення за lock і команди локально й у CI.",
+            "en": "Mock the response boundary, assert decoded outputs and sanitized events, then run the same lock-based install and commands in local and CI environments."
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Підключи транспортну фікстуру HTTPX до малого клієнта або перевір її декодер офлайн unit-тестом. Покрий успіх, тайм-аут і зламаний JSON. Запиши невдале твердження до виправлення й успішний результат після нього. Додай CI для Ruff і pytest із заданим Python та фіксованими залежностями.\n\n**Синтетичні документи політик**",
+            "en": "Connect an HTTPX transport fixture to a small client or wrap its decoder in an offline unit test. Cover success, timeout and invalid JSON. Record the failing assertion before the fix and the passing outcome afterward. Add a CI job for Ruff and pytest with declared Python and pinned dependencies.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Відтвори відмову до зміни коду.",
+              "en": "Reproduce the failure before changing the code."
+            },
+            {
+              "uk": "Заміни зовнішній транспорт детермінованою функцією.",
+              "en": "Replace the external transport with a deterministic function."
+            },
+            {
+              "uk": "Перевір точний набір ключів події.",
+              "en": "Assert the exact set of keys in the log event."
+            }
+          ],
+          "solution": {
+            "uk": "Підстав відповідь на межі, перевір декодований вихід й очищені події, далі запусти однакове встановлення за lock і команди локально й у CI.",
+            "en": "Mock the response boundary, assert decoded outputs and sanitized events, then run the same lock-based install and commands in local and CI environments."
+          }
+        }
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "id": "Q1",
+      "prompt": {
+        "uk": "Що робить тест тайм-ауту детермінованим?",
+        "en": "What makes a timeout test deterministic?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Очікування перед кожною перевіркою.",
+            "en": "Sleeping before every assertion."
+          },
+          "explanation": {
+            "uk": "Очікування не гарантує поведінки.",
+            "en": "Sleeping cannot ensure the target behavior."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Під’єднана залежність із відомим тайм-аутом.",
+            "en": "An injected dependency that raises the expected timeout."
+          },
+          "explanation": {
+            "uk": "Відмова виникає за сценарієм без мережевого часу.",
+            "en": "Failure occurs on command without network timing."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Звернення до віддаленого сайту.",
+            "en": "Contacting a distant public site."
+          },
+          "explanation": {
+            "uk": "DNS і серверна поведінка мінливі.",
+            "en": "DNS and server behavior vary."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q2",
+      "prompt": {
+        "uk": "Яке поле дає діагностику з малою експозицією даних?",
+        "en": "Which field adds diagnostic value with minimal data exposure?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Повний заголовок Authorization.",
+            "en": "Full Authorization header."
+          },
+          "explanation": {
+            "uk": "Він містить облікові дані.",
+            "en": "It contains credentials."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Сирі документи.",
+            "en": "Raw uploaded documents."
+          },
+          "explanation": {
+            "uk": "Документи можуть містити PII й не потрібні для зіставлення.",
+            "en": "Documents may contain PII and are unrelated to event matching."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Згенерований непрозорий кореляційний ID.",
+            "en": "A generated opaque correlation ID."
+          },
+          "explanation": {
+            "uk": "Він зв’язує події без показу тіла.",
+            "en": "It connects events without revealing the body."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q3",
+      "prompt": {
+        "uk": "Що дає перевірити MockTransport?",
+        "en": "What does a MockTransport allow you to check?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Побудований клієнтом запит і обробку синтетичних відповідей.",
+            "en": "The request the client constructs and how it handles synthetic responses."
+          },
+          "explanation": {
+            "uk": "Обробник бачить запит без реального мережевого I/O.",
+            "en": "The handler sees the request without real network IO."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Доступність production DNS.",
+            "en": "Production DNS availability."
+          },
+          "explanation": {
+            "uk": "Справжній DNS-пошук не потрібен.",
+            "en": "No real lookup is needed."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Гарантії ізоляції БД.",
+            "en": "Database isolation guarantees."
+          },
+          "explanation": {
+            "uk": "Ця межа тестує HTTP-клієнт.",
+            "en": "This seam tests an HTTP client."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q4",
+      "prompt": {
+        "uk": "Що має зафіксувати регресійна фікстура?",
+        "en": "What should a regression fixture capture?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Тільки фінальний зелений статус.",
+            "en": "Only a final green badge."
+          },
+          "explanation": {
+            "uk": "Статус не вказує відтворюваного випадку.",
+            "en": "A badge does not reveal the reproducible case."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Найменший конкретний вхід, який показує порушене правило.",
+            "en": "The smallest concrete input that exposes the broken rule."
+          },
+          "explanation": {
+            "uk": "Це дає конкретний доказ відмови.",
+            "en": "This supplies actionable failure evidence."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Усі справжні секрети з журналу.",
+            "en": "Every real secret from a log."
+          },
+          "explanation": {
+            "uk": "У фікстурах потрібні синтетичні дані.",
+            "en": "Fixtures should use synthetic data."
+          }
+        }
+      ]
+    }
+  ],
+  "crosslinks": [
+    "W03-L03",
+    "SR-W03"
+  ]
+}

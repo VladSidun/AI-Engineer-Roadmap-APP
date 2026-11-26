@@ -1,0 +1,566 @@
+{
+  "id": "SR-W01",
+  "contentVersion": 1,
+  "objectives": [
+    {
+      "id": "O1",
+      "skill": "systems",
+      "title": {
+        "en": "Explain the model and system boundary with evidence",
+        "uk": "Пояснити межу між моделлю і системою з доказами"
+      }
+    },
+    {
+      "id": "O2",
+      "skill": "tooling",
+      "title": {
+        "en": "Reproduce a small environment and check a new fixture",
+        "uk": "Відтворити мале середовище й перевірити нову фікстуру"
+      }
+    },
+    {
+      "id": "O3",
+      "skill": "diagnostics",
+      "title": {
+        "en": "Defend a result and turn a gap into a measurable step",
+        "uk": "Обґрунтувати результат і перетворити прогалину на вимірюваний крок"
+      }
+    }
+  ],
+  "sources": [
+    {
+      "title": {
+        "en": "Recording Git changes",
+        "uk": "Запис змін у Git"
+      },
+      "url": "https://git-scm.com/book/en/v2/Git-Basics-Recording-Changes-to-the-Repository",
+      "version": "Pro Git 2",
+      "checked": "2026-11-26"
+    },
+    {
+      "title": {
+        "en": "Assertions in pytest",
+        "uk": "Перевірки в pytest"
+      },
+      "url": "https://docs.pytest.org/en/stable/how-to/assert.html",
+      "version": "pytest stable",
+      "checked": "2026-11-26"
+    }
+  ],
+  "examples": [],
+  "overview": {
+    "en": "Bring together the four lesson skills on one new fixture. Explain where the model ends, what the surrounding system guarantees and how you would measure the quality difference. Then provide a runnable small check and a short English explanation. You can start before finishing all four lessons. Your review evidence is saved, and mastery follows when lesson prerequisites are met.",
+    "uk": "Об’єднай навички чотирьох уроків на новій фікстурі. Поясни, де закінчується модель, що гарантує система і як виміряти різницю в якості. Потім зроби відтворювану перевірку й коротке пояснення англійською. Почати можна до завершення чотирьох уроків. Докази збережуться, а засвоєння буде зараховано після виконання передумов."
+  },
+  "theory": {
+    "en": "### Transfer the reasoning\n\nImagine that a model proposes labels for imported records. The surrounding software validates record structure and stores the result. A deterministic format check can be exercised with a fixed case. Model quality needs labelled examples and a metric that reflects the user's error costs. For the transfer task use one changed synthetic fixture and write the expectation before running it. Save the command, the actual outcome, and a limit of the check. In English describe the part under test, one failure and your next action. Claim only what your test observes.",
+    "uk": "### Перенеси міркування\n\nУяви, що модель пропонує мітки імпортованим записам. Система перевіряє структуру й зберігає результат. Детерміновану перевірку формату можна відтворити на сталій фікстурі. Якість моделі потребує розмічених прикладів і метрики, що враховує ціну помилки для користувача. Для вправи зміни одну синтетичну фікстуру й запиши очікування до запуску. Збережи команду, результат і межі перевірки. Англійською опиши компонент, одну помилку й наступну дію. Стверджуй тільки те, що спостерігав."
+  },
+  "recap": {
+    "en": "Transfer a check to a new input, record what changed, and explain the limitation in plain English.",
+    "uk": "Перенеси перевірку на новий вхід, запиши зміну й поясни обмеження простою англійською."
+  },
+  "interview": [
+    "What component can be validated deterministically?",
+    "How would you check whether your model misses relevant items?"
+  ],
+  "interviewGuide": {
+    "en": "Use two or three sentences in English with one concrete example.",
+    "uk": "Склади дві-три англійські фрази з одним конкретним прикладом."
+  },
+  "questions": [
+    {
+      "id": "Q1",
+      "prompt": {
+        "en": "A team extracts fields with a model, then validates their types. What is the validator?",
+        "uk": "Команда виділяє поля моделлю, а потім перевіряє типи. Чим є валідатор?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "en": "A retrained model",
+            "uk": "Перенавченою моделлю"
+          },
+          "explanation": {
+            "en": "Type checks can run without updating parameters.",
+            "uk": "Перевірка типу не потребує зміни ваг."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "en": "A system component with a deterministic contract",
+            "uk": "Компонентом системи з детермінованим контрактом"
+          },
+          "explanation": {
+            "en": "It enforces the stated rules for a produced value.",
+            "uk": "Валідатор застосовує визначені правила до результату."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "en": "A test dataset",
+            "uk": "Тестовим набором даних"
+          },
+          "explanation": {
+            "en": "A validator is executable logic, while a dataset contains examples.",
+            "uk": "Валідатор є виконуваною логікою, а набір даних містить приклади."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q2",
+      "prompt": {
+        "en": "A release changes only the prompt. Which work still needs doing?",
+        "uk": "У релізі змінився тільки промпт. Що все одно треба зробити?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "en": "Re-evaluate on a fixed set of examples",
+            "uk": "Повторити оцінювання на сталих прикладах"
+          },
+          "explanation": {
+            "en": "Prompts alter system behavior with unchanged model weights.",
+            "uk": "Промпт може змінити поведінку системи за тих самих ваг."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "en": "Claim the old system score by weight hash alone",
+            "uk": "Зарахувати стару оцінку лише за хешем ваг"
+          },
+          "explanation": {
+            "en": "The hash says nothing about a changed prompt.",
+            "uk": "Хеш не характеризує змінений промпт."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "en": "Update weights before checking anything",
+            "uk": "Змінити ваги до будь-якої перевірки"
+          },
+          "explanation": {
+            "en": "Evaluation can test a prompt change with identical weights.",
+            "uk": "Оцінювання може перевірити зміну промпту за сталих ваг."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q3",
+      "prompt": {
+        "en": "A classifier misses many relevant items. What helps quantify that?",
+        "uk": "Класифікатор пропускає багато потрібних об’єктів. Що це вимірює?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "en": "Time per request",
+            "uk": "Час на запит"
+          },
+          "explanation": {
+            "en": "Latency captures speed.",
+            "uk": "Затримка вимірює швидкість."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "en": "Number of model parameters",
+            "uk": "Кількість параметрів моделі"
+          },
+          "explanation": {
+            "en": "Parameter count is a model descriptor.",
+            "uk": "Кількість параметрів описує модель."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "en": "Recall among actual positives",
+            "uk": "Recall серед дійсно позитивних"
+          },
+          "explanation": {
+            "en": "Recall decreases with false negatives.",
+            "uk": "Recall зменшується через хибні негативи."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q4",
+      "prompt": {
+        "en": "What is good evidence that someone else can run the project?",
+        "uk": "Що засвідчує, що інша людина може запустити проєкт?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "A",
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "en": "Run documented setup in a fresh workspace",
+            "uk": "Виконати задокументоване налаштування в чистій папці"
+          },
+          "explanation": {
+            "en": "Fresh setup tests the documented assumptions.",
+            "uk": "Чистий запуск перевіряє задокументовані припущення."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "en": "Send a screenshot of an IDE tab",
+            "uk": "Надіслати скриншот вкладки IDE"
+          },
+          "explanation": {
+            "en": "A tab does not recreate the environment.",
+            "uk": "Вкладка не відтворює середовище."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "en": "Record the test command and observed outcome",
+            "uk": "Записати команду тестів і фактичний результат"
+          },
+          "explanation": {
+            "en": "Another learner can reproduce and compare the outcome.",
+            "uk": "Інший учень може повторити й порівняти результат."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q5",
+      "prompt": {
+        "en": "Which input checks CSV quoting during transfer?",
+        "uk": "Який вхід перевірить лапки CSV на новому випадку?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "en": "An empty file only",
+            "uk": "Лише порожній файл"
+          },
+          "explanation": {
+            "en": "It exercises emptiness but contains no quoted field.",
+            "uk": "Він перевіряє порожній вхід без поля в лапках."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "en": "A quoted name with a comma and count zero",
+            "uk": "Назва з комою в лапках і кількість нуль"
+          },
+          "explanation": {
+            "en": "The case checks delimiter handling and a valid boundary value.",
+            "uk": "Випадок перевіряє роздільник і валідне граничне число."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "en": "Two unquoted numeric names",
+            "uk": "Дві числові назви без лапок"
+          },
+          "explanation": {
+            "en": "There is no embedded comma to preserve.",
+            "uk": "Вкладену кому тут не перевіриш."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q6",
+      "prompt": {
+        "en": "Your join returns the right pairs in a different order across runs. What change belongs in the SQL contract?",
+        "uk": "JOIN повертає правильні пари в різному порядку. Що додати до SQL-контракту?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "en": "Add more unrelated rows",
+            "uk": "Додати більше непов’язаних рядків"
+          },
+          "explanation": {
+            "en": "More data does not declare a row order.",
+            "uk": "Більше даних не задає порядок."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "en": "Replace joins with arbitrary selection",
+            "uk": "Замінити JOIN довільним відбором"
+          },
+          "explanation": {
+            "en": "Selection does not specify ordering.",
+            "uk": "Відбір не визначає сортування."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "en": "Specify ORDER BY and tie-breakers if required",
+            "uk": "Додати ORDER BY і за потреби додаткові ключі"
+          },
+          "explanation": {
+            "en": "SQL needs explicit ordering for a deterministic sequence.",
+            "uk": "Для детермінованої послідовності SQL потребує явного порядку."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q7",
+      "prompt": {
+        "en": "Which record makes a gap actionable?",
+        "uk": "Який запис перетворює прогалину на дію?"
+      },
+      "objectives": [
+        "O3"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "en": "Learn all of backend someday",
+            "uk": "Колись вивчити весь backend"
+          },
+          "explanation": {
+            "en": "There is no task boundary or completion signal.",
+            "uk": "Немає меж задачі й ознаки завершення."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "en": "30 minutes for a failing array fixture, success when the client raises ValueError",
+            "uk": "30 хв на фікстуру-масив, успіх коли клієнт дає ValueError"
+          },
+          "explanation": {
+            "en": "The action has a time box, fixture and expected result.",
+            "uk": "Дія має часові межі, фікстуру й очікуваний результат."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "en": "Delete the failed result",
+            "uk": "Видалити невдалий результат"
+          },
+          "explanation": {
+            "en": "The failure points to the work to schedule.",
+            "uk": "Помилка вказує, що запланувати."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q8",
+      "prompt": {
+        "en": "How should you explain a mocked test in English?",
+        "uk": "Як пояснити підмінний тест англійською?"
+      },
+      "objectives": [
+        "O3"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "en": "State the controlled input, observed behavior and a limitation",
+            "uk": "Назвати контрольований вхід, поведінку й обмеження"
+          },
+          "explanation": {
+            "en": "This is a reproducible explanation with clear scope.",
+            "uk": "Це відтворюване пояснення з чіткими межами."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "en": "Say that all network cases are guaranteed",
+            "uk": "Сказати, що перевірено всі мережеві випадки"
+          },
+          "explanation": {
+            "en": "Mock transport does not exercise live network behavior.",
+            "uk": "Підмінний транспорт не перевіряє живу мережу."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "en": "Read out only the score",
+            "uk": "Назвати лише оцінку"
+          },
+          "explanation": {
+            "en": "A score gives no fixture or reasoning.",
+            "uk": "Оцінка не пояснює фікстуру чи причину."
+          }
+        }
+      ]
+    }
+  ],
+  "exercises": [
+    {
+      "id": "SR-W01-E1",
+      "title": {
+        "en": "Transfer check and English explanation",
+        "uk": "Перенесення перевірки й пояснення англійською"
+      },
+      "kind": "rubric",
+      "objectives": [
+        "O1",
+        "O2",
+        "O3"
+      ],
+      "estimateMinutes": 30,
+      "criteria": [
+        {
+          "id": "input",
+          "title": {
+            "en": "I used a new synthetic input, ran a check, and recorded expected and actual outcomes.",
+            "uk": "Я використав новий синтетичний вхід, виконав перевірку й записав очікування та результат."
+          }
+        },
+        {
+          "id": "boundary",
+          "title": {
+            "en": "I identified what the deterministic check and an independent model evaluation would each measure.",
+            "uk": "Я визначив, що окремо вимірюють детермінована перевірка й оцінювання моделі."
+          }
+        },
+        {
+          "id": "english",
+          "title": {
+            "en": "I wrote a short English explanation with the result and one limitation.",
+            "uk": "Я написав коротке пояснення англійською з результатом і одним обмеженням."
+          }
+        }
+      ],
+      "example": {
+        "en": "Example: a fixture named `one,two` with count 0 produced one CSV record, which parsed as the original name. English: “The CSV reader preserved the quoted field. I did not test multi-line names.”",
+        "uk": "Приклад: фікстура `one,two` з кількістю 0 дала один запис CSV, що прочитався з початковою назвою. Англійською: “The CSV reader preserved the quoted field. I did not test multi-line names.”"
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "en": "First scenario",
+            "uk": "Перший сценарій"
+          },
+          "prompt": {
+            "en": "Use a CSV fixture with a new quoted name. Run a deterministic check and propose one metric for the hypothetical label model. Add two sentences in English on what was verified.",
+            "uk": "Візьми CSV-фікстуру з новою назвою в лапках. Виконай детерміновану перевірку і запропонуй метрику для умовної моделі міток. Додай два речення англійською про перевірене."
+          },
+          "hints": [
+            {
+              "en": "Identify the observable outcome.",
+              "uk": "Визнач спостережуваний результат."
+            },
+            {
+              "en": "Write down the input and the comparison you will make.",
+              "uk": "Запиши вхід і те, з чим порівняєш результат."
+            },
+            {
+              "en": "Use an evidence row with command, expected, observed and next action.",
+              "uk": "Зроби запис із командою, очікуванням, спостереженням і наступною дією."
+            }
+          ],
+          "solution": {
+            "en": "Example: a fixture named `one,two` with count 0 produced one CSV record, which parsed as the original name. English: “The CSV reader preserved the quoted field. I did not test multi-line names.”",
+            "uk": "Приклад: фікстура `one,two` з кількістю 0 дала один запис CSV, що прочитався з початковою назвою. Англійською: “The CSV reader preserved the quoted field. I did not test multi-line names.”"
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "en": "Transfer scenario",
+            "uk": "Сценарій перенесення"
+          },
+          "prompt": {
+            "en": "Use a mocked HTTP JSON array and object. Run both, explain the object boundary, and propose a separately labelled evaluation for a model that suggests categories. Add your English explanation.",
+            "uk": "Візьми підмінні HTTP-відповіді з JSON-масивом і об’єктом. Запусти обидві, поясни вимогу об’єкта й запропонуй окреме розмічене оцінювання моделі категорій. Додай англійське пояснення."
+          },
+          "hints": [
+            {
+              "en": "Identify what changed from your first scenario.",
+              "uk": "Визнач, що змінилося від першого сценарію."
+            },
+            {
+              "en": "Predict the new outcome before running anything.",
+              "uk": "Перед запуском спрогнозуй новий результат."
+            },
+            {
+              "en": "Record both the checked behavior and one limitation.",
+              "uk": "Зафіксуй перевірену поведінку й одне обмеження."
+            }
+          ],
+          "solution": {
+            "en": "Example: a fixture named `one,two` with count 0 produced one CSV record, which parsed as the original name. English: “The CSV reader preserved the quoted field. I did not test multi-line names.”",
+            "uk": "Приклад: фікстура `one,two` з кількістю 0 дала один запис CSV, що прочитався з початковою назвою. Англійською: “The CSV reader preserved the quoted field. I did not test multi-line names.”"
+          }
+        }
+      ]
+    }
+  ],
+  "crosslinks": [
+    "W01-L01",
+    "W01-L04",
+    "G-M0"
+  ]
+}

@@ -1,0 +1,519 @@
+{
+  "id": "W06-L03",
+  "contentVersion": 1,
+  "overview": {
+    "uk": "Процес може жити, коли API ще не приймає реальні запити. Відділи здоров’я від готовності й вимірюй справжнє очікування викликачів. Урок створює локальне вимірювання й перевірку релізу Project A. Порівняй медіану й хвіст затримок зі сталих спостережень, використай монотонний годинник і опиши недоступність залежної БД. CI запускає повторювані перевірки на одноразовій базі. Метрики малої вправи описують конкретну вибірку й дають читати факти поведінки релізу.",
+    "en": "A process can be alive while the API cannot accept real requests. Separate health from readiness and measure the time callers actually wait. This lesson builds a local measurement and release check for Project A. You will compare median and tail latency from fixed observations, use a monotonic clock for elapsed time, and document what changes when a dependent database is unavailable. A CI workflow runs repeatable checks on a disposable database. Metrics from the small exercise describe only its observed sample and help you read, rather than guess, the behavior of a release."
+  },
+  "theory": {
+    "uk": "### Запитання кожної перевірки\n\nLiveness повідомляє супервізору, чи відповідає процес. Readiness повідомляє викликачу, чи сервіс приймає нормальні запити. Проєкт може бути ready після перевірки з’єднання БД та версії схеми. Якщо БД тимчасово недоступна, readiness падає, а процес живе й відновлює з’єднання. Короткі обмежені перевірки не тримають ресурси нескінченно. Повертай стабільний статус без credentials, шляхів чи traceback.\n\n### Вимірювання минулого часу\n\nВикористай time.perf_counter або perf_counter_ns навколо визначеної операції. Монотонна різниця уникає змін календарного часу. Запиши одиниці, середовище, прогрів, обсяг і врахування відмов. Для 10, 20, 30, 40, 200 мс nearest-rank p50 дорівнює 30 мс, а p95 — 200 мс. Nearest rank використовує ceil(q × n) у відсортованій вибірці з позиціями від 1. Інші системи можуть інтерполювати. Одне повільне значення домінує p95 у цій вибірці. Назви метод і розмір без висновків поза даними.\n\n### CI як відтворюваний сигнал\n\nЗапусти lint, unit та інтеграцію БД у чистому середовищі з точними залежностями. Застосуй міграції й перевір liveness та readiness через справжній API. Якщо збираєш продуктивність, опиши навантаження й покажи затримку успішних запитів і кількість відмов. Не зривай спільний CI поодиноким шумним виміром. Функціональний тайм-аут чи рішення бюджету перевіряй керованим годинником, а справжню затримку — заданим навантаженням.\n\n### Прочитай протокол затримок і готовності\n\nПідготуй три стани: ready до контрольованої відмови, unready під час недоступності БД і ready після відновлення. Запиши обидві проби. Якщо процес завершується за кожної залежної відмови, супервізор може постійно його перезапускати й ускладнювати діагностику. Якщо readiness лишається healthy при відмові, клієнти слатимуть залежні запити сервісу, який не справиться. Виміряй час проби й обмеж кожну окремо, щоб швидко завершувалася. Результат зроби малим і стабільним для автоматизації.\n\nДля малого локального бенчмарка назви endpoint і фікстуру, зроби визначений прогрів та збери затримки й відмови з фіксованою одночасністю. Якщо 18 успішні й два падають, покажи процентиль 18 успіхів і кількість відмов разом. Інакше швидка відмова може виглядати прискоренням. Порівнюй два запуски за описаних умов. Вказуй інтерполяцію чи nearest rank, бо інструменти можуть різнитися на малих вибірках. Швидкість скеровує діагностику, а тести коректності перевіряють поведінку ресурсів і помилки.",
+    "en": "### Choose the question each probe answers\n\nLiveness can tell a supervisor whether the process responds. Readiness tells a caller whether the service can accept its normal requests. A project might return ready only after checking database connectivity and expected schema version. If the database is briefly down, readiness can fail while the process stays alive and reconnects. Short bounded checks prevent a probe from holding resources indefinitely. Return a stable status without leaking credentials, server paths or stack traces.\n\n### Measure elapsed time\n\nUse time.perf_counter or perf_counter_ns around a defined operation. A monotonic difference avoids wall-clock changes. Record units and environment, warm-up, sample size and whether errors are counted. With observations 10, 20, 30, 40, 200 ms, nearest-rank p50 is 30 ms and p95 is 200 ms. Nearest rank uses ceil(q × n) in the sorted sample, with one-based positions. Other systems may interpolate. A single slow value dominates p95 for this sample. Report the method and size rather than generalizing beyond the data.\n\n### Make CI a repeatable release signal\n\nRun lint, unit tests and real database integration tests on a clean environment with exact dependencies. Apply migrations and check liveness and readiness through the real API. If you collect local performance, describe the workload and report both successful request latency and error count. Avoid failing a shared CI run on a single noisy time measurement. Test a functional timeout or latency-budget decision with a fake clock and assess real latency over a specified workload.\n\n### Read a timing and readiness transcript\n\nPrepare a timeline with three states: ready before a planned fixture outage, unready while the database is unavailable and ready after recovery. Capture both probes. If the process exits on every dependency failure, a supervisor may restart it repeatedly and make diagnosis harder. If readiness remains healthy during an outage, clients may keep sending dependent requests to a process that cannot handle them. Measure probe duration and set a separate bound so each check stops promptly. Keep the outcome small and stable enough for automated checks.\n\nFor a small local benchmark, name the endpoint and fixture, perform a fixed warm-up, and collect durations and failure totals under fixed concurrency. If 18 requests succeed and two fail, report the percentile of the 18 successful requests and the error count together. Otherwise a quick failure might make the service appear faster. Compare two runs only under documented conditions. Label interpolated and nearest-rank methods, since tools can disagree on small samples. Use speed measurements to guide investigation, while correctness tests assert actual resource behavior and error contracts."
+  },
+  "recap": {
+    "uk": "Перевір життя процесу та придатність обслуговувати. Повідомляй затримку з чіткою операцією, вибіркою та правилом процентиля.",
+    "en": "Check whether the process lives and whether it can serve. Report latency with a clear operation, sample and percentile convention."
+  },
+  "objectives": [
+    {
+      "id": "O1",
+      "title": {
+        "uk": "Розрізняти liveness і readiness та перевіряти обидва.",
+        "en": "Distinguish liveness from readiness and test both."
+      },
+      "skill": "systems"
+    },
+    {
+      "id": "O2",
+      "title": {
+        "uk": "Обчислювати й повідомляти затримку з явною вибіркою та методом.",
+        "en": "Compute and report latency with an explicit sample and method."
+      },
+      "skill": "evaluation"
+    }
+  ],
+  "sources": [
+    {
+      "title": {
+        "uk": "Python monotonic clocks",
+        "en": "Python monotonic clocks"
+      },
+      "url": "https://docs.python.org/3.12/library/time.html",
+      "version": "Python 3.12",
+      "checked": "2026-11-26"
+    },
+    {
+      "title": {
+        "uk": "Building and testing Python on GitHub Actions",
+        "en": "Building and testing Python on GitHub Actions"
+      },
+      "url": "https://docs.github.com/en/actions/tutorials/build-and-test-code/python",
+      "version": "GitHub Actions",
+      "checked": "2026-11-26"
+    },
+    {
+      "title": {
+        "uk": "Docker Compose startup order",
+        "en": "Docker Compose startup order"
+      },
+      "url": "https://docs.docker.com/compose/how-tos/startup-order/",
+      "version": "Docker Compose",
+      "checked": "2026-11-26"
+    }
+  ],
+  "examples": [
+    {
+      "file": "w06_l03_example.py",
+      "expected": "30\n200",
+      "explanation": {
+        "uk": "Обчисли nearest-rank процентилі зі сталої фікстури. Числа є спостереженнями, а не бенчмарком.",
+        "en": "Compute nearest-rank percentiles from a fixed fixture. The numbers are observations, not a benchmark."
+      },
+      "error": {
+        "uk": "Порожня вибірка не має процентиля. Перевір її до індексації.",
+        "en": "An empty sample has no percentile. Handle it before indexing."
+      }
+    }
+  ],
+  "interview": [
+    "When should a process be alive but unready?",
+    "How does a small sample impact the credibility of p95?"
+  ],
+  "interviewGuide": {
+    "uk": "Наведи перехід готовності й покажи розрахунок p95 для фікстури.",
+    "en": "Use a readiness transition and show how p95 is computed for the fixture."
+  },
+  "exercises": [
+    {
+      "id": "W06-L03-E1",
+      "title": {
+        "uk": "Обчислити явні процентилі затримки",
+        "en": "Compute explicit latency percentiles"
+      },
+      "kind": "code",
+      "objectives": [
+        "O1"
+      ],
+      "estimateMinutes": 75,
+      "criteria": [],
+      "example": {
+        "uk": "Для [10,20,30,40,200] поверни count=5, p50=30 і p95=200.",
+        "en": "For [10,20,30,40,200] return count=5, p50=30 and p95=200."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(samples) для списку мілісекунд. Поверни {'count': n, 'p50': value, 'p95': value}, процентилі nearest-rank відсортованого входу. Порожня вибірка дає None для обох. Дозволені скінченні невід’ємні int і float; bool чи інші значення дають ValueError. Не змінюй ввід.\n\n**Синтетичні накладні**",
+            "en": "Implement solve(samples) for a list of milliseconds. Return {'count': n, 'p50': value, 'p95': value}, with nearest-rank percentiles of the sorted input. Empty samples return both percentiles None. Integers and floats are allowed when finite and nonnegative; reject bool or other values with ValueError. Do not mutate input.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Перевір ввід до сортування.",
+              "en": "Check input before sorting."
+            },
+            {
+              "uk": "Окремо задай порожній результат.",
+              "en": "Define the empty result separately."
+            },
+            {
+              "uk": "Перетвори ceil(q*n) з одиничної на нульову індексацію.",
+              "en": "Convert one-based ceil(q*n) to a zero-based index."
+            }
+          ],
+          "solution": {
+            "uk": "Сортуй копію. Для порожньої вибірки процентилів немає, інакше діє однакове задокументоване правило.\n\n```python\nimport math\n\ndef solve(samples: list[int | float]) -> dict[str, int | float | None]:\n    if any(type(value) not in (int, float) or value < 0\n           or (isinstance(value, float) and not math.isfinite(value)) for value in samples):\n        raise ValueError('invalid elapsed sample')\n    ordered = sorted(samples)\n    count = len(ordered)\n    return {'count': count,\n            'p50': ordered[(count + 1) // 2 - 1] if count else None,\n            'p95': ordered[(95 * count + 99) // 100 - 1] if count else None}\n```",
+            "en": "Sort a copy. Percentiles are absent for an empty sample and use the same documented convention otherwise.\n\n```python\nimport math\n\ndef solve(samples: list[int | float]) -> dict[str, int | float | None]:\n    if any(type(value) not in (int, float) or value < 0\n           or (isinstance(value, float) and not math.isfinite(value)) for value in samples):\n        raise ValueError('invalid elapsed sample')\n    ordered = sorted(samples)\n    count = len(ordered)\n    return {'count': count,\n            'p50': ordered[(count + 1) // 2 - 1] if count else None,\n            'p95': ordered[(95 * count + 99) // 100 - 1] if count else None}\n```"
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(samples) для списку мілісекунд. Поверни {'count': n, 'p50': value, 'p95': value}, процентилі nearest-rank відсортованого входу. Порожня вибірка дає None для обох. Дозволені скінченні невід’ємні int і float; bool чи інші значення дають ValueError. Не змінюй ввід.\n\n**Синтетичні запити підтримки**",
+            "en": "Implement solve(samples) for a list of milliseconds. Return {'count': n, 'p50': value, 'p95': value}, with nearest-rank percentiles of the sorted input. Empty samples return both percentiles None. Integers and floats are allowed when finite and nonnegative; reject bool or other values with ValueError. Do not mutate input.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Перевір ввід до сортування.",
+              "en": "Check input before sorting."
+            },
+            {
+              "uk": "Окремо задай порожній результат.",
+              "en": "Define the empty result separately."
+            },
+            {
+              "uk": "Перетвори ceil(q*n) з одиничної на нульову індексацію.",
+              "en": "Convert one-based ceil(q*n) to a zero-based index."
+            }
+          ],
+          "solution": {
+            "uk": "Сортуй копію. Для порожньої вибірки процентилів немає, інакше діє однакове задокументоване правило.\n\n```python\nimport math\n\ndef solve(samples: list[int | float]) -> dict[str, int | float | None]:\n    if any(type(value) not in (int, float) or value < 0\n           or (isinstance(value, float) and not math.isfinite(value)) for value in samples):\n        raise ValueError('invalid elapsed sample')\n    ordered = sorted(samples)\n    count = len(ordered)\n    return {'count': count,\n            'p50': ordered[(count + 1) // 2 - 1] if count else None,\n            'p95': ordered[(95 * count + 99) // 100 - 1] if count else None}\n```",
+            "en": "Sort a copy. Percentiles are absent for an empty sample and use the same documented convention otherwise.\n\n```python\nimport math\n\ndef solve(samples: list[int | float]) -> dict[str, int | float | None]:\n    if any(type(value) not in (int, float) or value < 0\n           or (isinstance(value, float) and not math.isfinite(value)) for value in samples):\n        raise ValueError('invalid elapsed sample')\n    ordered = sorted(samples)\n    count = len(ordered)\n    return {'count': count,\n            'p50': ordered[(count + 1) // 2 - 1] if count else None,\n            'p95': ordered[(95 * count + 99) // 100 - 1] if count else None}\n```"
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(samples) для списку мілісекунд. Поверни {'count': n, 'p50': value, 'p95': value}, процентилі nearest-rank відсортованого входу. Порожня вибірка дає None для обох. Дозволені скінченні невід’ємні int і float; bool чи інші значення дають ValueError. Не змінюй ввід.\n\n**Синтетичні документи політик**",
+            "en": "Implement solve(samples) for a list of milliseconds. Return {'count': n, 'p50': value, 'p95': value}, with nearest-rank percentiles of the sorted input. Empty samples return both percentiles None. Integers and floats are allowed when finite and nonnegative; reject bool or other values with ValueError. Do not mutate input.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Перевір ввід до сортування.",
+              "en": "Check input before sorting."
+            },
+            {
+              "uk": "Окремо задай порожній результат.",
+              "en": "Define the empty result separately."
+            },
+            {
+              "uk": "Перетвори ceil(q*n) з одиничної на нульову індексацію.",
+              "en": "Convert one-based ceil(q*n) to a zero-based index."
+            }
+          ],
+          "solution": {
+            "uk": "Сортуй копію. Для порожньої вибірки процентилів немає, інакше діє однакове задокументоване правило.\n\n```python\nimport math\n\ndef solve(samples: list[int | float]) -> dict[str, int | float | None]:\n    if any(type(value) not in (int, float) or value < 0\n           or (isinstance(value, float) and not math.isfinite(value)) for value in samples):\n        raise ValueError('invalid elapsed sample')\n    ordered = sorted(samples)\n    count = len(ordered)\n    return {'count': count,\n            'p50': ordered[(count + 1) // 2 - 1] if count else None,\n            'p95': ordered[(95 * count + 99) // 100 - 1] if count else None}\n```",
+            "en": "Sort a copy. Percentiles are absent for an empty sample and use the same documented convention otherwise.\n\n```python\nimport math\n\ndef solve(samples: list[int | float]) -> dict[str, int | float | None]:\n    if any(type(value) not in (int, float) or value < 0\n           or (isinstance(value, float) and not math.isfinite(value)) for value in samples):\n        raise ValueError('invalid elapsed sample')\n    ordered = sorted(samples)\n    count = len(ordered)\n    return {'count': count,\n            'p50': ordered[(count + 1) // 2 - 1] if count else None,\n            'p95': ordered[(95 * count + 99) // 100 - 1] if count else None}\n```"
+          }
+        }
+      ]
+    },
+    {
+      "id": "W06-L03-E2",
+      "title": {
+        "uk": "Запустити health, readiness і виміри Project A",
+        "en": "Run health, readiness and timing checks on Project A"
+      },
+      "kind": "rubric",
+      "objectives": [
+        "O2"
+      ],
+      "estimateMinutes": 70,
+      "criteria": [
+        {
+          "id": "C1",
+          "title": {
+            "uk": "Показано окремі результати проб до, під час і після відмови.",
+            "en": "Show separate probe outcomes before, during and after outage."
+          }
+        },
+        {
+          "id": "C2",
+          "title": {
+            "uk": "Наведено виміри, кількість, одиниці та правило.",
+            "en": "Provide actual measurements with count, unit and percentile rule."
+          }
+        },
+        {
+          "id": "C3",
+          "title": {
+            "uk": "Використано одноразову фікстуру й відтворювані перевірки.",
+            "en": "Use a disposable fixture and reproducible checks."
+          }
+        }
+      ],
+      "example": {
+        "uk": "Коли БД зупинена, liveness відповідає, readiness показує недоступність. Дай p95 з числом спостережень.",
+        "en": "When the DB is stopped, liveness responds and readiness returns an unavailable status. Report p95 with a sample count."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Додай маршрути liveness і readiness. Запусти одноразову Compose-фікстуру зі здоровою, тимчасово недоступною й відновленою БД. Запиши обидві відповіді в кожному стані. Збери хоча б 20 вимірів одного описаного endpoint. Запиши одиниці, метод, число відмов і середовище. Додай функціональні перевірки до CI.\n\n**Синтетичні накладні**",
+            "en": "Add liveness and readiness routes. Run a disposable Compose fixture with the DB healthy, temporarily unavailable and available again. Record both responses in each state. Collect at least 20 elapsed samples for one documented endpoint. Record units, method, failure count and environment. Add the functional checks to CI.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Визнач точну вимогу readiness.",
+              "en": "Define exactly what readiness must verify."
+            },
+            {
+              "uk": "Використай різницю монотонного часу.",
+              "en": "Use elapsed difference from a monotonic clock."
+            },
+            {
+              "uk": "Задокументуй окремий підсумок неуспішних запитів.",
+              "en": "Document whether failed requests are summarized separately."
+            }
+          ],
+          "solution": {
+            "uk": "Перевіряй процес і БД окремо з лімітами часу. Збери тривалість визначеного endpoint і повідом вибірку та відмови.",
+            "en": "Probe process and database separately with time limits. Collect elapsed values for a defined endpoint and report observations with sample information and errors."
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Додай маршрути liveness і readiness. Запусти одноразову Compose-фікстуру зі здоровою, тимчасово недоступною й відновленою БД. Запиши обидві відповіді в кожному стані. Збери хоча б 20 вимірів одного описаного endpoint. Запиши одиниці, метод, число відмов і середовище. Додай функціональні перевірки до CI.\n\n**Синтетичні запити підтримки**",
+            "en": "Add liveness and readiness routes. Run a disposable Compose fixture with the DB healthy, temporarily unavailable and available again. Record both responses in each state. Collect at least 20 elapsed samples for one documented endpoint. Record units, method, failure count and environment. Add the functional checks to CI.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Визнач точну вимогу readiness.",
+              "en": "Define exactly what readiness must verify."
+            },
+            {
+              "uk": "Використай різницю монотонного часу.",
+              "en": "Use elapsed difference from a monotonic clock."
+            },
+            {
+              "uk": "Задокументуй окремий підсумок неуспішних запитів.",
+              "en": "Document whether failed requests are summarized separately."
+            }
+          ],
+          "solution": {
+            "uk": "Перевіряй процес і БД окремо з лімітами часу. Збери тривалість визначеного endpoint і повідом вибірку та відмови.",
+            "en": "Probe process and database separately with time limits. Collect elapsed values for a defined endpoint and report observations with sample information and errors."
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Додай маршрути liveness і readiness. Запусти одноразову Compose-фікстуру зі здоровою, тимчасово недоступною й відновленою БД. Запиши обидві відповіді в кожному стані. Збери хоча б 20 вимірів одного описаного endpoint. Запиши одиниці, метод, число відмов і середовище. Додай функціональні перевірки до CI.\n\n**Синтетичні документи політик**",
+            "en": "Add liveness and readiness routes. Run a disposable Compose fixture with the DB healthy, temporarily unavailable and available again. Record both responses in each state. Collect at least 20 elapsed samples for one documented endpoint. Record units, method, failure count and environment. Add the functional checks to CI.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Визнач точну вимогу readiness.",
+              "en": "Define exactly what readiness must verify."
+            },
+            {
+              "uk": "Використай різницю монотонного часу.",
+              "en": "Use elapsed difference from a monotonic clock."
+            },
+            {
+              "uk": "Задокументуй окремий підсумок неуспішних запитів.",
+              "en": "Document whether failed requests are summarized separately."
+            }
+          ],
+          "solution": {
+            "uk": "Перевіряй процес і БД окремо з лімітами часу. Збери тривалість визначеного endpoint і повідом вибірку та відмови.",
+            "en": "Probe process and database separately with time limits. Collect elapsed values for a defined endpoint and report observations with sample information and errors."
+          }
+        }
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "id": "Q1",
+      "prompt": {
+        "uk": "Яка проба має впасти, якщо БД недоступна, а процес відповідає?",
+        "en": "Which probe should fail if the DB is unreachable and the process responds?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Має падати лише liveness.",
+            "en": "Liveness alone should always fail."
+          },
+          "explanation": {
+            "uk": "Це може спричинити зайві рестарти.",
+            "en": "That can cause unnecessary process restarts."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Readiness може впасти, коли liveness проходить.",
+            "en": "Readiness can fail while liveness succeeds."
+          },
+          "explanation": {
+            "uk": "Процес може жити без можливості прийняти запити.",
+            "en": "The process can live but be unable to serve regular requests."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Обидві мають завжди бути успішними.",
+            "en": "Both must always stay successful."
+          },
+          "explanation": {
+            "uk": "Твердження готовності було б хибним.",
+            "en": "A ready claim would be false for dependent requests."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q2",
+      "prompt": {
+        "uk": "Що дає монотонний годинник виміру затримки?",
+        "en": "What does a monotonic clock give latency measurement?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Сталу позначку UTC.",
+            "en": "A stable UTC timestamp."
+          },
+          "explanation": {
+            "uk": "Монотонний час призначено для інтервалів.",
+            "en": "Monotonic clocks are for intervals."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Гарантовано однаковий час запитів.",
+            "en": "Guaranteed equal request timing."
+          },
+          "explanation": {
+            "uk": "Робота запитів і далі різна.",
+            "en": "Actual request work still varies."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Різниці часу без стрибків календарного годинника.",
+            "en": "Elapsed differences unaffected by wall-clock jumps."
+          },
+          "explanation": {
+            "uk": "Він вимірює тривалість без календарного часу.",
+            "en": "It measures duration without relying on wall time."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q3",
+      "prompt": {
+        "uk": "Який nearest-rank p95 для п’яти відсортованих значень?",
+        "en": "What is nearest-rank p95 of a sorted five-value sample?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Останнє значення.",
+            "en": "The last value."
+          },
+          "explanation": {
+            "uk": "ceil(.95 × 5) = 5.",
+            "en": "ceil(.95 × 5) = 5."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Третє значення.",
+            "en": "The third value."
+          },
+          "explanation": {
+            "uk": "Це nearest-rank p50 тут.",
+            "en": "That is nearest-rank p50 here."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Середнє арифметичне.",
+            "en": "The arithmetic mean."
+          },
+          "explanation": {
+            "uk": "Процентилі ранжують без усереднення.",
+            "en": "Percentiles rank rather than average all samples."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q4",
+      "prompt": {
+        "uk": "Що має супроводжувати результат затримки?",
+        "en": "What should accompany a latency result?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Обіцянка, що сервіс ніколи не сповільниться.",
+            "en": "A promise that the service never slows down."
+          },
+          "explanation": {
+            "uk": "Вибірка не гарантує майбутнього.",
+            "en": "A sample cannot guarantee future behavior."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Endpoint, одиниці, розмір вибірки, метод і правило відмов.",
+            "en": "Endpoint, units, sample size, method and failure policy."
+          },
+          "explanation": {
+            "uk": "Це робить порівняння зрозумілими.",
+            "en": "This makes comparisons intelligible."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Лише найшвидше спостереження.",
+            "en": "Only the fastest observation."
+          },
+          "explanation": {
+            "uk": "Це приховує типову й хвостову поведінку.",
+            "en": "It hides typical and tail behavior."
+          }
+        }
+      ]
+    }
+  ],
+  "crosslinks": [
+    "W06-L02",
+    "W06-L04"
+  ]
+}

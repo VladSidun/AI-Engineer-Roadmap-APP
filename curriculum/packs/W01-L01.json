@@ -1,0 +1,507 @@
+{
+  "id": "W01-L01",
+  "contentVersion": 1,
+  "objectives": [
+    {
+      "id": "O1",
+      "title": {
+        "en": "Classify an approach by how its behavior is produced.",
+        "uk": "Класифікуй підхід за тим, як формується його поведінка."
+      },
+      "skill": "systems"
+    },
+    {
+      "id": "O2",
+      "title": {
+        "en": "Trace a model error and a system error to different components.",
+        "uk": "Простеж помилки моделі й системи до різних компонентів."
+      },
+      "skill": "systems"
+    },
+    {
+      "id": "O3",
+      "title": {
+        "en": "Choose a rule, model or hybrid for a concrete decision.",
+        "uk": "Обери правило, модель або гібрид для конкретного рішення."
+      },
+      "skill": "evaluation"
+    }
+  ],
+  "overview": {
+    "en": "An AI application may combine a rule, a learned predictor and an ordinary database. The important first question is where the behavior comes from. A rule engine applies criteria written by a person. A machine-learning model learns a mapping from examples. Deep learning uses multi-layer neural networks, and generative AI produces new content such as text. A large language model is one kind of generative model. An application may use one to interpret a request and still rely on ordinary code to decide which records the user can access.\n\nUse a support-ticket router throughout this lesson. Decide what the model predicts, what the surrounding service must guarantee, and how you can tell which part failed. These decisions guide the architecture and the tests you can run before adding a provider. In the first task, classify parts of one system. In the second, design a boundary for an unfamiliar case.",
+    "uk": "Застосунок зі ШІ може поєднувати правило, навчену модель і звичайну базу даних. Спочатку з’ясуй, звідки береться поведінка. Система правил застосовує критерії, які написала людина. Модель машинного навчання вчиться знаходити відповідність між входом і виходом на прикладах. Глибоке навчання використовує багатошарові нейронні мережі, а генеративний ШІ створює новий вміст, наприклад текст. Велика мовна модель є одним із видів генеративних моделей. Застосунок може використовувати її, щоб зрозуміти запит, а доступом до записів керувати звичайним кодом.\n\nРозглянь маршрутизацію звернень у підтримку. Визнач, що прогнозує модель, які гарантії дає сервіс і за яким спостереженням можна локалізувати збій. Ці рішення визначають архітектуру й тести ще до інтеграції з провайдером. У першій вправі класифікуй частини системи. У другій спроєктуй межу між моделлю та застосунком для нового випадку."
+  },
+  "theory": {
+    "en": "### Four descriptions, two questions\nAsk whether the behavior is explicitly programmed or learned, then ask what the component produces. In symbolic AI, facts and relationships have explicit representations. A rule such as “an active incident goes to the on-call queue” operates on these facts. The evidence for the decision is the matched rule and input state. A fixed rule works well when the condition can be defined and audited. It grows brittle when free text changes faster than engineers can write exceptions. A single if-statement is ordinary software; a collection of explicit facts plus inference rules illustrates the symbolic approach.\n\nA supervised ML classifier learns from labelled examples such as tickets paired with the correct team. Its output might be a team label and a score. Labelling is an engineering choice: two teams may disagree on ownership, and a historical label can reflect an outdated workflow. A deep classifier learns this mapping with a multi-layer neural network. Depth describes how the mapping is represented, while classification describes the output. A model can be deep and discriminative. A generator instead produces a new sequence, picture or other content. For a language model, successive tokens are predicted from the context. Generated text can look plausible while encoding the wrong ticket ID.\n\n### Draw the boundary\nTicket → validate request → predict team → apply access policy → assign or ask for review.\n\nThe model consumes a representation of the ticket and returns a prediction. The validator, permission check, queue, retry policy and operator UI are components of the system. The access policy is deterministic because rights are defined by the current service state. A label such as “billing” has meaning only after ordinary code checks it against the routing contract. If the classifier predicts billing and the service writes to an unauthorized queue, the permission boundary failed. If the service writes exactly as specified but the label generated from a bilingual complaint is wrong, inspect the model, labelled examples and input preparation. Record the component and observed symptom separately.\n\n| Condition | Choice | Check |\n| --- | --- | --- |\n| Escalation is defined by an incident flag | Rule | Active incident always goes to on-call |\n| Multiple phrasings express the same issue | Classifier | Compare against human-labelled tickets |\n| Operators need a draft summary | Generator with review | Check supporting facts and allow edits |\n| Text includes account identifiers | Restrict input and output in the service | Confirm which records and fields cross the boundary |\n\n### Make a comparison\nStart with the simplest baseline, such as a team chosen from an explicit form field. Keep its decisions and compare a learned approach on the same examples. Include rare requests and ambiguous tickets. Decide how to handle “unknown” before integration: route to triage when a prediction falls below a chosen threshold or fails the contract. This makes the cost of an uncertain decision visible. Measure incorrect assignments and review volume together. A threshold that sends every ticket to review avoids automatic misrouting but may save no work. Ask who bears the cost of each failure before making the threshold stricter.",
+    "uk": "### Чотири назви й два запитання\nЗапитай, чи поведінку явно запрограмовано або вивчено, а потім з’ясуй, що повертає компонент. У символічному ШІ факти й зв’язки мають явне представлення. Правило «активний інцидент спрямовуємо до чергових» працює з такими фактами. Рішення пояснюють умова правила й стан входу. Фіксоване правило зручне, якщо умову можна визначити і перевірити, але стає крихким, коли вільний текст змінюється швидше, ніж інженери пишуть винятки. Окрема інструкція if є звичайним кодом. Сукупність явних фактів і правил виведення ілюструє символічний підхід.\n\nКласифікатор ML з учителем вчиться на розмічених даних, наприклад на зверненнях із правильною командою. Вихід може містити мітку команди й оцінку впевненості. Розмітка є інженерним рішенням: дві команди можуть по-різному розуміти відповідальність, а історична мітка може відображати застарілий процес. Глибокий класифікатор вивчає відповідність багатошаровою нейромережею. Глибина описує будову, тоді як класифікація описує тип виходу. Глибока модель може бути дискримінативною. Генератор створює нову послідовність, зображення чи інший вміст. Мовна модель послідовно прогнозує токени з контексту. Правдоподібний текст може містити неправильний ID звернення.\n\n### Проведи межу\nЗвернення → валідація запиту → прогноз команди → політика доступу → призначення або ручна перевірка.\n\nМодель отримує представлення звернення та видає прогноз. Валідатор, права доступу, черга, політика повторів та інтерфейс оператора є частинами системи. Політика доступу детермінована, бо права визначені поточним станом сервісу. Мітка «billing» має сенс після перевірки проти контракту маршрутизації. Якщо модель повернула billing і сервіс записав його до черги без потрібних прав, збій стався на межі доступу. Якщо запис відповідає контракту, але мітка двомовної скарги хибна, перевір модель, розмітку й підготовку входу. Запиши компонент і спостережуваний симптом окремо.\n\n| Умова | Вибір | Перевірка |\n| --- | --- | --- |\n| Ескалацію визначає ознака інциденту | Правило | Активний інцидент завжди потрапляє до чергових |\n| Ту саму проблему висловлюють різними словами | Класифікатор | Порівняння зі зверненнями, розміченими людьми |\n| Операторам потрібна чернетка резюме | Генератор із перевіркою | Звірка фактів і можливість редагувати |\n| Текст містить ідентифікатори облікових записів | Обмеження входу й виходу в сервісі | Перелік записів і полів, що перетинають межу |\n\n### Порівняй варіанти\nПочни з простого baseline, наприклад команди з явного поля форми. Збережи рішення та порівняй навчений підхід на тих самих прикладах. Додай рідкісні запити й неоднозначні звернення. Заздалегідь визнач обробку невідомих випадків: потрібна ручна перевірка, якщо прогноз нижчий за обраний поріг або порушує контракт. Так видно вартість невизначеного рішення. Вимірюй неправильні призначення разом з обсягом ручної перевірки. Поріг, за якого кожне звернення йде оператору, прибирає автоматичні помилки, але може не заощадити праці. З’ясуй, хто оплачує наслідки кожної помилки, перш ніж посилювати поріг."
+  },
+  "recap": {
+    "en": "Classify behavior by its origin and output. Draw the boundary before assigning blame. Choose a baseline and a fallback that you can test with the same inputs.",
+    "uk": "Класифікуй поведінку за походженням і виходом. Проведи межу компонентів, перш ніж локалізувати помилку. Обери baseline і резервний шлях, які можна перевірити на однакових даних."
+  },
+  "interview": [
+    "When would you prefer a rule over a learned classifier?",
+    "How would you locate a failure between a model and its surrounding service?"
+  ],
+  "interviewGuide": {
+    "en": "Answer with a condition, a concrete observation and a test.",
+    "uk": "Назви умову, конкретне спостереження і тест."
+  },
+  "sources": [
+    {
+      "title": {
+        "en": "Introduction to large language models",
+        "uk": "Вступ до великих мовних моделей"
+      },
+      "url": "https://developers.google.com/machine-learning/crash-course/llm",
+      "version": "ML Crash Course",
+      "checked": "2026-11-26"
+    }
+  ],
+  "examples": [],
+  "questions": [
+    {
+      "id": "Q1",
+      "prompt": {
+        "en": "What defines a symbolic route in this example?",
+        "uk": "Що визначає символічну маршрутизацію в цьому прикладі?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "options": [
+        {
+          "id": "a",
+          "title": {
+            "en": "The number of layers",
+            "uk": "Кількість шарів"
+          },
+          "explanation": {
+            "en": "Depth describes a network.",
+            "uk": "Глибина описує мережу."
+          }
+        },
+        {
+          "id": "b",
+          "title": {
+            "en": "An explicit rule applied to known facts",
+            "uk": "Явне правило, застосоване до відомих фактів"
+          },
+          "explanation": {
+            "en": "A matched rule explains the result.",
+            "uk": "Результат пояснює правило, умову якого виконано."
+          }
+        },
+        {
+          "id": "c",
+          "title": {
+            "en": "The database size",
+            "uk": "Розмір БД"
+          },
+          "explanation": {
+            "en": "Storage size does not determine inference.",
+            "uk": "Розмір сховища не визначає виведення."
+          }
+        }
+      ],
+      "correct": [
+        "b"
+      ]
+    },
+    {
+      "id": "Q2",
+      "prompt": {
+        "en": "A correct label reaches an unauthorized queue. Where do you inspect first?",
+        "uk": "Правильна мітка потрапила до недозволеної черги. Що перевірити спочатку?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "options": [
+        {
+          "id": "a",
+          "title": {
+            "en": "The service access check",
+            "uk": "Перевірку доступу сервісу"
+          },
+          "explanation": {
+            "en": "The system owns authorization.",
+            "uk": "Права доступу контролює система."
+          }
+        },
+        {
+          "id": "b",
+          "title": {
+            "en": "Only the training loss",
+            "uk": "Тільки втрати при навчанні"
+          },
+          "explanation": {
+            "en": "The prediction was correct.",
+            "uk": "Прогноз був правильним."
+          }
+        },
+        {
+          "id": "c",
+          "title": {
+            "en": "The tokenizer vocabulary size",
+            "uk": "Розмір словника токенізатора"
+          },
+          "explanation": {
+            "en": "A vocabulary does not enforce permissions.",
+            "uk": "Словник не контролює права."
+          }
+        }
+      ],
+      "correct": [
+        "a"
+      ]
+    },
+    {
+      "id": "Q3",
+      "prompt": {
+        "en": "Which statements can hold at the same time? Choose all that apply.",
+        "uk": "Які твердження можуть бути істинними одночасно? Обери всі."
+      },
+      "objectives": [
+        "O3"
+      ],
+      "options": [
+        {
+          "id": "a",
+          "title": {
+            "en": "A deep network can classify tickets.",
+            "uk": "Глибока мережа може класифікувати звернення."
+          },
+          "explanation": {
+            "en": "Depth describes architecture.",
+            "uk": "Глибина описує архітектуру."
+          }
+        },
+        {
+          "id": "b",
+          "title": {
+            "en": "Any deep model must generate text.",
+            "uk": "Кожна глибока модель генерує текст."
+          },
+          "explanation": {
+            "en": "Classification is also possible.",
+            "uk": "Можлива й класифікація."
+          }
+        },
+        {
+          "id": "c",
+          "title": {
+            "en": "A system can combine learned and deterministic parts.",
+            "uk": "Система може поєднувати навчені та детерміновані частини."
+          },
+          "explanation": {
+            "en": "Each component can have a different role.",
+            "uk": "Компоненти можуть виконувати різні ролі."
+          }
+        }
+      ],
+      "correct": [
+        "a",
+        "c"
+      ]
+    },
+    {
+      "id": "Q4",
+      "prompt": {
+        "en": "Why keep a rule baseline?",
+        "uk": "Навіщо зберігати baseline на правилах?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "options": [
+        {
+          "id": "a",
+          "title": {
+            "en": "It guarantees perfect labels.",
+            "uk": "Він гарантує ідеальні мітки."
+          },
+          "explanation": {
+            "en": "A baseline can make mistakes.",
+            "uk": "Baseline теж може помилятися."
+          }
+        },
+        {
+          "id": "b",
+          "title": {
+            "en": "Its result replaces measurement.",
+            "uk": "Його результат заміняє вимірювання."
+          },
+          "explanation": {
+            "en": "A comparison needs measurements.",
+            "uk": "Порівняння потребує вимірювань."
+          }
+        },
+        {
+          "id": "c",
+          "title": {
+            "en": "It gives a reference on the same cases.",
+            "uk": "Він дає орієнтир на тих самих кейсах."
+          },
+          "explanation": {
+            "en": "The difference can be attributed to the approach when inputs match.",
+            "uk": "На однакових входах можна оцінити вплив підходу."
+          }
+        }
+      ],
+      "correct": [
+        "c"
+      ]
+    }
+  ],
+  "exercises": [
+    {
+      "id": "W01-L01-E1",
+      "title": {
+        "en": "Label a ticket pipeline",
+        "uk": "Класифікуй частини маршрутизації"
+      },
+      "kind": "rubric",
+      "objectives": [
+        "O1"
+      ],
+      "estimateMinutes": 45,
+      "criteria": [
+        {
+          "id": "C1",
+          "title": {
+            "en": "I separated explicit rules, learned behavior and ordinary storage.",
+            "uk": "Я розрізнив явні правила, навчення й звичайне зберігання."
+          }
+        },
+        {
+          "id": "C2",
+          "title": {
+            "en": "I identified an observed failure and the component to test.",
+            "uk": "Я визначив симптом збою та компонент для перевірки."
+          }
+        }
+      ],
+      "example": {
+        "en": "Example evidence: a learned queue label is wrong, but a permission test confirms the write was blocked.",
+        "uk": "Приклад доказу: навчена мітка черги хибна, але тест прав підтверджує, що запис заблоковано."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "en": "Primary attempt",
+            "uk": "Основний варіант"
+          },
+          "prompt": {
+            "en": "Write a three-row table for an incident rule, a model that predicts a team, and the queue database. Add an ambiguous ticket and identify the first test.",
+            "uk": "Створи таблицю з трьох рядків для правила інциденту, моделі вибору команди й бази черг. Додай неоднозначне звернення і вкажи перший тест."
+          },
+          "hints": [
+            {
+              "en": "Ask where each decision originates.",
+              "uk": "Запитай, звідки береться кожне рішення."
+            },
+            {
+              "en": "Draw columns for input, output and decision source.",
+              "uk": "Накресли колонки входу, виходу й джерела рішення."
+            },
+            {
+              "en": "Trace the observed output before inspecting the next component.",
+              "uk": "Перевір спостережуваний вихід до переходу до наступного компонента."
+            }
+          ],
+          "solution": {
+            "en": "The incident flag is explicit, routing from examples is learned, and persistence records the outcome. Replay the text against fixed labels, then separately assert the write target.",
+            "uk": "Ознака інциденту є явною, маршрутизація з прикладів навченою, а сховище фіксує результат. Відтвори текст із фіксованими мітками й окремо перевір ціль запису."
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "en": "Retry 1",
+            "uk": "Повтор 1"
+          },
+          "prompt": {
+            "en": "Use a fraud flag, a learned risk label and a transaction journal. Test a duplicated transaction.",
+            "uk": "Візьми ознаку шахрайства, навчену мітку ризику й журнал транзакцій. Перевір дубль транзакції."
+          },
+          "hints": [
+            {
+              "en": "Ask where each decision originates.",
+              "uk": "Запитай, звідки береться кожне рішення."
+            },
+            {
+              "en": "Draw columns for input, output and decision source.",
+              "uk": "Накресли колонки входу, виходу й джерела рішення."
+            },
+            {
+              "en": "Trace the observed output before inspecting the next component.",
+              "uk": "Перевір спостережуваний вихід до переходу до наступного компонента."
+            }
+          ],
+          "solution": {
+            "en": "The flag is explicit, the risk label is learned and the journal records events. Replay two identical IDs and verify deduplication independently of the risk label.",
+            "uk": "Ознака явна, мітка ризику навчена, журнал зберігає події. Відтвори два однакових ID і перевір дедуплікацію незалежно від ризику."
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "en": "Retry 2",
+            "uk": "Повтор 2"
+          },
+          "prompt": {
+            "en": "Use a moderation label, a publishing rule and storage. Test a wrong label on a private post.",
+            "uk": "Візьми мітку модерації, правило публікації та сховище. Перевір хибну мітку приватного допису."
+          },
+          "hints": [
+            {
+              "en": "Ask where each decision originates.",
+              "uk": "Запитай, звідки береться кожне рішення."
+            },
+            {
+              "en": "Draw columns for input, output and decision source.",
+              "uk": "Накресли колонки входу, виходу й джерела рішення."
+            },
+            {
+              "en": "Trace the observed output before inspecting the next component.",
+              "uk": "Перевір спостережуваний вихід до переходу до наступного компонента."
+            }
+          ],
+          "solution": {
+            "en": "The moderation label is learned, publishing policy is deterministic and storage is passive. Verify that no label can override the private visibility rule.",
+            "uk": "Мітка навчена, політика публікації детермінована, сховище пасивне. Переконайся, що мітка не може скасувати правило приватності."
+          }
+        }
+      ],
+      "diagnostic": false
+    },
+    {
+      "id": "W01-L01-E2",
+      "title": {
+        "en": "Design a safe baseline",
+        "uk": "Спроєктуй безпечний baseline"
+      },
+      "kind": "rubric",
+      "objectives": [
+        "O2"
+      ],
+      "estimateMinutes": 45,
+      "criteria": [
+        {
+          "id": "C1",
+          "title": {
+            "en": "I specified an input, output, and abstention condition.",
+            "uk": "Я визначив вхід, вихід і умову утримання від рішення."
+          }
+        },
+        {
+          "id": "C2",
+          "title": {
+            "en": "I proposed a baseline and one measurable acceptance check.",
+            "uk": "Я запропонував baseline й один вимірюваний тест."
+          }
+        }
+      ],
+      "example": {
+        "en": "A starter baseline sends missing team fields to triage. Compare wrong assignments per 100 tickets and review volume.",
+        "uk": "Початковий baseline спрямовує звернення без команди на ручну перевірку. Порівняй помилки на 100 звернень і кількість перевірок."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "en": "Primary attempt",
+            "uk": "Основний варіант"
+          },
+          "prompt": {
+            "en": "Design a system for meeting summaries. Decide what is generated and when a person must review the output.",
+            "uk": "Спроєктуй систему резюме зустрічей. Визнач, що генерується і коли результат має переглянути людина."
+          },
+          "hints": [
+            {
+              "en": "Separate a draft from a committed action.",
+              "uk": "Відокрем чернетку від остаточної дії."
+            },
+            {
+              "en": "Compare the same small set against a no-model baseline.",
+              "uk": "Порівняй однакову малу вибірку з baseline без моделі."
+            },
+            {
+              "en": "Record one error count and a review count.",
+              "uk": "Запиши кількість помилок і кількість ручних перевірок."
+            }
+          ],
+          "solution": {
+            "en": "Generate a draft with source timestamps. Ask for review when a commitment lacks a supporting line. Compare factual errors per 20 cases with a template-only baseline.",
+            "uk": "Генеруй чернетку з часовими мітками. Вимагай перевірки, якщо зобов’язання не має підтверджувального рядка. Порівняй фактичні помилки на 20 кейсах із шаблонним baseline."
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "en": "Retry 1",
+            "uk": "Повтор 1"
+          },
+          "prompt": {
+            "en": "Design a mail category system with a manual inbox fallback.",
+            "uk": "Спроєктуй категоризацію пошти з ручною резервною скринькою."
+          },
+          "hints": [
+            {
+              "en": "Separate a draft from a committed action.",
+              "uk": "Відокрем чернетку від остаточної дії."
+            },
+            {
+              "en": "Compare the same small set against a no-model baseline.",
+              "uk": "Порівняй однакову малу вибірку з baseline без моделі."
+            },
+            {
+              "en": "Record one error count and a review count.",
+              "uk": "Запиши кількість помилок і кількість ручних перевірок."
+            }
+          ],
+          "solution": {
+            "en": "Predict a category and route uncertainty to the inbox. Compare false automatic moves and manual volume with sender-based rules.",
+            "uk": "Прогнозуй категорію, сумнівні листи залишай у скриньці. Порівняй хибні автопереміщення й ручну роботу з правилами за відправником."
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "en": "Retry 2",
+            "uk": "Повтор 2"
+          },
+          "prompt": {
+            "en": "Design a document form assistant with missing fields.",
+            "uk": "Спроєктуй асистента заповнення документа, в якому бракує полів."
+          },
+          "hints": [
+            {
+              "en": "Separate a draft from a committed action.",
+              "uk": "Відокрем чернетку від остаточної дії."
+            },
+            {
+              "en": "Compare the same small set against a no-model baseline.",
+              "uk": "Порівняй однакову малу вибірку з baseline без моделі."
+            },
+            {
+              "en": "Record one error count and a review count.",
+              "uk": "Запиши кількість помилок і кількість ручних перевірок."
+            }
+          ],
+          "solution": {
+            "en": "Draft values with source fields and keep missing values empty. Compare incorrect fields and reviews with a deterministic field-copy baseline.",
+            "uk": "Заповнюй чернетку зі вказаними джерелами полів, а відсутні поля лишай порожніми. Порівняй хибні поля й ручні перевірки з детермінованим копіюванням."
+          }
+        }
+      ],
+      "diagnostic": false
+    }
+  ],
+  "crosslinks": [
+    "W01-L02",
+    "SR-W01"
+  ]
+}

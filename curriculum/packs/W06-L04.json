@@ -1,0 +1,519 @@
+{
+  "id": "W06-L04",
+  "contentVersion": 1,
+  "overview": {
+    "uk": "Збери перший реліз Project A. Із чистого клону підніми API, PostgreSQL і воркер, створи синтетичний документ і спостерігай переходи job. Перевір дозволене представлення, повтори операцію, перезапусти систему й покажи один результат. Локальна вправа перевіряє трасу станів, щоб розрізнити повторні спостереження й невалідні переходи. Самостійний результат — відтворюваний ланцюг рішень і доказів для власного репозиторію.",
+    "en": "Bring the first Project A release together. From a clean clone, bring up API, PostgreSQL and a background worker, create a synthetic document and observe the job through its state transitions. Verify the authorized view, deliberately replay the operation, restart the system, and show that one result remains. The local exercise checks a status-event trace so you can distinguish repeated observations from invalid transitions. The independent deliverable is a reproducible decision and evidence trail for your own backend repository."
+  },
+  "theory": {
+    "uk": "### Трасування всієї системи\n\nAPI отримує синтетичні дані, автентифікує актора, перевіряє ввід і фіксує документ та job. Воркер бере job своєї області й записує результат. API повертає публічний статус для того самого актора. Перевір той самий ID у create response, рядку БД і status route. Сам 202 доводить прийняття, а succeeded і збережений результат разом доводять завершення на фікстурі. Коректна відповідь не доводить відсутність доступу стороннього.\n\n### Репетиція відмови, повтору й рестарту\n\nПісля успішного запиту повтори його ключ із тими самими даними та перевір той самий job ID і один результат. Виконай заборонену дію від іншого тестового tenant. Перевір узгодженість метаданих і стану сховища. Зупини API і БД без видалення тому. Після готовності підтвердь наявність початкових об’єктів і результату. Розрізняй повтор того самого job і явний запит нової версії.\n\n### Артефакт чистого запуску\n\nЗадокументуй версії, безпечні env, міграцію, URL готовності, очікувані відповіді й очищення одноразового демо. Додай схему й трасу API→воркер. Запиши фактичні CI-перевірки. Долучи статус, кількість і безпечні поля виходу. Придатне обмеження — локальний воркер без розподілених повторів. Не заявляй production SLO з малої локальної фікстури. Деплой і зовнішні сервіси лиши необов’язковими.\n\n### Зв’яжи твердження системи з доказами\n\nПідготуй коротку таблицю кроків, відповіді й спостереження БД. Почни з готовності й ревізії схеми. Створи синтетичний документ і запиши tenant та ID у безпечному виводі. Запусти job і перевір queued. Після обробки прочитай завдання й результат. Повтори ключ, порівняй ID й порахуй рядки результату. Додай відмову області та перевір незмінний рядок. Після рестарту повтори запит результату без вставки нової фікстури.\n\nДемо показує сталу поведінку у контрольованому середовищі й залишає операційні межі. Перший бекенд може використовувати одного локального воркера й прості повтори. Опиши взаємодії, що зміняться з кількома воркерами, більшим набором чи відмовою сховища. Скрипт має бути достатньо коротким для повтору перед суттєвою зміною. Познач кожен крок очікуванням і спостережуваною перевіркою. Збій зупиняє демо з видимою причиною. Так огляд портфоліо стає відтворюваним доказом для наступних віх витягнення, провайдера й оцінювання.",
+    "en": "### Trace the whole system\n\nThe API receives synthetic data, authenticates the actor, validates input and commits the document and job. The worker consumes a scoped job and writes a result. The API returns public status for the same actor. Check one ID consistently across create response, database row and status route. A 202 alone proves acceptance, while a later succeeded status and a persisted result together prove completion for that fixture. A correct response does not establish that denied actors have no access.\n\n### Rehearse failure, replay and restart\n\nAfter a successful request, reuse its operation key with the same data and verify the same job ID and one result. Attempt a denied action with another tenant fixture. Check that returned metadata and persistent state remain consistent. Simulate stopping API and DB services without deleting the volume. After readiness, prove the original objects and result still exist. Distinguish replay of the same job from an explicitly requested new version.\n\n### Make a clean-run artifact\n\nDocument runtime versions, safe environment variables, migrator command, readiness URL, expected responses and cleanup for the disposable demo. Include a schema diagram and an API-to-worker trace. Record which CI checks actually ran. Attach observable evidence such as status, count and safe output fields. A clear limitation might be a local polling worker without distributed retries. Avoid claiming a production service SLO from a small local fixture. Keep the deployment and external services optional.\n\n### Connect system claims to recorded evidence\n\nPrepare one compact demonstration table with steps, response and database observation. Begin with readiness and the schema revision. Create a synthetic document, then record its tenant and ID in the safe fixture output. Trigger a job and verify the queued status. After processing, read the job and the recorded result. Repeat the original key, compare response identity and query the result count. Include a scoped denial and verify it left the stored row unchanged. After restarting the stack, repeat the result query without inserting another fixture row.\n\nA demo can show a stable behavior in a controlled environment and still leave operational limits. Your first backend may use one local worker and a simple retry policy. Document interactions that could change with several workers, a larger dataset or a storage outage. Keep the script short enough to rerun before every important change. Mark each step with expected behavior and an observable check. A failure should stop the demo with a visible reason. This turns a portfolio walkthrough into repeatable evidence for future extraction, provider and evaluation milestones."
+  },
+  "recap": {
+    "uk": "Покажи чистий шлях API→результат у своїй області зі сталими ID й виходом після повтору та рестарту.",
+    "en": "Show a clean, scoped API-to-result journey that preserves job identity and output across replay and restart."
+  },
+  "objectives": [
+    {
+      "id": "O1",
+      "title": {
+        "uk": "Перевіряти шлях від документа до результату з повтором і рестартом.",
+        "en": "Verify a complete document-to-result path with retry and restart."
+      },
+      "skill": "systems"
+    },
+    {
+      "id": "O2",
+      "title": {
+        "uk": "Підготувати відтворюване локальне демо і точний підсумок доказів.",
+        "en": "Publish a reproducible local demo and an accurate evidence summary."
+      },
+      "skill": "evaluation"
+    }
+  ],
+  "sources": [
+    {
+      "title": {
+        "uk": "Docker Compose startup order",
+        "en": "Docker Compose startup order"
+      },
+      "url": "https://docs.docker.com/compose/how-tos/startup-order/",
+      "version": "Docker Compose",
+      "checked": "2026-11-26"
+    },
+    {
+      "title": {
+        "uk": "Building and testing Python on GitHub Actions",
+        "en": "Building and testing Python on GitHub Actions"
+      },
+      "url": "https://docs.github.com/en/actions/tutorials/build-and-test-code/python",
+      "version": "GitHub Actions",
+      "checked": "2026-11-26"
+    },
+    {
+      "title": {
+        "uk": "PostgreSQL INSERT and ON CONFLICT",
+        "en": "PostgreSQL INSERT and ON CONFLICT"
+      },
+      "url": "https://www.postgresql.org/docs/17/sql-insert.html",
+      "version": "PostgreSQL 17",
+      "checked": "2026-11-26"
+    }
+  ],
+  "examples": [
+    {
+      "file": "w06_l04_example.py",
+      "expected": "1 succeeded",
+      "explanation": {
+        "uk": "Згорни просту синтетичну трасу до останніх станів. Вправа перевіряє переходи перед прийняттям останнього стану.",
+        "en": "Collapse a simple synthetic trace to each job's latest observation. The exercise validates transitions before accepting the latest status."
+      },
+      "error": {
+        "uk": "Перехід succeeded→running є невалідним за контрактом вправи.",
+        "en": "A succeeded-to-running transition is invalid in the lab's trace contract."
+      }
+    }
+  ],
+  "interview": [
+    "Which observations prove a background job completed?",
+    "How would you demonstrate that a declined request did not mutate state?"
+  ],
+  "interviewGuide": {
+    "uk": "Повідом статус, ID, точну кількість і обмеження запуску.",
+    "en": "Report status, IDs, exact counts and a limitation from the run."
+  },
+  "exercises": [
+    {
+      "id": "W06-L04-E1",
+      "title": {
+        "uk": "Перевірити трасу станів зі стійкістю до повтору",
+        "en": "Validate a replay-safe status trace"
+      },
+      "kind": "code",
+      "objectives": [
+        "O1"
+      ],
+      "estimateMinutes": 75,
+      "criteria": [],
+      "example": {
+        "uk": "Траса queued, running, running, succeeded дає один succeeded.",
+        "en": "A queued, running, running, succeeded trace yields one succeeded result."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(events) для iterable рядкових (job_id, state). Поверни останній стан кожного job у порядку першої появи. ID непорожні й зберігаються як надано. Job починається queued, переходить у running і далі succeeded або failed. Однакові повторні спостереження дозволені. Інший перехід чи невідомий стан дає ValueError. Порожній вхід повертає {}.\n\n**Синтетичні накладні**",
+            "en": "Implement solve(events), an iterable of (job_id, state) strings. Return the latest state per job in order of first appearance. Job IDs must be nonblank and are kept as supplied. Each job starts queued, can move to running and then succeeded or failed. Equal repeated observations are allowed. Any other transition or unknown state raises ValueError. Empty input returns {}.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Тримай поточний стан окремо за ID.",
+              "en": "Keep the current state separately per ID."
+            },
+            {
+              "uk": "Опиши дозволені переходи таблицею.",
+              "en": "Describe the allowed transitions in a table."
+            },
+            {
+              "uk": "Допускай повтори перед перевіркою цільового стану.",
+              "en": "Allow duplicates before comparing the new state with the target set."
+            }
+          ],
+          "solution": {
+            "uk": "Відстежуй стан за порядком вставки й перевір подію до застосування. Однакове повторне спостереження не спричиняє переходу.\n\n```python\nfrom collections.abc import Iterable\n\ndef solve(events: Iterable[tuple[str, str]]) -> dict[str, str]:\n    transitions = {None: {'queued'}, 'queued': {'running'},\n                   'running': {'succeeded', 'failed'}, 'succeeded': set(), 'failed': set()}\n    latest: dict[str, str] = {}\n    for identity, state in events:\n        if not identity.strip():\n            raise ValueError('missing job id')\n        previous = latest.get(identity)\n        if state != previous and state not in transitions[previous]:\n            raise ValueError('invalid job transition')\n        latest[identity] = state\n    return latest\n```",
+            "en": "Track insertion-ordered states and validate every event before applying it. A repeated equal observation causes no transition.\n\n```python\nfrom collections.abc import Iterable\n\ndef solve(events: Iterable[tuple[str, str]]) -> dict[str, str]:\n    transitions = {None: {'queued'}, 'queued': {'running'},\n                   'running': {'succeeded', 'failed'}, 'succeeded': set(), 'failed': set()}\n    latest: dict[str, str] = {}\n    for identity, state in events:\n        if not identity.strip():\n            raise ValueError('missing job id')\n        previous = latest.get(identity)\n        if state != previous and state not in transitions[previous]:\n            raise ValueError('invalid job transition')\n        latest[identity] = state\n    return latest\n```"
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(events) для iterable рядкових (job_id, state). Поверни останній стан кожного job у порядку першої появи. ID непорожні й зберігаються як надано. Job починається queued, переходить у running і далі succeeded або failed. Однакові повторні спостереження дозволені. Інший перехід чи невідомий стан дає ValueError. Порожній вхід повертає {}.\n\n**Синтетичні запити підтримки**",
+            "en": "Implement solve(events), an iterable of (job_id, state) strings. Return the latest state per job in order of first appearance. Job IDs must be nonblank and are kept as supplied. Each job starts queued, can move to running and then succeeded or failed. Equal repeated observations are allowed. Any other transition or unknown state raises ValueError. Empty input returns {}.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Тримай поточний стан окремо за ID.",
+              "en": "Keep the current state separately per ID."
+            },
+            {
+              "uk": "Опиши дозволені переходи таблицею.",
+              "en": "Describe the allowed transitions in a table."
+            },
+            {
+              "uk": "Допускай повтори перед перевіркою цільового стану.",
+              "en": "Allow duplicates before comparing the new state with the target set."
+            }
+          ],
+          "solution": {
+            "uk": "Відстежуй стан за порядком вставки й перевір подію до застосування. Однакове повторне спостереження не спричиняє переходу.\n\n```python\nfrom collections.abc import Iterable\n\ndef solve(events: Iterable[tuple[str, str]]) -> dict[str, str]:\n    transitions = {None: {'queued'}, 'queued': {'running'},\n                   'running': {'succeeded', 'failed'}, 'succeeded': set(), 'failed': set()}\n    latest: dict[str, str] = {}\n    for identity, state in events:\n        if not identity.strip():\n            raise ValueError('missing job id')\n        previous = latest.get(identity)\n        if state != previous and state not in transitions[previous]:\n            raise ValueError('invalid job transition')\n        latest[identity] = state\n    return latest\n```",
+            "en": "Track insertion-ordered states and validate every event before applying it. A repeated equal observation causes no transition.\n\n```python\nfrom collections.abc import Iterable\n\ndef solve(events: Iterable[tuple[str, str]]) -> dict[str, str]:\n    transitions = {None: {'queued'}, 'queued': {'running'},\n                   'running': {'succeeded', 'failed'}, 'succeeded': set(), 'failed': set()}\n    latest: dict[str, str] = {}\n    for identity, state in events:\n        if not identity.strip():\n            raise ValueError('missing job id')\n        previous = latest.get(identity)\n        if state != previous and state not in transitions[previous]:\n            raise ValueError('invalid job transition')\n        latest[identity] = state\n    return latest\n```"
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(events) для iterable рядкових (job_id, state). Поверни останній стан кожного job у порядку першої появи. ID непорожні й зберігаються як надано. Job починається queued, переходить у running і далі succeeded або failed. Однакові повторні спостереження дозволені. Інший перехід чи невідомий стан дає ValueError. Порожній вхід повертає {}.\n\n**Синтетичні документи політик**",
+            "en": "Implement solve(events), an iterable of (job_id, state) strings. Return the latest state per job in order of first appearance. Job IDs must be nonblank and are kept as supplied. Each job starts queued, can move to running and then succeeded or failed. Equal repeated observations are allowed. Any other transition or unknown state raises ValueError. Empty input returns {}.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Тримай поточний стан окремо за ID.",
+              "en": "Keep the current state separately per ID."
+            },
+            {
+              "uk": "Опиши дозволені переходи таблицею.",
+              "en": "Describe the allowed transitions in a table."
+            },
+            {
+              "uk": "Допускай повтори перед перевіркою цільового стану.",
+              "en": "Allow duplicates before comparing the new state with the target set."
+            }
+          ],
+          "solution": {
+            "uk": "Відстежуй стан за порядком вставки й перевір подію до застосування. Однакове повторне спостереження не спричиняє переходу.\n\n```python\nfrom collections.abc import Iterable\n\ndef solve(events: Iterable[tuple[str, str]]) -> dict[str, str]:\n    transitions = {None: {'queued'}, 'queued': {'running'},\n                   'running': {'succeeded', 'failed'}, 'succeeded': set(), 'failed': set()}\n    latest: dict[str, str] = {}\n    for identity, state in events:\n        if not identity.strip():\n            raise ValueError('missing job id')\n        previous = latest.get(identity)\n        if state != previous and state not in transitions[previous]:\n            raise ValueError('invalid job transition')\n        latest[identity] = state\n    return latest\n```",
+            "en": "Track insertion-ordered states and validate every event before applying it. A repeated equal observation causes no transition.\n\n```python\nfrom collections.abc import Iterable\n\ndef solve(events: Iterable[tuple[str, str]]) -> dict[str, str]:\n    transitions = {None: {'queued'}, 'queued': {'running'},\n                   'running': {'succeeded', 'failed'}, 'succeeded': set(), 'failed': set()}\n    latest: dict[str, str] = {}\n    for identity, state in events:\n        if not identity.strip():\n            raise ValueError('missing job id')\n        previous = latest.get(identity)\n        if state != previous and state not in transitions[previous]:\n            raise ValueError('invalid job transition')\n        latest[identity] = state\n    return latest\n```"
+          }
+        }
+      ]
+    },
+    {
+      "id": "W06-L04-E2",
+      "title": {
+        "uk": "Відрепетирувати демо бекенду Project A з чистого клону",
+        "en": "Rehearse the Project A backend demo from a clean clone"
+      },
+      "kind": "rubric",
+      "objectives": [
+        "O2"
+      ],
+      "estimateMinutes": 70,
+      "criteria": [
+        {
+          "id": "C1",
+          "title": {
+            "uk": "Чисте налаштування демонструє мігрований API й обробку.",
+            "en": "A clean setup demonstrates migrated API and job processing."
+          }
+        },
+        {
+          "id": "C2",
+          "title": {
+            "uk": "Показано один збережений результат після повтору й рестарту та перевірено відмову.",
+            "en": "Show one persisted result after replay and restart and verify denial."
+          }
+        },
+        {
+          "id": "C3",
+          "title": {
+            "uk": "Доказ називає фактичні локальні чи CI перевірки й обмеження.",
+            "en": "Evidence names actual local or CI checks and one limitation."
+          }
+        }
+      ],
+      "example": {
+        "uk": "Демо показує job Q і один результат до й після рестарту сервісів та scoped 404 для іншого tenant.",
+        "en": "The demo logs job ID Q and one stored result before and after service restart, then shows a scoped 404 for another tenant."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Запусти чисту локальну копію в окремому Compose-проєкті. Покажи старт і міграції, дозволене завантаження чи створення, queued і фінальний статус, відмову іншого tenant, ідемпотентний повтор і збережені результати після рестарту. Дай команди README, схему та фактично запущені перевірки CI. Дані синтетичні, вкажи операційне обмеження.\n\n**Синтетичні накладні**",
+            "en": "Run a clean local copy in a separate Compose project. Show fixture startup and migrations, authorized upload/create, queued and final status, rejected cross-tenant request, idempotent replay and persisted results after restart. Provide a README command sequence, schema diagram and the CI checks that actually ran. Keep data synthetic and note a remaining operational limitation.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Запиши точні команди запуску й завершення для фікстури.",
+              "en": "Write exact setup and disposal commands for the fixture project."
+            },
+            {
+              "uk": "Перевір БД окремо від HTTP-відповіді.",
+              "en": "Verify database state independently of the HTTP response."
+            },
+            {
+              "uk": "Залиш короткий протокол зі статусами, ID й кількістю.",
+              "en": "Keep a compact transcript with status, IDs and counts."
+            }
+          ],
+          "solution": {
+            "uk": "Запусти міграції й підтвердь перший процес у чистій фікстурі. Повтори job, покажи один результат і відмову доступу, далі підтвердь збереження після рестарту. Чітко запиши обмеження.",
+            "en": "Run the migrations and prove the first workflow in a clean fixture. Repeat the job, demonstrate one result and denied access, and prove the result remains after restart. Record limits honestly."
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Запусти чисту локальну копію в окремому Compose-проєкті. Покажи старт і міграції, дозволене завантаження чи створення, queued і фінальний статус, відмову іншого tenant, ідемпотентний повтор і збережені результати після рестарту. Дай команди README, схему та фактично запущені перевірки CI. Дані синтетичні, вкажи операційне обмеження.\n\n**Синтетичні запити підтримки**",
+            "en": "Run a clean local copy in a separate Compose project. Show fixture startup and migrations, authorized upload/create, queued and final status, rejected cross-tenant request, idempotent replay and persisted results after restart. Provide a README command sequence, schema diagram and the CI checks that actually ran. Keep data synthetic and note a remaining operational limitation.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Запиши точні команди запуску й завершення для фікстури.",
+              "en": "Write exact setup and disposal commands for the fixture project."
+            },
+            {
+              "uk": "Перевір БД окремо від HTTP-відповіді.",
+              "en": "Verify database state independently of the HTTP response."
+            },
+            {
+              "uk": "Залиш короткий протокол зі статусами, ID й кількістю.",
+              "en": "Keep a compact transcript with status, IDs and counts."
+            }
+          ],
+          "solution": {
+            "uk": "Запусти міграції й підтвердь перший процес у чистій фікстурі. Повтори job, покажи один результат і відмову доступу, далі підтвердь збереження після рестарту. Чітко запиши обмеження.",
+            "en": "Run the migrations and prove the first workflow in a clean fixture. Repeat the job, demonstrate one result and denied access, and prove the result remains after restart. Record limits honestly."
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Запусти чисту локальну копію в окремому Compose-проєкті. Покажи старт і міграції, дозволене завантаження чи створення, queued і фінальний статус, відмову іншого tenant, ідемпотентний повтор і збережені результати після рестарту. Дай команди README, схему та фактично запущені перевірки CI. Дані синтетичні, вкажи операційне обмеження.\n\n**Синтетичні документи політик**",
+            "en": "Run a clean local copy in a separate Compose project. Show fixture startup and migrations, authorized upload/create, queued and final status, rejected cross-tenant request, idempotent replay and persisted results after restart. Provide a README command sequence, schema diagram and the CI checks that actually ran. Keep data synthetic and note a remaining operational limitation.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Запиши точні команди запуску й завершення для фікстури.",
+              "en": "Write exact setup and disposal commands for the fixture project."
+            },
+            {
+              "uk": "Перевір БД окремо від HTTP-відповіді.",
+              "en": "Verify database state independently of the HTTP response."
+            },
+            {
+              "uk": "Залиш короткий протокол зі статусами, ID й кількістю.",
+              "en": "Keep a compact transcript with status, IDs and counts."
+            }
+          ],
+          "solution": {
+            "uk": "Запусти міграції й підтвердь перший процес у чистій фікстурі. Повтори job, покажи один результат і відмову доступу, далі підтвердь збереження після рестарту. Чітко запиши обмеження.",
+            "en": "Run the migrations and prove the first workflow in a clean fixture. Repeat the job, demonstrate one result and denied access, and prove the result remains after restart. Record limits honestly."
+          }
+        }
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "id": "Q1",
+      "prompt": {
+        "uk": "Який доказ показує завершення job і збережений вихід?",
+        "en": "Which evidence shows a job finished and persisted output?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Лише HTTP 202.",
+            "en": "An HTTP 202 response only."
+          },
+          "explanation": {
+            "uk": "Прийняття не доводить виконання.",
+            "en": "Acceptance does not prove execution."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Твердження, що воркер стартував.",
+            "en": "A statement that the worker started."
+          },
+          "explanation": {
+            "uk": "Старт нічого не каже про вихід цього job.",
+            "en": "Startup says nothing about this job's result."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Фінальний успішний статус та збережений результат за job ID.",
+            "en": "A terminal success status and a stored result for the job ID."
+          },
+          "explanation": {
+            "uk": "Завершення й збереження потребують обох спостережень.",
+            "en": "Completion and persistence require both observations."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q2",
+      "prompt": {
+        "uk": "Як перевірити відсутність дублювання ефектів при повторі?",
+        "en": "How do you verify replay does not duplicate effects?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Повтори ключ в області й перевір той самий ID і один результат.",
+            "en": "Repeat the scoped key and assert the same ID and one stored result."
+          },
+          "explanation": {
+            "uk": "Доказ перевіряє ID і ефект.",
+            "en": "The evidence checks both identity and effect."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Використай новий ключ і порахуй два результати.",
+            "en": "Use a new key and count two results."
+          },
+          "explanation": {
+            "uk": "Новий ключ просить іншу логічну операцію.",
+            "en": "A new key asks for a new logical operation."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Прочитай повідомлення без запиту сховища.",
+            "en": "Read the return message without querying storage."
+          },
+          "explanation": {
+            "uk": "Воно не виключає дублікатів у сховищі.",
+            "en": "It cannot rule out duplicates in storage."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q3",
+      "prompt": {
+        "uk": "Від чого має залежати демо чистого клону?",
+        "en": "What should the clean-clone demo depend on?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Неописаний env із production-секретами.",
+            "en": "An undocumented environment file with production secrets."
+          },
+          "explanation": {
+            "uk": "Демо потребує лише синтетичних безпечних credentials.",
+            "en": "The demo requires only synthetic safe credentials."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Описані runtime, версії, конфігурація фікстур і команди.",
+            "en": "Documented runtime, pins, fixture config and startup commands."
+          },
+          "explanation": {
+            "uk": "Середовище можна відтворити.",
+            "en": "The environment can be recreated reproducibly."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Наявна БД розробника з невідомим вмістом.",
+            "en": "A developer's existing database with unknown content."
+          },
+          "explanation": {
+            "uk": "Приховані дані заважають чистому запуску.",
+            "en": "Hidden data prevents a clean run."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q4",
+      "prompt": {
+        "uk": "Яке твердження коректне після малого локального демо?",
+        "en": "What is the correct claim after a small local demo?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Production виконує всі цілі затримки.",
+            "en": "The production system meets every latency target."
+          },
+          "explanation": {
+            "uk": "Мала локальна вибірка цього не встановлює.",
+            "en": "A small local sample cannot establish this."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Авторизація всіх користувачів ніколи не регресує.",
+            "en": "All users' authorization can never regress."
+          },
+          "explanation": {
+            "uk": "Майбутня поведінка потребує перевірок.",
+            "en": "Future behavior needs continued testing."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Описаний сценарій пройшов для своєї фікстури й середовища.",
+            "en": "The documented scenario passed for its fixture and environment."
+          },
+          "explanation": {
+            "uk": "Обсяг відповідає фактичним перевіркам.",
+            "en": "Scope follows the actual observed checks."
+          }
+        }
+      ]
+    }
+  ],
+  "crosslinks": [
+    "W06-L03",
+    "SR-W06"
+  ]
+}

@@ -1,0 +1,519 @@
+{
+  "id": "W04-L02",
+  "contentVersion": 1,
+  "overview": {
+    "uk": "Створення документа й першого job є однією прикладною операцією. Транзакція задає межу, щоб помилка вставки не залишила половину результату. Дізнайся, як Session SQLAlchemy пов’язана з транзакцією, чому flush і commit мають різні ефекти і як ревізія Alembic змінює наявну схему. Локальна вправа SQLite перевіряє атомарність. Перенесення в Project A застосовує ідею у PostgreSQL і захищає наявні рядки тестом оновлення.",
+    "en": "Creating a document and its first processing job is one application operation. A transaction models that boundary so an insert failure cannot leave only half of the result. Learn how SQLAlchemy Session relates to a database transaction, why flush and commit have different effects, and how an Alembic revision changes an existing schema. The local SQLite exercise checks atomicity. The Project A transfer applies the same idea on PostgreSQL and adds an upgrade test that protects existing rows."
+  },
+  "theory": {
+    "uk": "### Шлях транзакції\n\nBegin → вставка документа → вставка job → commit. Відмова між записами має відкотити обидва. Session.begin описує область та фіксує успішний вихід. ORM може відстежувати об’єкти до надсилання SQL. Flush надсилає накопичений SQL у транзакцію й може показати помилку обмеження. Він не фіксує транзакцію. Після невдалого flush очисть транзакцію Session до повторного використання. Нова операція має отримати придатну сесію.\n\n### Конкурентність та ізоляція\n\nПопередній SELECT може покращити повідомлення, але другий записувач може створити рядок до INSERT. Забезпеч унікальність у БД і визнач, як представити конфлікт. Тримай транзакцію короткою й уникай HTTP-очікування під блокуванням рядка. Поведінка PostgreSQL залежить від ізоляції. За read committed оператори можуть бачити різні зафіксовані знімки. Спирайся на інваріант БД та перевір конкурентність у реальному рушії.\n\n### Міграція наявної схеми\n\nAlembic відстежує порядок ID ревізій. Autogenerate порівнює metadata моделей зі схемою й створює кандидати на зміни. Переглянь diff. Перейменування може виглядати як drop та add і втратити дані. Для обов’язкової колонки з наявними рядками розглянь додавання без вимоги, backfill та підтверджене обмеження. Протестуй порожню БД і оновлення з репрезентативних даних. Потім запусти smoke-тест і задокументуй відкат з урахуванням незворотних змін даних.\n\n### Обери безпечну послідовність оновлення\n\nУяви таблицю документів із рядками й новим обов’язковим review_state. Додай поле із сумісним перехідним правилом. Розгорни код, що працює зі старою формою даних. Для великої таблиці заповни наявні рядки контрольованими пакетами. Перевір null і хибні значення до посилення обмеження. Далі перемкни читання й запис на фінальну схему. У малому локальному проєкті кроки можна поєднати, коли всі записувачі зупинені під час міграції. Запиши припущення. Для сервісу з багатьма процесами визнач співіснування старого й нового коду.\n\nПеревір збій між flush і commit синтетичним дублікатом ключа job. Переконайся, що старий job зберігся, а новий документ зник після rollback. Прочитай зафіксований стан новою сесією, бо раніше завантажений об’єкт може показати застарілі властивості. Для upgrade застосуй попередню ревізію й запиши точні ID та кількість до наступної. Далі підтвердь нове значення, попередні дані й справжній виклик API. Чисте встановлення перевіряє інший початковий стан.",
+    "en": "### Follow one transaction\n\nBegin → insert document → insert job → commit. A failure between the two writes should roll back both. SQLAlchemy Session.begin can express the scope and commit on a clean exit. ORM objects may be tracked before a SQL statement has been sent. Flush sends pending SQL to the database transaction and can expose a constraint error. It does not commit the transaction. If a flush fails, clean up the failed Session transaction before reusing it. A new unit of work should receive a usable session.\n\n### Races and isolation\n\nA preliminary SELECT can improve an error message, but a second writer can create the same row before INSERT. Enforce uniqueness in the database, then decide how to map the conflict. Keep the transaction short and avoid waiting on external HTTP within a row lock. PostgreSQL behavior depends on isolation level. Under read committed, statements can observe different committed snapshots. Use the database invariant for correctness and verify concurrent flows in the actual engine used by the service.\n\n### Evolve an existing schema\n\nAlembic tracks ordered revision IDs. Autogenerate compares model metadata with a live schema and produces candidate operations. Review that diff. A rename may appear as drop plus add and can discard data. To add a required column on populated data, consider an expand step, backfill and validated constraint. Test a blank database and an upgrade starting from representative existing data. Run application smoke tests afterward and document a rollback path that accounts for irreversible data changes.\n\n### Choose a safe upgrade sequence\n\nImagine a document table with existing rows and a new required review_state field. First add the field with a compatible transition rule. Deploy code that can coexist with the old data shape. Backfill existing rows in controlled batches if the table is large. Check for nulls and unexpected values before tightening the constraint. Then switch reads and writes to the final schema. For a small local project, you can combine steps when all writers stop during migration. Record that operational assumption. For a running multiprocess service, decide how old and new code coexist during rollout.\n\nTest failure between flush and commit using a synthetic duplicate job key. Assert that the previously existing job survives and a newly inserted document disappears on rollback. Reopen a new session to read committed state, since an object already loaded into a previous session can present stale attributes. In the upgrade test, prepare an earlier revision and capture exact IDs and row counts before applying the next revision. Then verify the new default, the old values and behavior of an actual API call. A clean install checks the other starting point."
+  },
+  "recap": {
+    "uk": "Фіксуй пов’язані записи разом, закріплюй інваріанти в БД і тестуй upgrade на справжніх попередніх рядках.",
+    "en": "Commit related writes together, enforce invariants in the database, and test upgrade on real prior rows."
+  },
+  "objectives": [
+    {
+      "id": "O1",
+      "title": {
+        "uk": "Обирати межу транзакції пов’язаних записів.",
+        "en": "Choose the transaction boundary for related writes."
+      },
+      "skill": "systems"
+    },
+    {
+      "id": "O2",
+      "title": {
+        "uk": "Перевіряти міграцію на попередніх даних і чистій базі.",
+        "en": "Verify a schema migration from prior data as well as a clean database."
+      },
+      "skill": "evaluation"
+    }
+  ],
+  "sources": [
+    {
+      "title": {
+        "uk": "SQLAlchemy transactions",
+        "en": "SQLAlchemy transactions"
+      },
+      "url": "https://docs.sqlalchemy.org/en/20/orm/session_transaction.html",
+      "version": "SQLAlchemy 2.0",
+      "checked": "2026-11-26"
+    },
+    {
+      "title": {
+        "uk": "Alembic autogenerate",
+        "en": "Alembic autogenerate"
+      },
+      "url": "https://alembic.sqlalchemy.org/en/latest/autogenerate.html",
+      "version": "Alembic",
+      "checked": "2026-11-26"
+    },
+    {
+      "title": {
+        "uk": "PostgreSQL constraints",
+        "en": "PostgreSQL constraints"
+      },
+      "url": "https://www.postgresql.org/docs/17/ddl-constraints.html",
+      "version": "PostgreSQL 17",
+      "checked": "2026-11-26"
+    }
+  ],
+  "examples": [
+    {
+      "file": "w04_l02_example.py",
+      "expected": "rolled back\n0",
+      "explanation": {
+        "uk": "Дублікат падає в області транзакції. SQLite у Python 3.12.",
+        "en": "The duplicate fails inside a transaction context. Python 3.12 SQLite."
+      },
+      "error": {
+        "uk": "Без спільної транзакції викликач може побачити перший рядок після збою.",
+        "en": "Without a transaction spanning both actions, the caller could observe the first row after the failure."
+      }
+    }
+  ],
+  "interview": [
+    "What is the difference between ORM flush and commit?",
+    "How would you add a required column without losing old rows?"
+  ],
+  "interviewGuide": {
+    "uk": "Опиши стан до міграції, backfill, валідацію обмеження і smoke test.",
+    "en": "Describe pre-upgrade, backfill, constraint validation and smoke test."
+  },
+  "exercises": [
+    {
+      "id": "W04-L02-E1",
+      "title": {
+        "uk": "Атомарно створити документ і job",
+        "en": "Atomically create a document and job"
+      },
+      "kind": "code",
+      "objectives": [
+        "O1"
+      ],
+      "estimateMinutes": 75,
+      "criteria": [],
+      "example": {
+        "uk": "Другий запис із наявним job key залишає кількість документів незмінною.",
+        "en": "A second write using an existing job key leaves the number of documents unchanged."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(db, title, job_key) для SQLite без активної транзакції на вході. Встав у documents(id INTEGER PRIMARY KEY, title TEXT NOT NULL) і jobs(key TEXT PRIMARY KEY, document_id INTEGER NOT NULL). Вимагай непорожні title та job_key і зберігай вхідні рядки. Поверни ID документа. Фіксуй обидва записи при успіху й передавай sqlite3.IntegrityError після rollback дубліката ключа.\n\n**Синтетичні накладні**",
+            "en": "Implement solve(db, title, job_key) for SQLite when no transaction is active on entry. Insert into documents(id INTEGER PRIMARY KEY, title TEXT NOT NULL) and jobs(key TEXT PRIMARY KEY, document_id INTEGER NOT NULL). Require nonblank title and job_key, then preserve their input strings. Return the document ID. Commit both writes on success and let sqlite3.IntegrityError propagate after rollback on a duplicate job key.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Використай контекст транзакції навколо двох вставок.",
+              "en": "Use a transaction context around both inserts."
+            },
+            {
+              "uk": "Отримай згенерований ID до вставки дитини.",
+              "en": "Get the generated ID before inserting its child."
+            },
+            {
+              "uk": "Передай виняток дубліката за межі контексту транзакції.",
+              "en": "Let the duplicate exception leave the transaction context."
+            }
+          ],
+          "solution": {
+            "uk": "Контекстний менеджер відкотить записи за помилки INSERT. Параметри зберігають рядки як значення.\n\n```python\nimport sqlite3\n\ndef solve(db: sqlite3.Connection, title: str, job_key: str) -> int:\n    if not title.strip() or not job_key.strip():\n        raise ValueError('title and job key required')\n    with db:\n        created = db.execute('INSERT INTO documents(title) VALUES (?)', (title,)).lastrowid\n        if created is None:\n            raise RuntimeError('missing inserted identity')\n        db.execute('INSERT INTO jobs(key, document_id) VALUES (?, ?)', (job_key, created))\n    return created\n```",
+            "en": "The context manager rolls back if an insert fails. Parameter binding preserves string data as values.\n\n```python\nimport sqlite3\n\ndef solve(db: sqlite3.Connection, title: str, job_key: str) -> int:\n    if not title.strip() or not job_key.strip():\n        raise ValueError('title and job key required')\n    with db:\n        created = db.execute('INSERT INTO documents(title) VALUES (?)', (title,)).lastrowid\n        if created is None:\n            raise RuntimeError('missing inserted identity')\n        db.execute('INSERT INTO jobs(key, document_id) VALUES (?, ?)', (job_key, created))\n    return created\n```"
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(db, title, job_key) для SQLite без активної транзакції на вході. Встав у documents(id INTEGER PRIMARY KEY, title TEXT NOT NULL) і jobs(key TEXT PRIMARY KEY, document_id INTEGER NOT NULL). Вимагай непорожні title та job_key і зберігай вхідні рядки. Поверни ID документа. Фіксуй обидва записи при успіху й передавай sqlite3.IntegrityError після rollback дубліката ключа.\n\n**Синтетичні запити підтримки**",
+            "en": "Implement solve(db, title, job_key) for SQLite when no transaction is active on entry. Insert into documents(id INTEGER PRIMARY KEY, title TEXT NOT NULL) and jobs(key TEXT PRIMARY KEY, document_id INTEGER NOT NULL). Require nonblank title and job_key, then preserve their input strings. Return the document ID. Commit both writes on success and let sqlite3.IntegrityError propagate after rollback on a duplicate job key.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Використай контекст транзакції навколо двох вставок.",
+              "en": "Use a transaction context around both inserts."
+            },
+            {
+              "uk": "Отримай згенерований ID до вставки дитини.",
+              "en": "Get the generated ID before inserting its child."
+            },
+            {
+              "uk": "Передай виняток дубліката за межі контексту транзакції.",
+              "en": "Let the duplicate exception leave the transaction context."
+            }
+          ],
+          "solution": {
+            "uk": "Контекстний менеджер відкотить записи за помилки INSERT. Параметри зберігають рядки як значення.\n\n```python\nimport sqlite3\n\ndef solve(db: sqlite3.Connection, title: str, job_key: str) -> int:\n    if not title.strip() or not job_key.strip():\n        raise ValueError('title and job key required')\n    with db:\n        created = db.execute('INSERT INTO documents(title) VALUES (?)', (title,)).lastrowid\n        if created is None:\n            raise RuntimeError('missing inserted identity')\n        db.execute('INSERT INTO jobs(key, document_id) VALUES (?, ?)', (job_key, created))\n    return created\n```",
+            "en": "The context manager rolls back if an insert fails. Parameter binding preserves string data as values.\n\n```python\nimport sqlite3\n\ndef solve(db: sqlite3.Connection, title: str, job_key: str) -> int:\n    if not title.strip() or not job_key.strip():\n        raise ValueError('title and job key required')\n    with db:\n        created = db.execute('INSERT INTO documents(title) VALUES (?)', (title,)).lastrowid\n        if created is None:\n            raise RuntimeError('missing inserted identity')\n        db.execute('INSERT INTO jobs(key, document_id) VALUES (?, ?)', (job_key, created))\n    return created\n```"
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(db, title, job_key) для SQLite без активної транзакції на вході. Встав у documents(id INTEGER PRIMARY KEY, title TEXT NOT NULL) і jobs(key TEXT PRIMARY KEY, document_id INTEGER NOT NULL). Вимагай непорожні title та job_key і зберігай вхідні рядки. Поверни ID документа. Фіксуй обидва записи при успіху й передавай sqlite3.IntegrityError після rollback дубліката ключа.\n\n**Синтетичні документи політик**",
+            "en": "Implement solve(db, title, job_key) for SQLite when no transaction is active on entry. Insert into documents(id INTEGER PRIMARY KEY, title TEXT NOT NULL) and jobs(key TEXT PRIMARY KEY, document_id INTEGER NOT NULL). Require nonblank title and job_key, then preserve their input strings. Return the document ID. Commit both writes on success and let sqlite3.IntegrityError propagate after rollback on a duplicate job key.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Використай контекст транзакції навколо двох вставок.",
+              "en": "Use a transaction context around both inserts."
+            },
+            {
+              "uk": "Отримай згенерований ID до вставки дитини.",
+              "en": "Get the generated ID before inserting its child."
+            },
+            {
+              "uk": "Передай виняток дубліката за межі контексту транзакції.",
+              "en": "Let the duplicate exception leave the transaction context."
+            }
+          ],
+          "solution": {
+            "uk": "Контекстний менеджер відкотить записи за помилки INSERT. Параметри зберігають рядки як значення.\n\n```python\nimport sqlite3\n\ndef solve(db: sqlite3.Connection, title: str, job_key: str) -> int:\n    if not title.strip() or not job_key.strip():\n        raise ValueError('title and job key required')\n    with db:\n        created = db.execute('INSERT INTO documents(title) VALUES (?)', (title,)).lastrowid\n        if created is None:\n            raise RuntimeError('missing inserted identity')\n        db.execute('INSERT INTO jobs(key, document_id) VALUES (?, ?)', (job_key, created))\n    return created\n```",
+            "en": "The context manager rolls back if an insert fails. Parameter binding preserves string data as values.\n\n```python\nimport sqlite3\n\ndef solve(db: sqlite3.Connection, title: str, job_key: str) -> int:\n    if not title.strip() or not job_key.strip():\n        raise ValueError('title and job key required')\n    with db:\n        created = db.execute('INSERT INTO documents(title) VALUES (?)', (title,)).lastrowid\n        if created is None:\n            raise RuntimeError('missing inserted identity')\n        db.execute('INSERT INTO jobs(key, document_id) VALUES (?, ?)', (job_key, created))\n    return created\n```"
+          }
+        }
+      ]
+    },
+    {
+      "id": "W04-L02-E2",
+      "title": {
+        "uk": "Відрепетирувати першу міграцію Project A",
+        "en": "Rehearse the first Project A migration"
+      },
+      "kind": "rubric",
+      "objectives": [
+        "O2"
+      ],
+      "estimateMinutes": 70,
+      "criteria": [
+        {
+          "id": "C1",
+          "title": {
+            "uk": "Використано фікстури PostgreSQL і записано команди оновлення.",
+            "en": "Use PostgreSQL fixtures and record upgrade commands."
+          }
+        },
+        {
+          "id": "C2",
+          "title": {
+            "uk": "Порівняно наявні дані до й після міграції.",
+            "en": "Compare existing data before and after the migration."
+          }
+        },
+        {
+          "id": "C3",
+          "title": {
+            "uk": "Перевірено спільний rollback пов’язаних записів.",
+            "en": "Assert related writes roll back together."
+          }
+        }
+      ],
+      "example": {
+        "uk": "Наявний документ D зберігає ID й одержує queued за міграції, що показують запити до й після.",
+        "en": "Existing document D keeps its ID and gets a queued default on upgrade, as shown by a query before and after."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Напиши початкову ревізію Alembic і другу, що додає обов’язковий status до заповненої таблиці документів. Одну тимчасову PostgreSQL створи з нуля, іншу онови з першої ревізії із синтетичним рядком. Зафіксуй обидві вершини ревізій, заповнене значення й кількість до і після. Додай транзакцію і відкат одного дубліката.\n\n**Синтетичні накладні**",
+            "en": "Write an initial Alembic revision and a second revision that adds a required status to a populated document table. Start one temporary PostgreSQL database from nothing and upgrade another from the first revision with a synthetic row. Record both revision heads, the backfilled value, and the count before and after. Include the transaction and rollback behavior of one duplicate create.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Розділяй зміну схеми й типові значення застосунку.",
+              "en": "Separate applying a schema from setting application defaults."
+            },
+            {
+              "uk": "Заповни рядки перед посиленням обмеження.",
+              "en": "Backfill rows before tightening the constraint."
+            },
+            {
+              "uk": "Перевір кількість рядків і точні незмінні ID.",
+              "en": "Check row counts and exact stable IDs."
+            }
+          ],
+          "solution": {
+            "uk": "Застосуй Alembic через розширення й backfill, перевір обов’язкові поля, далі повтори на чистій БД. Повторне створення з конфліктом має зберегти стан обох таблиць до невдалої транзакції.",
+            "en": "Run Alembic upgrade through the expansion and backfill, verify required fields, then rerun through a clean database. A duplicate create should leave both tables unchanged relative to the point before the failed transaction."
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Напиши початкову ревізію Alembic і другу, що додає обов’язковий status до заповненої таблиці документів. Одну тимчасову PostgreSQL створи з нуля, іншу онови з першої ревізії із синтетичним рядком. Зафіксуй обидві вершини ревізій, заповнене значення й кількість до і після. Додай транзакцію і відкат одного дубліката.\n\n**Синтетичні запити підтримки**",
+            "en": "Write an initial Alembic revision and a second revision that adds a required status to a populated document table. Start one temporary PostgreSQL database from nothing and upgrade another from the first revision with a synthetic row. Record both revision heads, the backfilled value, and the count before and after. Include the transaction and rollback behavior of one duplicate create.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Розділяй зміну схеми й типові значення застосунку.",
+              "en": "Separate applying a schema from setting application defaults."
+            },
+            {
+              "uk": "Заповни рядки перед посиленням обмеження.",
+              "en": "Backfill rows before tightening the constraint."
+            },
+            {
+              "uk": "Перевір кількість рядків і точні незмінні ID.",
+              "en": "Check row counts and exact stable IDs."
+            }
+          ],
+          "solution": {
+            "uk": "Застосуй Alembic через розширення й backfill, перевір обов’язкові поля, далі повтори на чистій БД. Повторне створення з конфліктом має зберегти стан обох таблиць до невдалої транзакції.",
+            "en": "Run Alembic upgrade through the expansion and backfill, verify required fields, then rerun through a clean database. A duplicate create should leave both tables unchanged relative to the point before the failed transaction."
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Напиши початкову ревізію Alembic і другу, що додає обов’язковий status до заповненої таблиці документів. Одну тимчасову PostgreSQL створи з нуля, іншу онови з першої ревізії із синтетичним рядком. Зафіксуй обидві вершини ревізій, заповнене значення й кількість до і після. Додай транзакцію і відкат одного дубліката.\n\n**Синтетичні документи політик**",
+            "en": "Write an initial Alembic revision and a second revision that adds a required status to a populated document table. Start one temporary PostgreSQL database from nothing and upgrade another from the first revision with a synthetic row. Record both revision heads, the backfilled value, and the count before and after. Include the transaction and rollback behavior of one duplicate create.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Розділяй зміну схеми й типові значення застосунку.",
+              "en": "Separate applying a schema from setting application defaults."
+            },
+            {
+              "uk": "Заповни рядки перед посиленням обмеження.",
+              "en": "Backfill rows before tightening the constraint."
+            },
+            {
+              "uk": "Перевір кількість рядків і точні незмінні ID.",
+              "en": "Check row counts and exact stable IDs."
+            }
+          ],
+          "solution": {
+            "uk": "Застосуй Alembic через розширення й backfill, перевір обов’язкові поля, далі повтори на чистій БД. Повторне створення з конфліктом має зберегти стан обох таблиць до невдалої транзакції.",
+            "en": "Run Alembic upgrade through the expansion and backfill, verify required fields, then rerun through a clean database. A duplicate create should leave both tables unchanged relative to the point before the failed transaction."
+          }
+        }
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "id": "Q1",
+      "prompt": {
+        "uk": "Що сталося, коли Session flush пройшов?",
+        "en": "What happens when a Session flush succeeds?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "SQL перевірено без надсилання.",
+            "en": "The SQL was validated without being sent."
+          },
+          "explanation": {
+            "uk": "Flush виконує очікуваний SQL.",
+            "en": "Flush executes pending SQL."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Очікуваний SQL надіслано в активну транзакцію.",
+            "en": "Pending SQL reached the active transaction."
+          },
+          "explanation": {
+            "uk": "Транзакція ще потребує commit.",
+            "en": "The transaction still needs a successful commit."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Транзакцію негайно зафіксовано.",
+            "en": "The transaction is committed immediately."
+          },
+          "explanation": {
+            "uk": "Flush і commit різні.",
+            "en": "Flush and commit are separate."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q2",
+      "prompt": {
+        "uk": "Який захист працює, коли два записувачі змагаються після SELECT?",
+        "en": "Which defense remains correct when two writers race after SELECT?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Більший тайм-аут відповіді.",
+            "en": "A larger response timeout."
+          },
+          "explanation": {
+            "uk": "Довше очікування не гарантує унікальності.",
+            "en": "Waiting longer cannot guarantee uniqueness."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Лише друга перевірка в UI.",
+            "en": "A second UI check only."
+          },
+          "explanation": {
+            "uk": "UI не гарантує конкурентність БД.",
+            "en": "UI has no database concurrency guarantee."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Унікальне обмеження БД і явна обробка конфлікту.",
+            "en": "A unique database constraint plus deliberate conflict handling."
+          },
+          "explanation": {
+            "uk": "БД розв’язує конфліктні записи.",
+            "en": "The database arbitrates conflicting writes."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q3",
+      "prompt": {
+        "uk": "Що перевірити в автоматично згенерованому перейменуванні?",
+        "en": "What must you inspect in an autogenerated rename?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Чи згенеровано drop і add з ризиком втрати даних.",
+            "en": "Whether it generated drop and add operations that could lose data."
+          },
+          "explanation": {
+            "uk": "Намір перейменування може бути відсутній у diff.",
+            "en": "Rename intent may not be captured by the model diff."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Лише назву файлу.",
+            "en": "Only the filename."
+          },
+          "explanation": {
+            "uk": "Збереження визначають операції.",
+            "en": "The operations determine data preservation."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Лише відступи.",
+            "en": "Only indentation."
+          },
+          "explanation": {
+            "uk": "Форматування не визначає семантику міграції.",
+            "en": "Formatting does not determine migration semantics."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q4",
+      "prompt": {
+        "uk": "Що демонструє безпечну міграцію на наявних рядках?",
+        "en": "What demonstrates a non-breaking migration for existing rows?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Скриншот синтаксису нової схеми.",
+            "en": "A screenshot of the latest schema syntax."
+          },
+          "explanation": {
+            "uk": "Він не дає доказу оновлення.",
+            "en": "It supplies no upgrade evidence."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Оновлення з попередньої ревізії з репрезентативними рядками та перевіркою полів і ID.",
+            "en": "Upgrade from the previous revision with representative rows and assert fields and IDs."
+          },
+          "explanation": {
+            "uk": "Це перевіряє справжній стартовий стан.",
+            "en": "It exercises the real starting point."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Одне чисте встановлення без даних.",
+            "en": "One clean install without data."
+          },
+          "explanation": {
+            "uk": "Воно не виявить проблеми старих рядків.",
+            "en": "It cannot expose problems with old rows."
+          }
+        }
+      ]
+    }
+  ],
+  "crosslinks": [
+    "W04-L01",
+    "W04-L03"
+  ]
+}

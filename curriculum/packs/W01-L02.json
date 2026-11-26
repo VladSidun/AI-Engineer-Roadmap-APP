@@ -1,0 +1,508 @@
+{
+  "id": "W01-L02",
+  "contentVersion": 1,
+  "objectives": [
+    {
+      "id": "O1",
+      "title": {
+        "en": "Distinguish training, inference and evaluation in a trace.",
+        "uk": "Розрізни навчання, inference та оцінювання за трасою."
+      },
+      "skill": "systems"
+    },
+    {
+      "id": "O2",
+      "title": {
+        "en": "Compare two approaches without data leakage.",
+        "uk": "Порівняй два підходи без витоку даних."
+      },
+      "skill": "evaluation"
+    },
+    {
+      "id": "O3",
+      "title": {
+        "en": "Match engineering roles to the evidence they own.",
+        "uk": "Зістав інженерні ролі з доказами, за які вони відповідають."
+      },
+      "skill": "systems"
+    }
+  ],
+  "overview": {
+    "en": "At training time, an algorithm adjusts model parameters using examples and an objective. At inference time, the model uses the current parameters to produce a result for a new input. Evaluation compares results with criteria established for the task. These activities can run in the same Python program during experimentation, yet they answer different questions. To find out whether a ticket router improves, hold the dataset, baseline and evaluation protocol steady while comparing choices. Decide in advance what counts as a costly error.\n\nA research engineer might design an experiment that isolates a change to the model. An ML engineer might make retraining reproducible and track drift. An applied AI engineer might integrate the router, check authorization and evaluate the full workflow. Role boundaries vary by team. Study the artifacts and responsibility for a decision when a title is ambiguous. You will trace a release and propose a comparison another person could repeat.",
+    "uk": "Під час навчання алгоритм змінює параметри моделі за прикладами й цільовою функцією. Під час inference модель використовує поточні параметри для отримання результату на новому вході. Оцінювання порівнює результати з критеріями конкретної задачі. Ці дії можуть виконуватися в одній програмі Python під час експерименту, але відповідають на різні запитання. Щоб перевірити покращення маршрутизатора звернень, порівняй варіанти на незмінному наборі даних за однаковим протоколом і з тим самим baseline. Заздалегідь визнач, яка помилка дорого коштує.\n\nResearch engineer може спроєктувати експеримент, що ізолює одну зміну моделі. ML engineer може забезпечити відтворюване навчання й стежити за дрейфом. Applied AI engineer може інтегрувати маршрутизатор, перевірити авторизацію й оцінити весь процес. Межі ролей різняться між командами. Якщо назва посади неоднозначна, дивися на артефакти й відповідальність за рішення. Ти простежиш реліз і запропонуєш порівняння, яке може повторити інша людина."
+  },
+  "theory": {
+    "en": "### Trace a release\nLabelled examples → fit parameters → release version → inference on an input → compare the output with a reference.\n\nTraining minimizes a loss. For classification, the loss can penalize a low probability assigned to the correct category. Loss gives the optimizer a direction for changing weights. It may differ from the metric people use for release. Inference applies the frozen release to new inputs. Inference can include sampling, so repeated calls may vary even though the weights stay fixed. Saving a request or editing a prompt changes an input or system configuration. Weight updates occur in a separate training process. Evaluation can run inference as one step and then add labels, denominators and analysis.\n\n### Separate development from the final check\nUse training data to fit. Use development data to choose settings, such as the threshold for sending to review. Reserve a test set for a final comparison. If you tune repeatedly on the final set, the selected configuration has information about those examples and the test is no longer independent. Keep near-duplicate tickets about the same incident on one side of the split. If you expect to serve tomorrow’s requests, a time-based split can better approximate deployment. Version the data and record exclusions. A random split of individual rows does not prevent leakage across duplicate customers or threads.\n\nImagine 100 tickets, ten requiring escalation. The baseline always predicts “ordinary”: it reaches 90% accuracy and catches zero escalations. A second classifier raises alarms for nine tickets, six correctly. Its precision is 6/9, or two thirds, and its recall is 6/10, or 60%. Three unnecessary reviews and four missed escalations are operational consequences. If missing an escalation is expensive, change the threshold on development examples and measure both recall and review workload. Compare under fixed inputs, settings and rules. Include a table of failure categories and sample counts, especially for small subgroups.\n\n| Role emphasis | Example artifact | Decision it supports |\n| --- | --- | --- |\n| Research engineer | Controlled experiment and ablation | Which change explains the gain? |\n| ML engineer | Versioned pipeline and data validation report | Can we reproduce and monitor this model? |\n| Applied AI engineer | Integration contract and workflow results | Should this system ship for this task? |\n\n### Make evidence usable\nWrite the question before the run, for example “Will a new threshold catch more escalations within twelve reviews per hundred tickets?” Log the release ID and dataset version with the aggregate report. Read representative false positives and false negatives. If there are only two escalations, a one-case change moves recall by fifty percentage points. Record that uncertainty and avoid a broad claim about performance in another language or time period. Models and service policies can then be revised independently, with a documented reason for the next experiment.",
+    "uk": "### Простеж реліз\nРозмічені приклади → підбір параметрів → версія релізу → inference на вході → порівняння результату з еталоном.\n\nНавчання мінімізує функцію втрат. Для класифікації вона може штрафувати низьку ймовірність правильної категорії. Функція втрат дає оптимізатору напрям зміни ваг. Вона може відрізнятися від метрики, за якою люди приймають рішення про реліз. Під час inference фіксований реліз обробляє нові входи. Можна використовувати семплінг, тож відповіді можуть різнитися за тих самих ваг. Запис запиту або редагування промпту змінює вхід чи конфігурацію системи. Ваги оновлюються в процесі навчання. Оцінювання може викликати inference, а потім зіставити прогнози з мітками, порахувати знаменники й проаналізувати помилки.\n\n### Відокрем розробку від фінальної перевірки\nВикористовуй навчальні дані для підбору ваг. На development-наборі добирай налаштування, наприклад поріг ручної перевірки. Тестовий набір залиш для фінального порівняння. Якщо багаторазово підлаштовуватися під нього, обрана конфігурація вже враховує ці приклади й перевірка втрачає незалежність. Майже однакові звернення з одного інциденту залишай по один бік поділу. Для обробки завтрашніх запитів поділ за часом може краще відображати реальне використання. Версіюй набір і зафіксуй виключення. Випадковий поділ рядків не запобігає витоку між повторними зверненнями чи гілками діалогу.\n\nУяви 100 звернень, десять з яких потребують ескалації. Baseline завжди прогнозує «звичайне», має 90% accuracy і пропускає всі ескалації. Інший класифікатор позначає дев’ять звернень, шість правильно. Його precision дорівнює 6/9, тобто двом третинам, а recall дорівнює 6/10, тобто 60%. Наслідки для процесу становлять три зайві перевірки й чотири пропущені ескалації. Якщо пропуск дорого коштує, зміни поріг на development-наборі й виміряй recall разом з обсягом перевірок. Порівнюй за фіксованих входів, налаштувань та правил. Додай таблицю причин помилок і розміри вибірок, особливо для малих підгруп.\n\n| Фокус ролі | Приклад артефакту | Рішення |\n| --- | --- | --- |\n| Research engineer | Контрольований експеримент та абляція | Яка зміна дала покращення? |\n| ML engineer | Версійний pipeline і звіт перевірки даних | Чи можна відтворити модель і стежити за нею? |\n| Applied AI engineer | Контракт інтеграції та результати процесу | Чи варто випускати цю систему для задачі? |\n\n### Зроби висновок перевірюваним\nСформулюй запитання до запуску, наприклад «Чи знайде новий поріг більше ескалацій із лімітом 12 перевірок на 100 звернень?» Запиши ID релізу та версію даних у зведенні. Прочитай типові хибні спрацювання та пропуски. Якщо ескалацій лише дві, один випадок змінює recall на 50 відсоткових пунктів. Зафіксуй невизначеність і не поширюй висновок на іншу мову чи період без даних. Модель і політики сервісу тоді можна змінювати окремо, з поясненням мети наступного експерименту."
+  },
+  "recap": {
+    "en": "Training changes parameters. Inference uses a release. Evaluation tests outputs under a protocol. Preserve an independent test and report operational consequences.",
+    "uk": "Навчання змінює параметри. Inference використовує реліз. Оцінювання перевіряє вихід за протоколом. Збережи незалежну перевірку й опиши наслідки для процесу."
+  },
+  "interview": [
+    "What changes during training, inference and evaluation?",
+    "How would you prevent leakage when support tickets are grouped by incident?"
+  ],
+  "interviewGuide": {
+    "en": "Name the artifact, the data split and the decision in two or three sentences.",
+    "uk": "У двох-трьох реченнях назви артефакт, поділ даних і рішення."
+  },
+  "sources": [
+    {
+      "title": {
+        "en": "Precision and recall",
+        "uk": "Precision і recall"
+      },
+      "url": "https://developers.google.com/machine-learning/crash-course/classification/accuracy-precision-recall",
+      "version": "ML Crash Course",
+      "checked": "2026-11-26"
+    }
+  ],
+  "examples": [],
+  "questions": [
+    {
+      "id": "Q1",
+      "prompt": {
+        "en": "Editing a prompt changes what?",
+        "uk": "Що змінює редагування промпту?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "options": [
+        {
+          "id": "a",
+          "title": {
+            "en": "A model's trained weights",
+            "uk": "Навчені ваги"
+          },
+          "explanation": {
+            "en": "No optimizer step ran.",
+            "uk": "Крок оптимізатора не відбувся."
+          }
+        },
+        {
+          "id": "b",
+          "title": {
+            "en": "The system input configuration",
+            "uk": "Конфігурацію входу системи"
+          },
+          "explanation": {
+            "en": "Inference can use the same released weights.",
+            "uk": "Inference може використати ті самі ваги."
+          }
+        },
+        {
+          "id": "c",
+          "title": {
+            "en": "The reference labels",
+            "uk": "Еталонні мітки"
+          },
+          "explanation": {
+            "en": "Labels are maintained independently.",
+            "uk": "Мітки ведуться окремо."
+          }
+        }
+      ],
+      "correct": [
+        "b"
+      ]
+    },
+    {
+      "id": "Q2",
+      "prompt": {
+        "en": "When can final-test leakage happen?",
+        "uk": "Коли виникає витік у фінальній перевірці?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "options": [
+        {
+          "id": "a",
+          "title": {
+            "en": "Near-duplicate records occur in train and test.",
+            "uk": "Майже однакові записи є в train і test."
+          },
+          "explanation": {
+            "en": "The test may reward memorization.",
+            "uk": "Тест може винагороджувати запам’ятовування."
+          }
+        },
+        {
+          "id": "b",
+          "title": {
+            "en": "The metric has a name.",
+            "uk": "Метрика має назву."
+          },
+          "explanation": {
+            "en": "Names do not cause leakage.",
+            "uk": "Назви не спричиняють витоку."
+          }
+        },
+        {
+          "id": "c",
+          "title": {
+            "en": "The test is held back until release selection ends.",
+            "uk": "Тест відкладають до завершення вибору релізу."
+          },
+          "explanation": {
+            "en": "This preserves independence.",
+            "uk": "Це зберігає незалежність."
+          }
+        }
+      ],
+      "correct": [
+        "a"
+      ]
+    },
+    {
+      "id": "Q3",
+      "prompt": {
+        "en": "A classifier catches 6 of 10 incidents and signals 9. What is recall?",
+        "uk": "Класифікатор знаходить 6 із 10 інцидентів і сигналізує 9. Який recall?"
+      },
+      "objectives": [
+        "O3"
+      ],
+      "options": [
+        {
+          "id": "a",
+          "title": {
+            "en": "6/9",
+            "uk": "6/9"
+          },
+          "explanation": {
+            "en": "That is precision.",
+            "uk": "Це precision."
+          }
+        },
+        {
+          "id": "b",
+          "title": {
+            "en": "9/10",
+            "uk": "9/10"
+          },
+          "explanation": {
+            "en": "Signals include false alarms.",
+            "uk": "Сигнали включають хибні тривоги."
+          }
+        },
+        {
+          "id": "c",
+          "title": {
+            "en": "6/10",
+            "uk": "6/10"
+          },
+          "explanation": {
+            "en": "Recall uses all positive references.",
+            "uk": "Recall використовує всі позитивні еталони."
+          }
+        }
+      ],
+      "correct": [
+        "c"
+      ]
+    },
+    {
+      "id": "Q4",
+      "prompt": {
+        "en": "What supports a reproducible evaluation? Choose all that apply.",
+        "uk": "Що підтримує відтворюване оцінювання? Обери всі."
+      },
+      "objectives": [
+        "O1"
+      ],
+      "options": [
+        {
+          "id": "a",
+          "title": {
+            "en": "A recorded dataset version",
+            "uk": "Записана версія набору"
+          },
+          "explanation": {
+            "en": "A peer can reconstruct the inputs.",
+            "uk": "Колега може відтворити входи."
+          }
+        },
+        {
+          "id": "b",
+          "title": {
+            "en": "Repeated tuning on final examples",
+            "uk": "Повторний підбір на фінальних прикладах"
+          },
+          "explanation": {
+            "en": "This invalidates the test’s independence.",
+            "uk": "Це руйнує незалежність тесту."
+          }
+        },
+        {
+          "id": "c",
+          "title": {
+            "en": "A recorded model and settings version",
+            "uk": "Версія моделі й налаштувань"
+          },
+          "explanation": {
+            "en": "This identifies the behavior under test.",
+            "uk": "Це визначає поведінку, яку перевіряють."
+          }
+        }
+      ],
+      "correct": [
+        "a",
+        "c"
+      ]
+    }
+  ],
+  "exercises": [
+    {
+      "id": "W01-L02-E1",
+      "title": {
+        "en": "Trace model handoffs",
+        "uk": "Простеж передачу артефактів"
+      },
+      "kind": "rubric",
+      "objectives": [
+        "O1"
+      ],
+      "estimateMinutes": 45,
+      "criteria": [
+        {
+          "id": "C1",
+          "title": {
+            "en": "I labelled training, inference and evaluation in a real trace.",
+            "uk": "Я позначив навчання, inference та оцінювання у трасі."
+          }
+        },
+        {
+          "id": "C2",
+          "title": {
+            "en": "I assigned an artifact and owner to each step.",
+            "uk": "Я визначив артефакт і відповідального на кожному кроці."
+          }
+        }
+      ],
+      "example": {
+        "en": "Predictions were generated by the release. The evaluation report compared them with held-out labels.",
+        "uk": "Прогнози створив реліз. Звіт зіставив їх із відкладеними мітками."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "en": "Primary attempt",
+            "uk": "Основний варіант"
+          },
+          "prompt": {
+            "en": "Trace fitting, release and an evaluation of a ticket classifier. Include weights, predictions and a comparison report.",
+            "uk": "Простеж навчання, реліз і оцінювання класифікатора звернень. Додай ваги, прогнози й звіт."
+          },
+          "hints": [
+            {
+              "en": "Ask which artifact changed.",
+              "uk": "Запитай, який артефакт змінився."
+            },
+            {
+              "en": "Mark where reference outputs enter.",
+              "uk": "Познач, де з’являються еталони."
+            },
+            {
+              "en": "Write one sentence per handoff.",
+              "uk": "Напиши одне речення на передачу."
+            }
+          ],
+          "solution": {
+            "en": "Fit produces weights. Release produces predictions. Evaluation compares predictions and held-out labels. Assign fit to ML and integration evidence to Applied AI in this team.",
+            "uk": "Fit дає ваги, реліз дає прогнози, оцінювання зіставляє прогнози й відкладені мітки. У цій команді ML відповідає за fit, Applied AI за інтеграцію."
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "en": "Retry 1",
+            "uk": "Повтор 1"
+          },
+          "prompt": {
+            "en": "Trace a receipt extractor after a prompt-only change.",
+            "uk": "Простеж витягування даних з чеків після зміни лише промпту."
+          },
+          "hints": [
+            {
+              "en": "Ask which artifact changed.",
+              "uk": "Запитай, який артефакт змінився."
+            },
+            {
+              "en": "Mark where reference outputs enter.",
+              "uk": "Познач, де з’являються еталони."
+            },
+            {
+              "en": "Write one sentence per handoff.",
+              "uk": "Напиши одне речення на передачу."
+            }
+          ],
+          "solution": {
+            "en": "Prompt configuration changes and inference uses the same weights. Evaluate field-level correctness against the same receipt labels.",
+            "uk": "Змінюється промпт, inference використовує ті самі ваги. Перевір коректність полів на тих самих мітках чеків."
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "en": "Retry 2",
+            "uk": "Повтор 2"
+          },
+          "prompt": {
+            "en": "Trace a classification model with monthly retraining.",
+            "uk": "Простеж модель класифікації зі щомісячним перенавчанням."
+          },
+          "hints": [
+            {
+              "en": "Ask which artifact changed.",
+              "uk": "Запитай, який артефакт змінився."
+            },
+            {
+              "en": "Mark where reference outputs enter.",
+              "uk": "Познач, де з’являються еталони."
+            },
+            {
+              "en": "Write one sentence per handoff.",
+              "uk": "Напиши одне речення на передачу."
+            }
+          ],
+          "solution": {
+            "en": "Monthly training produces a new weight version. Compare both versions on a later frozen window before adopting the release.",
+            "uk": "Щомісячне навчання дає нову версію ваг. Порівняй обидві версії на пізнішому зафіксованому періоді."
+          }
+        }
+      ],
+      "diagnostic": false
+    },
+    {
+      "id": "W01-L02-E2",
+      "title": {
+        "en": "Design a fair comparison",
+        "uk": "Спроєктуй коректне порівняння"
+      },
+      "kind": "rubric",
+      "objectives": [
+        "O2"
+      ],
+      "estimateMinutes": 45,
+      "criteria": [
+        {
+          "id": "C1",
+          "title": {
+            "en": "I reserved an independent test and described group leakage.",
+            "uk": "Я залишив незалежний тест і описав витік між групами."
+          }
+        },
+        {
+          "id": "C2",
+          "title": {
+            "en": "I reported numerator, denominator and an operational trade-off.",
+            "uk": "Я вказав чисельник, знаменник і компроміс для роботи."
+          }
+        }
+      ],
+      "example": {
+        "en": "Recall 6/10; three false alarms. Keep all tickets about the same incident together.",
+        "uk": "Recall 6/10, три хибні тривоги. Тримай звернення одного інциденту разом."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "en": "Primary attempt",
+            "uk": "Основний варіант"
+          },
+          "prompt": {
+            "en": "A router catches 8 of 10 incidents but raises 16 alarms. Calculate precision and recall and propose a release rule with a review budget.",
+            "uk": "Маршрутизатор знаходить 8 із 10 інцидентів і подає 16 тривог. Обчисли precision та recall і запропонуй правило релізу з бюджетом перевірок."
+          },
+          "hints": [
+            {
+              "en": "Name the denominator before calculating.",
+              "uk": "Назви знаменник до обчислення."
+            },
+            {
+              "en": "Use alarm count for precision and true issue count for recall.",
+              "uk": "Для precision використовуй кількість тривог, для recall кількість справжніх проблем."
+            },
+            {
+              "en": "Pair recall with review volume per fixed input count.",
+              "uk": "Поєднай recall з обсягом перевірок на фіксовану кількість входів."
+            }
+          ],
+          "solution": {
+            "en": "Precision is 8/16 and recall 8/10. Choose a threshold on development groups and check one release on separate incidents. Quote eight unnecessary reviews.",
+            "uk": "Precision 8/16, recall 8/10. Обери поріг на development-групах і перевір один реліз на окремих інцидентах. Вкажи вісім зайвих перевірок."
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "en": "Retry 1",
+            "uk": "Повтор 1"
+          },
+          "prompt": {
+            "en": "A system finds 9 of 12 failures and flags 18 examples. Compare with a fixed baseline.",
+            "uk": "Система знаходить 9 із 12 збоїв і позначає 18 прикладів. Порівняй із фіксованим baseline."
+          },
+          "hints": [
+            {
+              "en": "Name the denominator before calculating.",
+              "uk": "Назви знаменник до обчислення."
+            },
+            {
+              "en": "Use alarm count for precision and true issue count for recall.",
+              "uk": "Для precision використовуй кількість тривог, для recall кількість справжніх проблем."
+            },
+            {
+              "en": "Pair recall with review volume per fixed input count.",
+              "uk": "Поєднай recall з обсягом перевірок на фіксовану кількість входів."
+            }
+          ],
+          "solution": {
+            "en": "Precision is 9/18 and recall 9/12. Run both configurations on the same held-out groups and log nine extra reviews.",
+            "uk": "Precision 9/18, recall 9/12. Прожени обидві конфігурації на тих самих відкладених групах і запиши дев’ять зайвих перевірок."
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "en": "Retry 2",
+            "uk": "Повтор 2"
+          },
+          "prompt": {
+            "en": "A system finds 5 of 8 issues and flags 7 examples. Reserve a later time window.",
+            "uk": "Система знаходить 5 із 8 проблем і позначає 7 прикладів. Залиш пізніше часове вікно."
+          },
+          "hints": [
+            {
+              "en": "Name the denominator before calculating.",
+              "uk": "Назви знаменник до обчислення."
+            },
+            {
+              "en": "Use alarm count for precision and true issue count for recall.",
+              "uk": "Для precision використовуй кількість тривог, для recall кількість справжніх проблем."
+            },
+            {
+              "en": "Pair recall with review volume per fixed input count.",
+              "uk": "Поєднай recall з обсягом перевірок на фіксовану кількість входів."
+            }
+          ],
+          "solution": {
+            "en": "Precision is 5/7 and recall 5/8. Keep later cases independent and report two false alarms alongside three misses.",
+            "uk": "Precision 5/7, recall 5/8. Залиш пізні кейси незалежними й зафіксуй дві хибні тривоги та три пропуски."
+          }
+        }
+      ],
+      "diagnostic": false
+    }
+  ],
+  "crosslinks": [
+    "W01-L01",
+    "W01-L03",
+    "SR-W01"
+  ]
+}

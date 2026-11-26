@@ -1,0 +1,519 @@
+{
+  "id": "W02-L04",
+  "contentVersion": 1,
+  "overview": {
+    "uk": "Відтворюваний CLI — це більше, ніж скрипт для одного файлу. Оператор має знати, як його запустити, де побачити відхилені рядки та чи збій перезапише наявний результат. Побудуй чисте перетворення, огорни його явним файловим адаптером, а межі перевір pytest без спільної робочої папки. Дізнайся, що перевіряє Ruff і навіщо фіксувати залежності для чистого клону. Практика перетворює CSV на JSON за детермінованими правилами й дає перевірити поведінку виходу через тимчасову папку. Наприкінці підготуєш інструкцію відтворення для іншого інженера.",
+    "en": "A repeatable CLI is more than a script that works for one file. An operator must know how to invoke it, how it reports rejected rows, and whether failed runs replace existing output. Build normalization as a pure transform, wrap it in an explicit file adapter, then use pytest to exercise boundaries without a shared workspace. Learn what Ruff checks and what locked dependencies contribute to a clean clone. The practice processes CSV into JSON using deterministic rules and makes output behavior testable with a temporary directory. You will finish with a short reproduction note another engineer can follow."
+  },
+  "theory": {
+    "uk": "### Контракти на трьох межах\n\nargv → параметри → вхідні рядки → нормалізовані значення → JSON-артефакт. Використай argparse, щоб відхиляти невідомі параметри й нестачу аргументів до відкриття файлу. Винеси розбір і конверсію до функцій, які можна викликати з тесту. Використай csv.DictReader для ком у лапках, переносів і назв колонок. Відкривай CSV із newline=\"\" та UTF-8. Розділи валідацію схеми й конверсію, щоб розрізняти відсутній заголовок і неправильне число. Нормалізатор має щоразу давати однакове значення для того самого рядка.\n\n### Поведінка при відмові\n\nCLI надсилає дані до stdout, якщо обіцяє потік для споживання. Діагностика йде в stderr, а некоректний ввід дає задокументований ненульовий код. Якщо результат має представляти успішний повний імпорт, перевір усі рядки до відкриття виходу. Для великих або чутливих до падіння запусків пиши в тимчасовий файл поряд і атомарно заміни результат після успішного завершення. Вправа перевіряє валідацію перед записом, що зберігає попередній файл при помилці вводу. Стійкість до збоїв диска тут окремий контракт.\n\n### Відтворювана перевірка\n\nВикористай tmp_path у pytest, щоб кожен тест мав власну папку. Перевір лапки, нульову кількість, файл лише із заголовком, помилкові рядки й наявний вихід при відмові. Параметризуй споріднені випадки й назви кожну помилку окремо. Ruff знаходить задані статичні проблеми на кшталт невикористаних імпортів, а pytest перевіряє поведінку. Вкажи підтримуваний Python і прямі залежності в pyproject.toml та додай lock або requirements для розв’язаного набору. Оновлюй lock свідомо. Чисте встановлення, lint і тести в CI підтверджують описані команди із чистої копії.\n\n### Порівняй вихід записів і процесу\n\nЗапусти нормалізатор для трьох рядків: коректна кількість, нуль і заголовок із комою в лапках. Перевір отримані об’єкти, а не відступи JSON. Далі постав від’ємне значення в останній рядок, задай наявний вихід і перевір незмінні байти. Запусти CLI процесним тестом у тимчасовій папці. Окремо забери stdout, stderr і код завершення. Очікуваний код помилки має бути в контракті CLI, щоб викликач міг безпечно обробити відмову у скрипті.\n\nРозділи інструменти за їхнім доказом. Ruff може знайти неочікуваний імпорт у нібито чистому конвертері. Unit-тест перевіряє нормалізацію тексту. Інтеграція показує, що відкрито правильні файли. Чисте середовище виявить незадекларований пакет або невстановлену точку входу. Запускай перевірки із задокументованого кореня. Поведінка CLI залежить і від робочої папки, завершень рядків та кодування. Передавай шляхи фікстур і задавай кодування явно.",
+    "en": "### Contracts at three boundaries\n\nargv → parsed options → input rows → normalized values → JSON artifact. Use argparse to reject unknown flags and missing options before opening a file. Route parsing and conversion through functions that a test can call directly. Use csv.DictReader for quoted commas, embedded newlines and column names. Open CSV files with newline=\"\" and explicit UTF-8. Separate schema validation from conversion so you know whether an error is caused by a missing header or a numeric field. A normalizer should transform the same row into the same value each time.\n\n### Decide what happens on failure\n\nA CLI sends data to stdout when it promises a consumable stream. Diagnostics go to stderr and invalid input gets a documented nonzero exit status. If output must represent a complete successful batch, validate all rows before opening the destination. For larger or crash-sensitive runs, stream into a temporary file next to the destination and replace it atomically after validation. The exercise checks validation before writing, which preserves the previous file on bad input. It does not promise crash-safe publication on disk failures.\n\n### Build a reproducible check\n\nUse tmp_path in pytest so each test owns its fixture directory. Test quoting and zero counts, header-only files, malformed rows and a preexisting output during failure. Parameterize related cases and give each failure a distinct name. Ruff catches configured static issues such as unused imports, while pytest asserts behavior. Specify supported Python and top-level dependencies in pyproject.toml and ship a lock or requirements file for the resolved set. A lock needs a deliberate update process. A fresh install plus lint and tests in CI verifies the documented commands from a clean workspace.\n\n### Compare record output and process output\n\nRun a normalizer on a file with three rows: a valid count, zero and a quoted title containing a comma. Assert the resulting objects rather than spacing in JSON. Then replace the final value with a negative number, give the CLI a pre-existing output path and verify unchanged bytes. Run the CLI through a process test with a temporary directory. Capture stdout, stderr and return code separately. The expected error code should be documented by the CLI. Giving callers a stable contract makes failure safe to handle in a script.\n\nSeparate collaboration tools by what they prove. Ruff can reveal a surprising import in a supposedly pure converter. A unit test can check text normalization. An integration test can prove the right files were opened. A clean environment test can find an undeclared package or an entry point that was never installed. Run each check from the documented root. A CLI's behavior also depends on the working directory, platform newline handling and encoding, so pass fixture paths and specify encodings instead of relying on a developer's shell."
+  },
+  "recap": {
+    "uk": "Відділи ввід-вивід від нормалізації. Задокументуй завершення, збережи попередній вихід при помилці та перевір встановлення у свіжому середовищі.",
+    "en": "Separate IO from normalization. Document exit behavior, preserve prior output on validation failure, and verify installation in a fresh environment."
+  },
+  "objectives": [
+    {
+      "id": "O1",
+      "title": {
+        "uk": "Розділяти CLI, нормалізацію рядків і запис результату.",
+        "en": "Split CLI argument handling from row normalization and output."
+      },
+      "skill": "tooling"
+    },
+    {
+      "id": "O2",
+      "title": {
+        "uk": "Перевіряти успішні, помилкові й порожні фікстури у відтворюваному середовищі.",
+        "en": "Verify valid, invalid and empty fixtures on a reproducible setup."
+      },
+      "skill": "evaluation"
+    }
+  ],
+  "sources": [
+    {
+      "title": {
+        "uk": "argparse",
+        "en": "argparse"
+      },
+      "url": "https://docs.python.org/3.12/library/argparse.html",
+      "version": "Python 3.12",
+      "checked": "2026-11-26"
+    },
+    {
+      "title": {
+        "uk": "Параметризація pytest",
+        "en": "pytest parametrization"
+      },
+      "url": "https://docs.pytest.org/en/stable/how-to/parametrize.html",
+      "version": "pytest 9",
+      "checked": "2026-11-26"
+    },
+    {
+      "title": {
+        "uk": "Конфігурація Ruff",
+        "en": "Ruff configuration"
+      },
+      "url": "https://docs.astral.sh/ruff/configuration/",
+      "version": "Ruff",
+      "checked": "2026-11-26"
+    }
+  ],
+  "examples": [
+    {
+      "file": "w02_l04_example.py",
+      "expected": "Paper, A4 | 2",
+      "explanation": {
+        "uk": "DictReader використовує граматику CSV, включно з полями в лапках. Стандартна бібліотека Python 3.12.",
+        "en": "DictReader uses the CSV grammar, including quoted fields. Python 3.12 standard library."
+      },
+      "error": {
+        "uk": "Заміна 2 на two спричиняє ValueError при конверсії.",
+        "en": "Replace 2 with two and the conversion raises ValueError."
+      }
+    }
+  ],
+  "interview": [
+    "What should a CLI print when its JSON output is consumed by another program?",
+    "How would you prevent failed validation from overwriting good output?"
+  ],
+  "interviewGuide": {
+    "uk": "Пройди через argv, перетворювач, артефакт і код завершення.",
+    "en": "Walk through argv, transformer, artifact, and the exit status."
+  },
+  "exercises": [
+    {
+      "id": "W02-L04-E1",
+      "title": {
+        "uk": "Нормалізувати CSV-файл у JSON",
+        "en": "Normalize a CSV file to JSON"
+      },
+      "kind": "code",
+      "objectives": [
+        "O1"
+      ],
+      "estimateMinutes": 92,
+      "criteria": [],
+      "example": {
+        "uk": "name,count, далі ' Sheet ,2' дає [{\"name\":\"Sheet\",\"count\":2}] і повертає 1.",
+        "en": "name,count followed by ' Sheet ,2' produces [{\"name\":\"Sheet\",\"count\":2}] and returns 1."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(source, destination), обидва аргументи Path. Прочитай CSV в UTF-8 із заголовком рівно name,count. Для кожного запису обріж непорожній name і перетвори count через int() на невід’ємне ціле. Відхиляй відсутні й зайві клітинки через ValueError. Запиши масив JSON в UTF-8 у вихідному порядку й поверни кількість рядків. Перевір увесь пакет до відкриття виходу. Файл лише із заголовком записує [].\n\n**Синтетичні накладні**",
+            "en": "Implement solve(source, destination) with both arguments as Path. Read CSV in UTF-8 with header exactly name,count. For each record, trim a nonempty name and parse count as a non-negative integer with int(). Reject missing and extra cells with ValueError. Output a UTF-8 JSON array of objects in the original order and return the row count. Validate the full batch before opening destination. A header-only file writes [].\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Прочитай записи через csv.DictReader і перевір fieldnames один раз.",
+              "en": "Read records with csv.DictReader and validate fieldnames once."
+            },
+            {
+              "uk": "Застосуй int() після перевірки наявності обох клітинок.",
+              "en": "Use int() after checking that both cells exist."
+            },
+            {
+              "uk": "Перенеси запис JSON після циклу валідації.",
+              "en": "Move JSON writing after the validation loop."
+            }
+          ],
+          "solution": {
+            "uk": "Накопичуй декодовані рядки, перевір кожен і потім запиши результат. Такий порядок зберігає попередній артефакт за невалідного вводу.\n\n```python\nimport csv\nimport json\nfrom pathlib import Path\n\ndef solve(source: Path, destination: Path) -> int:\n    normalized = []\n    with source.open(newline=\"\", encoding=\"utf-8\") as stream:\n        reader = csv.DictReader(stream)\n        if reader.fieldnames != [\"name\", \"count\"]:\n            raise ValueError(\"expected name,count\")\n        for row in reader:\n            name = row[\"name\"]\n            count = row[\"count\"]\n            if None in row or name is None or count is None or not name.strip():\n                raise ValueError(\"expected name and count\")\n            value = int(count)\n            if value < 0:\n                raise ValueError(\"count must be positive or zero\")\n            normalized.append({\"name\": name.strip(), \"count\": value})\n    destination.write_text(json.dumps(normalized, ensure_ascii=False), encoding=\"utf-8\")\n    return len(normalized)\n```",
+            "en": "Buffer the decoded rows, validate every one, then write the result. That ordering leaves any existing artifact in place on invalid input.\n\n```python\nimport csv\nimport json\nfrom pathlib import Path\n\ndef solve(source: Path, destination: Path) -> int:\n    normalized = []\n    with source.open(newline=\"\", encoding=\"utf-8\") as stream:\n        reader = csv.DictReader(stream)\n        if reader.fieldnames != [\"name\", \"count\"]:\n            raise ValueError(\"expected name,count\")\n        for row in reader:\n            name = row[\"name\"]\n            count = row[\"count\"]\n            if None in row or name is None or count is None or not name.strip():\n                raise ValueError(\"expected name and count\")\n            value = int(count)\n            if value < 0:\n                raise ValueError(\"count must be positive or zero\")\n            normalized.append({\"name\": name.strip(), \"count\": value})\n    destination.write_text(json.dumps(normalized, ensure_ascii=False), encoding=\"utf-8\")\n    return len(normalized)\n```"
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(source, destination), обидва аргументи Path. Прочитай CSV в UTF-8 із заголовком рівно name,count. Для кожного запису обріж непорожній name і перетвори count через int() на невід’ємне ціле. Відхиляй відсутні й зайві клітинки через ValueError. Запиши масив JSON в UTF-8 у вихідному порядку й поверни кількість рядків. Перевір увесь пакет до відкриття виходу. Файл лише із заголовком записує [].\n\n**Синтетичні запити підтримки**",
+            "en": "Implement solve(source, destination) with both arguments as Path. Read CSV in UTF-8 with header exactly name,count. For each record, trim a nonempty name and parse count as a non-negative integer with int(). Reject missing and extra cells with ValueError. Output a UTF-8 JSON array of objects in the original order and return the row count. Validate the full batch before opening destination. A header-only file writes [].\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Прочитай записи через csv.DictReader і перевір fieldnames один раз.",
+              "en": "Read records with csv.DictReader and validate fieldnames once."
+            },
+            {
+              "uk": "Застосуй int() після перевірки наявності обох клітинок.",
+              "en": "Use int() after checking that both cells exist."
+            },
+            {
+              "uk": "Перенеси запис JSON після циклу валідації.",
+              "en": "Move JSON writing after the validation loop."
+            }
+          ],
+          "solution": {
+            "uk": "Накопичуй декодовані рядки, перевір кожен і потім запиши результат. Такий порядок зберігає попередній артефакт за невалідного вводу.\n\n```python\nimport csv\nimport json\nfrom pathlib import Path\n\ndef solve(source: Path, destination: Path) -> int:\n    normalized = []\n    with source.open(newline=\"\", encoding=\"utf-8\") as stream:\n        reader = csv.DictReader(stream)\n        if reader.fieldnames != [\"name\", \"count\"]:\n            raise ValueError(\"expected name,count\")\n        for row in reader:\n            name = row[\"name\"]\n            count = row[\"count\"]\n            if None in row or name is None or count is None or not name.strip():\n                raise ValueError(\"expected name and count\")\n            value = int(count)\n            if value < 0:\n                raise ValueError(\"count must be positive or zero\")\n            normalized.append({\"name\": name.strip(), \"count\": value})\n    destination.write_text(json.dumps(normalized, ensure_ascii=False), encoding=\"utf-8\")\n    return len(normalized)\n```",
+            "en": "Buffer the decoded rows, validate every one, then write the result. That ordering leaves any existing artifact in place on invalid input.\n\n```python\nimport csv\nimport json\nfrom pathlib import Path\n\ndef solve(source: Path, destination: Path) -> int:\n    normalized = []\n    with source.open(newline=\"\", encoding=\"utf-8\") as stream:\n        reader = csv.DictReader(stream)\n        if reader.fieldnames != [\"name\", \"count\"]:\n            raise ValueError(\"expected name,count\")\n        for row in reader:\n            name = row[\"name\"]\n            count = row[\"count\"]\n            if None in row or name is None or count is None or not name.strip():\n                raise ValueError(\"expected name and count\")\n            value = int(count)\n            if value < 0:\n                raise ValueError(\"count must be positive or zero\")\n            normalized.append({\"name\": name.strip(), \"count\": value})\n    destination.write_text(json.dumps(normalized, ensure_ascii=False), encoding=\"utf-8\")\n    return len(normalized)\n```"
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Реалізуй solve(source, destination), обидва аргументи Path. Прочитай CSV в UTF-8 із заголовком рівно name,count. Для кожного запису обріж непорожній name і перетвори count через int() на невід’ємне ціле. Відхиляй відсутні й зайві клітинки через ValueError. Запиши масив JSON в UTF-8 у вихідному порядку й поверни кількість рядків. Перевір увесь пакет до відкриття виходу. Файл лише із заголовком записує [].\n\n**Синтетичні документи політик**",
+            "en": "Implement solve(source, destination) with both arguments as Path. Read CSV in UTF-8 with header exactly name,count. For each record, trim a nonempty name and parse count as a non-negative integer with int(). Reject missing and extra cells with ValueError. Output a UTF-8 JSON array of objects in the original order and return the row count. Validate the full batch before opening destination. A header-only file writes [].\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Прочитай записи через csv.DictReader і перевір fieldnames один раз.",
+              "en": "Read records with csv.DictReader and validate fieldnames once."
+            },
+            {
+              "uk": "Застосуй int() після перевірки наявності обох клітинок.",
+              "en": "Use int() after checking that both cells exist."
+            },
+            {
+              "uk": "Перенеси запис JSON після циклу валідації.",
+              "en": "Move JSON writing after the validation loop."
+            }
+          ],
+          "solution": {
+            "uk": "Накопичуй декодовані рядки, перевір кожен і потім запиши результат. Такий порядок зберігає попередній артефакт за невалідного вводу.\n\n```python\nimport csv\nimport json\nfrom pathlib import Path\n\ndef solve(source: Path, destination: Path) -> int:\n    normalized = []\n    with source.open(newline=\"\", encoding=\"utf-8\") as stream:\n        reader = csv.DictReader(stream)\n        if reader.fieldnames != [\"name\", \"count\"]:\n            raise ValueError(\"expected name,count\")\n        for row in reader:\n            name = row[\"name\"]\n            count = row[\"count\"]\n            if None in row or name is None or count is None or not name.strip():\n                raise ValueError(\"expected name and count\")\n            value = int(count)\n            if value < 0:\n                raise ValueError(\"count must be positive or zero\")\n            normalized.append({\"name\": name.strip(), \"count\": value})\n    destination.write_text(json.dumps(normalized, ensure_ascii=False), encoding=\"utf-8\")\n    return len(normalized)\n```",
+            "en": "Buffer the decoded rows, validate every one, then write the result. That ordering leaves any existing artifact in place on invalid input.\n\n```python\nimport csv\nimport json\nfrom pathlib import Path\n\ndef solve(source: Path, destination: Path) -> int:\n    normalized = []\n    with source.open(newline=\"\", encoding=\"utf-8\") as stream:\n        reader = csv.DictReader(stream)\n        if reader.fieldnames != [\"name\", \"count\"]:\n            raise ValueError(\"expected name,count\")\n        for row in reader:\n            name = row[\"name\"]\n            count = row[\"count\"]\n            if None in row or name is None or count is None or not name.strip():\n                raise ValueError(\"expected name and count\")\n            value = int(count)\n            if value < 0:\n                raise ValueError(\"count must be positive or zero\")\n            normalized.append({\"name\": name.strip(), \"count\": value})\n    destination.write_text(json.dumps(normalized, ensure_ascii=False), encoding=\"utf-8\")\n    return len(normalized)\n```"
+          }
+        }
+      ]
+    },
+    {
+      "id": "W02-L04-E2",
+      "title": {
+        "uk": "Зробити CLI відтворюваним із чистої копії",
+        "en": "Make the CLI reproducible from a clean workspace"
+      },
+      "kind": "rubric",
+      "objectives": [
+        "O2"
+      ],
+      "estimateMinutes": 80,
+      "criteria": [
+        {
+          "id": "C1",
+          "title": {
+            "uk": "Наведено команди встановлення й запуску та фактичні результати.",
+            "en": "Provide the documented install and run commands and their actual outcomes."
+          }
+        },
+        {
+          "id": "C2",
+          "title": {
+            "uk": "Перевірено валідний і некоректний ввід без спільних файлів.",
+            "en": "Test valid and invalid input without shared files."
+          }
+        },
+        {
+          "id": "C3",
+          "title": {
+            "uk": "Показано ненульовий статус і безпечну діагностику для відмови.",
+            "en": "Show nonzero exit and safe diagnostics for one failure."
+          }
+        }
+      ],
+      "example": {
+        "uk": "Додай ID тестів, версію Python і рядок stderr із назвою некоректного поля.",
+        "en": "Include the test IDs, Python version and a stderr line naming the invalid field."
+      },
+      "variants": [
+        {
+          "id": "v1",
+          "title": {
+            "uk": "Основний сценарій",
+            "en": "Primary case"
+          },
+          "prompt": {
+            "uk": "Додай argparse до нормалізатора, один параметризований тест pytest і конфігурацію Ruff у pyproject.toml. Виконай задокументоване налаштування в новому venv і запиши коди завершення для валідного й невалідного файлу. Додай зафіксовані версії залежностей.\n\n**Синтетичні накладні**",
+            "en": "Add an argparse entry point to your normalizer, one parametrized pytest test and Ruff configuration in pyproject.toml. Run the documented setup in a new virtual environment and capture exit codes for one valid and one invalid file. Include resolved dependency versions in your artifact.\n\n**Synthetic invoice fixtures**"
+          },
+          "hints": [
+            {
+              "uk": "Відділи розбір argv від перетворювача.",
+              "en": "Keep argv parsing out of the transform."
+            },
+            {
+              "uk": "Скористайся tmp_path і таблицею parametrize.",
+              "en": "Use tmp_path and a parametrize table."
+            },
+            {
+              "uk": "Запиши stdout, stderr і returncode окремо.",
+              "en": "Capture stdout, stderr and returncode separately."
+            }
+          ],
+          "solution": {
+            "uk": "Залиш адаптер main(argv), який викликає перетворення після парсингу. Дай pytest різні ID для валідної й від’ємної кількості, задай ціль Ruff і повтори запуск із нового venv за lockfile.",
+            "en": "Keep a main(argv) adapter; call the transform after parsing. Use pytest parameter ids for valid and negative counts, set a fixed Ruff target, and rerun from a fresh venv using a lockfile."
+          }
+        },
+        {
+          "id": "v2",
+          "title": {
+            "uk": "Новий сценарій",
+            "en": "Transfer case"
+          },
+          "prompt": {
+            "uk": "Додай argparse до нормалізатора, один параметризований тест pytest і конфігурацію Ruff у pyproject.toml. Виконай задокументоване налаштування в новому venv і запиши коди завершення для валідного й невалідного файлу. Додай зафіксовані версії залежностей.\n\n**Синтетичні запити підтримки**",
+            "en": "Add an argparse entry point to your normalizer, one parametrized pytest test and Ruff configuration in pyproject.toml. Run the documented setup in a new virtual environment and capture exit codes for one valid and one invalid file. Include resolved dependency versions in your artifact.\n\n**Synthetic support requests**"
+          },
+          "hints": [
+            {
+              "uk": "Відділи розбір argv від перетворювача.",
+              "en": "Keep argv parsing out of the transform."
+            },
+            {
+              "uk": "Скористайся tmp_path і таблицею parametrize.",
+              "en": "Use tmp_path and a parametrize table."
+            },
+            {
+              "uk": "Запиши stdout, stderr і returncode окремо.",
+              "en": "Capture stdout, stderr and returncode separately."
+            }
+          ],
+          "solution": {
+            "uk": "Залиш адаптер main(argv), який викликає перетворення після парсингу. Дай pytest різні ID для валідної й від’ємної кількості, задай ціль Ruff і повтори запуск із нового venv за lockfile.",
+            "en": "Keep a main(argv) adapter; call the transform after parsing. Use pytest parameter ids for valid and negative counts, set a fixed Ruff target, and rerun from a fresh venv using a lockfile."
+          }
+        },
+        {
+          "id": "v3",
+          "title": {
+            "uk": "Самостійна повторна спроба",
+            "en": "Independent retry"
+          },
+          "prompt": {
+            "uk": "Додай argparse до нормалізатора, один параметризований тест pytest і конфігурацію Ruff у pyproject.toml. Виконай задокументоване налаштування в новому venv і запиши коди завершення для валідного й невалідного файлу. Додай зафіксовані версії залежностей.\n\n**Синтетичні документи політик**",
+            "en": "Add an argparse entry point to your normalizer, one parametrized pytest test and Ruff configuration in pyproject.toml. Run the documented setup in a new virtual environment and capture exit codes for one valid and one invalid file. Include resolved dependency versions in your artifact.\n\n**Synthetic policy documents**"
+          },
+          "hints": [
+            {
+              "uk": "Відділи розбір argv від перетворювача.",
+              "en": "Keep argv parsing out of the transform."
+            },
+            {
+              "uk": "Скористайся tmp_path і таблицею parametrize.",
+              "en": "Use tmp_path and a parametrize table."
+            },
+            {
+              "uk": "Запиши stdout, stderr і returncode окремо.",
+              "en": "Capture stdout, stderr and returncode separately."
+            }
+          ],
+          "solution": {
+            "uk": "Залиш адаптер main(argv), який викликає перетворення після парсингу. Дай pytest різні ID для валідної й від’ємної кількості, задай ціль Ruff і повтори запуск із нового venv за lockfile.",
+            "en": "Keep a main(argv) adapter; call the transform after parsing. Use pytest parameter ids for valid and negative counts, set a fixed Ruff target, and rerun from a fresh venv using a lockfile."
+          }
+        }
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "id": "Q1",
+      "prompt": {
+        "uk": "Як машиночитаний CLI має повідомити про помилку валідації?",
+        "en": "How should a machine-readable CLI report a validation failure?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Ненульовий код завершення й діагностика в stderr.",
+            "en": "Use a nonzero exit status and write diagnostics to stderr."
+          },
+          "explanation": {
+            "uk": "Так скрипт викликача відділяє помилку від даних.",
+            "en": "This lets calling scripts detect the failure separately from data."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Повернути 0 і надрукувати traceback у stdout.",
+            "en": "Return 0 and print a traceback into stdout."
+          },
+          "explanation": {
+            "uk": "Це виглядає успіхом, а stdout неможливо розібрати.",
+            "en": "It looks successful and stdout stops being parseable."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Мовчки повернути порожній успішний результат.",
+            "en": "Silently return an empty successful result."
+          },
+          "explanation": {
+            "uk": "Викликач не відрізнить помилку від порожнього імпорту.",
+            "en": "The caller cannot tell invalid input from an empty import."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q2",
+      "prompt": {
+        "uk": "Яка фікстура виявить запис до повної валідації?",
+        "en": "Which fixture detects writes before full validation?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "B"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Один валідний рядок у новому файлі.",
+            "en": "One valid row in a new destination."
+          },
+          "explanation": {
+            "uk": "Коректний запис не доводить поведінку при пізній відмові.",
+            "en": "A correct output does not prove behavior on later failure."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Валідний перший рядок, помилковий другий і наявний вихід.",
+            "en": "A valid first row, invalid second row, and existing destination."
+          },
+          "explanation": {
+            "uk": "Вона відрізняє правильне перетворення від передчасної зміни.",
+            "en": "It distinguishes a successful transform from premature mutation."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Порожня вихідна папка без вхідного файлу.",
+            "en": "An empty output directory with no input file."
+          },
+          "explanation": {
+            "uk": "Це перевіряє відсутній шлях, а не збій усередині пакета.",
+            "en": "That exercises a missing path rather than mid-batch failure."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q3",
+      "prompt": {
+        "uk": "Яку помилку знайде unit-тест, але пропустить lint невикористаних імпортів?",
+        "en": "Which failure can a unit test find that unused-import lint cannot?"
+      },
+      "objectives": [
+        "O1"
+      ],
+      "correct": [
+        "C"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Імпортоване ім’я ніде не використано.",
+            "en": "An imported name is never used."
+          },
+          "explanation": {
+            "uk": "Це саме сфера статичного lint.",
+            "en": "This is exactly the static lint's scope."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Залежність відсутня в іншому релізі.",
+            "en": "A dependency is missing from an unrelated release."
+          },
+          "explanation": {
+            "uk": "Тест бачить власне середовище, без інших релізів.",
+            "en": "A test observes its own environment, not unrelated releases."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Нормалізатор відхиляє валідний нуль.",
+            "en": "The normalizer rejects a valid zero."
+          },
+          "explanation": {
+            "uk": "Перевірка поведінки звіряє контракт на конкретних даних.",
+            "en": "A behavioral assertion checks the contract on given inputs."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q4",
+      "prompt": {
+        "uk": "Що дає фіксація залежностей?",
+        "en": "What does the dependency lock contribute?"
+      },
+      "objectives": [
+        "O2"
+      ],
+      "correct": [
+        "A"
+      ],
+      "options": [
+        {
+          "id": "A",
+          "title": {
+            "uk": "Визначає розв’язані версії для повторюваного встановлення.",
+            "en": "It specifies resolved versions for a repeatable install."
+          },
+          "explanation": {
+            "uk": "Конкретна версія Python і контрольоване середовище доповнюють налаштування.",
+            "en": "A named Python version and controlled environment complete the setup."
+          }
+        },
+        {
+          "id": "B",
+          "title": {
+            "uk": "Замінює тести поведінки.",
+            "en": "It replaces behavioral tests."
+          },
+          "explanation": {
+            "uk": "Версії не встановлюють правильність програми.",
+            "en": "Versions do not establish program correctness."
+          }
+        },
+        {
+          "id": "C",
+          "title": {
+            "uk": "Автоматично оновлює кожну версію при запуску.",
+            "en": "It automatically updates every version each run."
+          },
+          "explanation": {
+            "uk": "Мета — фіксоване розв’язання до свідомого оновлення.",
+            "en": "The purpose is stable resolution until you update it."
+          }
+        }
+      ]
+    }
+  ],
+  "crosslinks": [
+    "W02-L03",
+    "SR-W02"
+  ]
+}
