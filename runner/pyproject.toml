@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=78"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quest-local-runner"
+version = "1.0.0"
+requires-python = ">=3.12"
+dependencies = ["pytest>=9,<10"]
+
+[project.scripts]
+quest-runner = "quest_runner.cli:main"
+
+[tool.setuptools.package-data]
+quest_runner = ["suites/*.json", "suites/*.py", "suites/*.txt"]

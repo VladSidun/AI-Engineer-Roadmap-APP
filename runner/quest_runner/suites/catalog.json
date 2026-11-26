@@ -1,0 +1,1202 @@
+[
+  {
+    "id": "W01-L03-E1.v1.1",
+    "exerciseId": "W01-L03-E1",
+    "variantId": "v1",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "starter": "setting.py",
+    "digest": "e045b9607466e327f95981dc88e0c82517dabc6c7db48617ff3b505e83ff66c0"
+  },
+  {
+    "id": "W01-L03-E1.v2.1",
+    "exerciseId": "W01-L03-E1",
+    "variantId": "v2",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "starter": "setting.py",
+    "digest": "f09ff56c7db6a9693bad4c1b42a4e9b5ef72bf466400bbf02b4cacf121d892c5"
+  },
+  {
+    "id": "W01-L03-E1.v3.1",
+    "exerciseId": "W01-L03-E1",
+    "variantId": "v3",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "starter": "setting.py",
+    "digest": "6bff236d6865fea739c0239b7c7fa32495a4361e28af86b50c4ac4d72dc79e1f"
+  },
+  {
+    "id": "W01-L03-E2.v1.1",
+    "exerciseId": "W01-L03-E2",
+    "variantId": "v1",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "starter": "fixture_counts.py",
+    "digest": "235751d430e9e2795aff4977c15ea9242db49c6e7b428ea795b5f1dad818b974"
+  },
+  {
+    "id": "W01-L03-E2.v2.1",
+    "exerciseId": "W01-L03-E2",
+    "variantId": "v2",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "starter": "fixture_counts.py",
+    "digest": "cbdbaa3fa45614254517b766ec62cf286472f7a319f6e45883aed125777e6720"
+  },
+  {
+    "id": "W01-L03-E2.v3.1",
+    "exerciseId": "W01-L03-E2",
+    "variantId": "v3",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "starter": "fixture_counts.py",
+    "digest": "587652915490abf5bec343ce0ee0f4f91bd9dd7acb3504383de21837278ec58e"
+  },
+  {
+    "id": "W01-L04-E1.v1.1",
+    "exerciseId": "W01-L04-E1",
+    "variantId": "v1",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "starter": "convert.py",
+    "digest": "6257426f309560e39e2263bd423c626374453c4aa22fabb5cbb08030e21aec39"
+  },
+  {
+    "id": "W01-L04-E1.v2.1",
+    "exerciseId": "W01-L04-E1",
+    "variantId": "v2",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "starter": "convert.py",
+    "digest": "eb084b354621936aef6e41d472f34c3ef8b19320a1499669e9112acab4ab1bf3"
+  },
+  {
+    "id": "W01-L04-E1.v3.1",
+    "exerciseId": "W01-L04-E1",
+    "variantId": "v3",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "starter": "convert.py",
+    "digest": "46a15051ff8005f3591acd0d94cb2bd67f092cff3ed05c1d2ce2bb3fff3f4c37"
+  },
+  {
+    "id": "W01-L04-E2.v1.1",
+    "exerciseId": "W01-L04-E2",
+    "variantId": "v1",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "starter": "diagnostic.py",
+    "digest": "842a2ae5250410edbcffdd63df690090927c7151ae23fda09d1abae70de8c181"
+  },
+  {
+    "id": "W01-L04-E2.v2.1",
+    "exerciseId": "W01-L04-E2",
+    "variantId": "v2",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "starter": "diagnostic.py",
+    "digest": "a2b86c95ddaca84e4c2a898cd439eefb7db6c1bad79108a05915486aadfc4ac5"
+  },
+  {
+    "id": "W01-L04-E2.v3.1",
+    "exerciseId": "W01-L04-E2",
+    "variantId": "v3",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "starter": "diagnostic.py",
+    "digest": "10ef864bed31e02e0772ded4890a52d2141adc69374cc3422dc44c7188905e68"
+  },
+  {
+    "id": "G-M0-E1.v1.1",
+    "exerciseId": "G-M0-E1",
+    "variantId": "v1",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "starter": "doctor.py",
+    "digest": "4d39ff47ee1a45af210d0b69ebe0a6f676d94e19baef47528c9c44899080f788"
+  },
+  {
+    "id": "G-M0-E1.v2.1",
+    "exerciseId": "G-M0-E1",
+    "variantId": "v2",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "starter": "doctor.py",
+    "digest": "8a304ab6232e9744abc8aa75b81f612e2339ad11d69056706f7dd2369037d685"
+  },
+  {
+    "id": "G-M0-E1.v3.1",
+    "exerciseId": "G-M0-E1",
+    "variantId": "v3",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "starter": "doctor.py",
+    "digest": "a5e6d1fb22951e42637ddaecfd3ce7cc4f8d5d663c62e31b464915fe0d7095a9"
+  },
+  {
+    "id": "W02-L01-E1-v1",
+    "exerciseId": "W02-L01-E1",
+    "variantId": "v1",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "fac3b026f0e70aa538645625a9dd8e3072b1280d7347eb164b7aea8aa8ea527b",
+    "starter": "w02_l01_e1.py",
+    "source": "m1.py"
+  },
+  {
+    "id": "W02-L01-E1-v2",
+    "exerciseId": "W02-L01-E1",
+    "variantId": "v2",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "acdb6d57441f708f7fb985df3a3bf4661e68926de09cc2e78e4e5b6c81f1994f",
+    "starter": "w02_l01_e1.py",
+    "source": "m1.py"
+  },
+  {
+    "id": "W02-L01-E1-v3",
+    "exerciseId": "W02-L01-E1",
+    "variantId": "v3",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "2ba5120d74697bf6288a9d2972b7377f89598f572722486b54717af5c4132be6",
+    "starter": "w02_l01_e1.py",
+    "source": "m1.py"
+  },
+  {
+    "id": "W02-L02-E1-v1",
+    "exerciseId": "W02-L02-E1",
+    "variantId": "v1",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "21df08e036a6efe12aaf07322d1e5e2b23b1771e7983e4e7d65038e659ea09e6",
+    "starter": "w02_l02_e1.py",
+    "source": "m1.py"
+  },
+  {
+    "id": "W02-L02-E1-v2",
+    "exerciseId": "W02-L02-E1",
+    "variantId": "v2",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "63045b669f0ff95fbc4101a5f745f978269feecebcab3d904c25577b0af0cf12",
+    "starter": "w02_l02_e1.py",
+    "source": "m1.py"
+  },
+  {
+    "id": "W02-L02-E1-v3",
+    "exerciseId": "W02-L02-E1",
+    "variantId": "v3",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "9911691a4764ce2984a71f8df19ced6bf0186da2f2beee5365984914d212df80",
+    "starter": "w02_l02_e1.py",
+    "source": "m1.py"
+  },
+  {
+    "id": "W02-L03-E1-v1",
+    "exerciseId": "W02-L03-E1",
+    "variantId": "v1",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "cd5cb16abdb1c80b9f73be442a7bfc34c30a77cd52a235f09508b337e4e3e03b",
+    "starter": "w02_l03_e1.py",
+    "source": "m1.py"
+  },
+  {
+    "id": "W02-L03-E1-v2",
+    "exerciseId": "W02-L03-E1",
+    "variantId": "v2",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "5b6675b7418a0e22741ff8e15380fdd8c9a160c4b0d35a16345b919d07c1aff7",
+    "starter": "w02_l03_e1.py",
+    "source": "m1.py"
+  },
+  {
+    "id": "W02-L03-E1-v3",
+    "exerciseId": "W02-L03-E1",
+    "variantId": "v3",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "e5961e47946317afdb7fb9ad77ee7612b8024527cc93695a1f539853309d3f5d",
+    "starter": "w02_l03_e1.py",
+    "source": "m1.py"
+  },
+  {
+    "id": "W02-L04-E1-v1",
+    "exerciseId": "W02-L04-E1",
+    "variantId": "v1",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "a03ddf1ba5959bb4d311f3946788354f9402e897f0942b3f658c5bd43b8af9c6",
+    "starter": "w02_l04_e1.py",
+    "source": "m1.py"
+  },
+  {
+    "id": "W02-L04-E1-v2",
+    "exerciseId": "W02-L04-E1",
+    "variantId": "v2",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "acbfac3d49f4ab3a255639b7753c3d1ba3cfa67096462849abbde16a4eeb40ce",
+    "starter": "w02_l04_e1.py",
+    "source": "m1.py"
+  },
+  {
+    "id": "W02-L04-E1-v3",
+    "exerciseId": "W02-L04-E1",
+    "variantId": "v3",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "cc0d9ffefdd9b987f1b8593c7f0eac26cf1ce90a5738ddf934da8c1ac3837529",
+    "starter": "w02_l04_e1.py",
+    "source": "m1.py"
+  },
+  {
+    "id": "W03-L01-E1-v1",
+    "exerciseId": "W03-L01-E1",
+    "variantId": "v1",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "e6bca528e51b82ec9362571c3d60aeb3aab59cc11290d163ce36fa8eb08da020",
+    "starter": "w03_l01_e1.py",
+    "source": "m1.py"
+  },
+  {
+    "id": "W03-L01-E1-v2",
+    "exerciseId": "W03-L01-E1",
+    "variantId": "v2",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "f596c0b35561ba1947f1e57e4f310664f083004b78d89d41ca57dedecb26dfde",
+    "starter": "w03_l01_e1.py",
+    "source": "m1.py"
+  },
+  {
+    "id": "W03-L01-E1-v3",
+    "exerciseId": "W03-L01-E1",
+    "variantId": "v3",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "3fc07e08ef55fbca67609a3a12228105623e46d173b3c7ef8cd026542cfbb6b4",
+    "starter": "w03_l01_e1.py",
+    "source": "m1.py"
+  },
+  {
+    "id": "W03-L02-E1-v1",
+    "exerciseId": "W03-L02-E1",
+    "variantId": "v1",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "d4736986ccfa8e87611e4e22ed15b9baa2e791acf8b48920f3eaf92537ef4b62",
+    "starter": "w03_l02_e1.py",
+    "source": "m1.py"
+  },
+  {
+    "id": "W03-L02-E1-v2",
+    "exerciseId": "W03-L02-E1",
+    "variantId": "v2",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "19a2061efe95f4abcb160e2df5a0b72d68e5a5862861b36068a427aac06d29f9",
+    "starter": "w03_l02_e1.py",
+    "source": "m1.py"
+  },
+  {
+    "id": "W03-L02-E1-v3",
+    "exerciseId": "W03-L02-E1",
+    "variantId": "v3",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "cfc40d99d386f30c59bb66ab419983621bf4a0056ab0b9e11923dea77705282e",
+    "starter": "w03_l02_e1.py",
+    "source": "m1.py"
+  },
+  {
+    "id": "W03-L03-E1-v1",
+    "exerciseId": "W03-L03-E1",
+    "variantId": "v1",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "5075e0fb528d7cf20c921a0b52a202fc8048fe3c6c4bc3efda709a483c2f0743",
+    "starter": "w03_l03_e1.py",
+    "source": "m1.py"
+  },
+  {
+    "id": "W03-L03-E1-v2",
+    "exerciseId": "W03-L03-E1",
+    "variantId": "v2",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "8fd50f593c626f3a82e823470789f149ee2fd59e2eaece92e7df3feed4423eb6",
+    "starter": "w03_l03_e1.py",
+    "source": "m1.py"
+  },
+  {
+    "id": "W03-L03-E1-v3",
+    "exerciseId": "W03-L03-E1",
+    "variantId": "v3",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "32864747510c3e91fd9cbacec23e70924469e5ac447e537fcd0026c11028e8bc",
+    "starter": "w03_l03_e1.py",
+    "source": "m1.py"
+  },
+  {
+    "id": "W03-L04-E1-v1",
+    "exerciseId": "W03-L04-E1",
+    "variantId": "v1",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "20a315c92758c109a80341ad59d296196d4a66157ba4f61afa02ca2c0a2fa66e",
+    "starter": "w03_l04_e1.py",
+    "source": "m1.py"
+  },
+  {
+    "id": "W03-L04-E1-v2",
+    "exerciseId": "W03-L04-E1",
+    "variantId": "v2",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "8a2f562c6dc3ff17f23e0494394d76588a92cb18c545d2bec1691e151144f93f",
+    "starter": "w03_l04_e1.py",
+    "source": "m1.py"
+  },
+  {
+    "id": "W03-L04-E1-v3",
+    "exerciseId": "W03-L04-E1",
+    "variantId": "v3",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "86b69bde15f518da44950c06fa6d04bc4b713824c32480ad5c9f9fc278b8c06b",
+    "starter": "w03_l04_e1.py",
+    "source": "m1.py"
+  },
+  {
+    "id": "G-M1-E1-v1",
+    "exerciseId": "G-M1-E1",
+    "variantId": "v1",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "d21e3e8e79e8ead523a2b7ec55ebd7e4840dc0b3eef56a6540edef834daf13b6",
+    "starter": "g_m1_e1.py",
+    "source": "m1.py"
+  },
+  {
+    "id": "G-M1-E1-v2",
+    "exerciseId": "G-M1-E1",
+    "variantId": "v2",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "87e980de576880b434449cda84381751b88017ca966f889c61ad27a3348ea180",
+    "starter": "g_m1_e1.py",
+    "source": "m1.py"
+  },
+  {
+    "id": "G-M1-E1-v3",
+    "exerciseId": "G-M1-E1",
+    "variantId": "v3",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "e7a5306d75ac3191893bcd667d963ee504581f79b301f28819c9699edb581511",
+    "starter": "g_m1_e1.py",
+    "source": "m1.py"
+  },
+  {
+    "id": "W04-L01-E1-v1",
+    "exerciseId": "W04-L01-E1",
+    "variantId": "v1",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "91a06d5604cf7ef8c8c2d2b33e401187bfbcd077a0844613323dbb387eb6ec75",
+    "starter": "w04_l01_e1.py",
+    "source": "m2.py"
+  },
+  {
+    "id": "W04-L01-E1-v2",
+    "exerciseId": "W04-L01-E1",
+    "variantId": "v2",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "bd913f67c13691ec794081c719d65ebc038563b79a9ea4cc06acff67771eb47a",
+    "starter": "w04_l01_e1.py",
+    "source": "m2.py"
+  },
+  {
+    "id": "W04-L01-E1-v3",
+    "exerciseId": "W04-L01-E1",
+    "variantId": "v3",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "b7ba8db04a4744286da67a9981ab12dda12829a0e132f80774f62030fadb18f9",
+    "starter": "w04_l01_e1.py",
+    "source": "m2.py"
+  },
+  {
+    "id": "W04-L02-E1-v1",
+    "exerciseId": "W04-L02-E1",
+    "variantId": "v1",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "47a4d093c560e9ad626d7f549fb5c18b09cd293de2b00ef117709d3d7c44aad8",
+    "starter": "w04_l02_e1.py",
+    "source": "m2.py"
+  },
+  {
+    "id": "W04-L02-E1-v2",
+    "exerciseId": "W04-L02-E1",
+    "variantId": "v2",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "c4243edc0e15fb0af82f86394b3654dec4ff1e328996ad803b9a3cd42e4da2ff",
+    "starter": "w04_l02_e1.py",
+    "source": "m2.py"
+  },
+  {
+    "id": "W04-L02-E1-v3",
+    "exerciseId": "W04-L02-E1",
+    "variantId": "v3",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "a0a16572d42ac06de06601efdaaa31ec8a05e25810238cc2cbd91755f9dab593",
+    "starter": "w04_l02_e1.py",
+    "source": "m2.py"
+  },
+  {
+    "id": "W04-L03-E1-v1",
+    "exerciseId": "W04-L03-E1",
+    "variantId": "v1",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "2425e2caa05a44020140c7f533938a5a8abfcaf43467f21b3886563406865220",
+    "starter": "w04_l03_e1.py",
+    "source": "m2.py"
+  },
+  {
+    "id": "W04-L03-E1-v2",
+    "exerciseId": "W04-L03-E1",
+    "variantId": "v2",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "bc063abb6c9e5182f75c8fb39274c1babed3d8ccf65d33030c8251e3e3e767ba",
+    "starter": "w04_l03_e1.py",
+    "source": "m2.py"
+  },
+  {
+    "id": "W04-L03-E1-v3",
+    "exerciseId": "W04-L03-E1",
+    "variantId": "v3",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "2ca05b447b15e68c0f03069595a3b1725a1984b8495318c8b6442ec50ca62a4f",
+    "starter": "w04_l03_e1.py",
+    "source": "m2.py"
+  },
+  {
+    "id": "W04-L04-E1-v1",
+    "exerciseId": "W04-L04-E1",
+    "variantId": "v1",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "afc865860d8fb9a09b3f6bcc3c51e851bbd1bcfd2f1319fed881294d1c94e3b0",
+    "starter": "w04_l04_e1.py",
+    "source": "m2.py"
+  },
+  {
+    "id": "W04-L04-E1-v2",
+    "exerciseId": "W04-L04-E1",
+    "variantId": "v2",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "b557ae17effba27ee354afcce8e283540046acf7e10c5ed874aec98bf0a70f87",
+    "starter": "w04_l04_e1.py",
+    "source": "m2.py"
+  },
+  {
+    "id": "W04-L04-E1-v3",
+    "exerciseId": "W04-L04-E1",
+    "variantId": "v3",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "c97407a941f920696a7f5607f99761d8785af224f4d6f09368970b4592359529",
+    "starter": "w04_l04_e1.py",
+    "source": "m2.py"
+  },
+  {
+    "id": "W05-L01-E1-v1",
+    "exerciseId": "W05-L01-E1",
+    "variantId": "v1",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "135ceea9fd221069263c9e08661f76928c8d440ea4e26fbd78b00a9b69db5492",
+    "starter": "w05_l01_e1.py",
+    "source": "m2.py"
+  },
+  {
+    "id": "W05-L01-E1-v2",
+    "exerciseId": "W05-L01-E1",
+    "variantId": "v2",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "6ebd169a41944a0bb46faf7e2b64774477b62527c174b5c066e8a98686bdfca3",
+    "starter": "w05_l01_e1.py",
+    "source": "m2.py"
+  },
+  {
+    "id": "W05-L01-E1-v3",
+    "exerciseId": "W05-L01-E1",
+    "variantId": "v3",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "5b3ccdf6951464d903390c0da4ca8b6cae2e9b317e3ec06cca7d930a4f7d27de",
+    "starter": "w05_l01_e1.py",
+    "source": "m2.py"
+  },
+  {
+    "id": "W05-L02-E1-v1",
+    "exerciseId": "W05-L02-E1",
+    "variantId": "v1",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "aadd03919c689f76c2a6da457c61a3d2b050d1930bd4e40c4a987f8f6120ec37",
+    "starter": "w05_l02_e1.py",
+    "source": "m2.py"
+  },
+  {
+    "id": "W05-L02-E1-v2",
+    "exerciseId": "W05-L02-E1",
+    "variantId": "v2",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "90bfbd5217363f2d405d3892e7d6f258215b194e1c45f7e108055d6e2f4e9e19",
+    "starter": "w05_l02_e1.py",
+    "source": "m2.py"
+  },
+  {
+    "id": "W05-L02-E1-v3",
+    "exerciseId": "W05-L02-E1",
+    "variantId": "v3",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "15ecab41c00fcfb091ffec654fb8f330ee73adb61ed6c39d03e4eeb3eba93130",
+    "starter": "w05_l02_e1.py",
+    "source": "m2.py"
+  },
+  {
+    "id": "W05-L03-E1-v1",
+    "exerciseId": "W05-L03-E1",
+    "variantId": "v1",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "d4d69111075389238806acbf8dc8a8ba20ce8a52c5e621384670f3e6bfba2be9",
+    "starter": "w05_l03_e1.py",
+    "source": "m2.py"
+  },
+  {
+    "id": "W05-L03-E1-v2",
+    "exerciseId": "W05-L03-E1",
+    "variantId": "v2",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "880d04f46ceb2d275b5697ef79e42d8bb203e28d487a2f596cbae73ee7a16a6a",
+    "starter": "w05_l03_e1.py",
+    "source": "m2.py"
+  },
+  {
+    "id": "W05-L03-E1-v3",
+    "exerciseId": "W05-L03-E1",
+    "variantId": "v3",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "31227809a30415c26fd7870ad9529cc51f48a573a683f72f52085e559c65a833",
+    "starter": "w05_l03_e1.py",
+    "source": "m2.py"
+  },
+  {
+    "id": "W05-L04-E1-v1",
+    "exerciseId": "W05-L04-E1",
+    "variantId": "v1",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "22362cafde066935ebe48b7745e8c66fc0f74c14f94713edc838cb08d74f01d8",
+    "starter": "w05_l04_e1.py",
+    "source": "m2.py"
+  },
+  {
+    "id": "W05-L04-E1-v2",
+    "exerciseId": "W05-L04-E1",
+    "variantId": "v2",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "a000af98e393ff7ecc53489ecbeea7455379ccf99eaa80c594ba024c348264bb",
+    "starter": "w05_l04_e1.py",
+    "source": "m2.py"
+  },
+  {
+    "id": "W05-L04-E1-v3",
+    "exerciseId": "W05-L04-E1",
+    "variantId": "v3",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "8958d19d8376d194a9cdacc1adde43e956420eccbf0c2788c38fabb4106b2803",
+    "starter": "w05_l04_e1.py",
+    "source": "m2.py"
+  },
+  {
+    "id": "W06-L01-E1-v1",
+    "exerciseId": "W06-L01-E1",
+    "variantId": "v1",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "623d153fb0c7e744e1d41937e18e9ab4c40b03fb6558a7feff67647f1815496d",
+    "starter": "w06_l01_e1.py",
+    "source": "m2.py"
+  },
+  {
+    "id": "W06-L01-E1-v2",
+    "exerciseId": "W06-L01-E1",
+    "variantId": "v2",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "97caecff2eec9cbe38c1e8937e07deb100cbb479f39c118119b5a8a9710e9ced",
+    "starter": "w06_l01_e1.py",
+    "source": "m2.py"
+  },
+  {
+    "id": "W06-L01-E1-v3",
+    "exerciseId": "W06-L01-E1",
+    "variantId": "v3",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "ff0f1f9793d2546e2a0c4a3da2f8ddec235ec28c696efe900c180d9b2d33969d",
+    "starter": "w06_l01_e1.py",
+    "source": "m2.py"
+  },
+  {
+    "id": "W06-L02-E1-v1",
+    "exerciseId": "W06-L02-E1",
+    "variantId": "v1",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "1dfb3794e93bb2067a3f0fe78d0af5501970b025dca52f530f05ba2cb89b8915",
+    "starter": "w06_l02_e1.py",
+    "source": "m2.py"
+  },
+  {
+    "id": "W06-L02-E1-v2",
+    "exerciseId": "W06-L02-E1",
+    "variantId": "v2",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "3374a650deb0ec3b638f9d929a19ea1d6e5214844fa183ca9ebf531e6435d7e7",
+    "starter": "w06_l02_e1.py",
+    "source": "m2.py"
+  },
+  {
+    "id": "W06-L02-E1-v3",
+    "exerciseId": "W06-L02-E1",
+    "variantId": "v3",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "845e6e53999e63002603f08c3aeb9034eaf9dd96b5f0aa0360f0a50f0b7f2a9a",
+    "starter": "w06_l02_e1.py",
+    "source": "m2.py"
+  },
+  {
+    "id": "W06-L03-E1-v1",
+    "exerciseId": "W06-L03-E1",
+    "variantId": "v1",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "8f1ef831c61b750e24b6c6fa9121d8ce86bd8739956b731bf87bf0f2012a7ee6",
+    "starter": "w06_l03_e1.py",
+    "source": "m2.py"
+  },
+  {
+    "id": "W06-L03-E1-v2",
+    "exerciseId": "W06-L03-E1",
+    "variantId": "v2",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "8db394943c2f0b7e018dc5f9400c47f937862140a24117951e89138d3168e2e6",
+    "starter": "w06_l03_e1.py",
+    "source": "m2.py"
+  },
+  {
+    "id": "W06-L03-E1-v3",
+    "exerciseId": "W06-L03-E1",
+    "variantId": "v3",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "6e527bdc65fc9416052656b7ee0793275040a3e76fceb971d56cd9949423ff98",
+    "starter": "w06_l03_e1.py",
+    "source": "m2.py"
+  },
+  {
+    "id": "W06-L04-E1-v1",
+    "exerciseId": "W06-L04-E1",
+    "variantId": "v1",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "f6b7b71d46c8a4f13fac8171500bb39060d3b523307613ef4dadbcfb9445c55b",
+    "starter": "w06_l04_e1.py",
+    "source": "m2.py"
+  },
+  {
+    "id": "W06-L04-E1-v2",
+    "exerciseId": "W06-L04-E1",
+    "variantId": "v2",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "51366f432fef6fe43750c5bd8dafda9a6abf1d12ab443281635cb66727e34280",
+    "starter": "w06_l04_e1.py",
+    "source": "m2.py"
+  },
+  {
+    "id": "W06-L04-E1-v3",
+    "exerciseId": "W06-L04-E1",
+    "variantId": "v3",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "363e73c293f03443ef63cad79db373154acc150dc84232d8e5a05a722df2c928",
+    "starter": "w06_l04_e1.py",
+    "source": "m2.py"
+  },
+  {
+    "id": "G-M2-E1-v1",
+    "exerciseId": "G-M2-E1",
+    "variantId": "v1",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "6eccdd2a0659eb97ed34ebbcda36780d78e88e93ab6edfd26771ec720234af87",
+    "starter": "g_m2_e1.py",
+    "source": "m2.py"
+  },
+  {
+    "id": "G-M2-E1-v2",
+    "exerciseId": "G-M2-E1",
+    "variantId": "v2",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "41be7be7ead9a82ef88767e47a9200f8f4f39a8a12dc3b4c2f3d7baffa92d8f3",
+    "starter": "g_m2_e1.py",
+    "source": "m2.py"
+  },
+  {
+    "id": "G-M2-E1-v3",
+    "exerciseId": "G-M2-E1",
+    "variantId": "v3",
+    "contentVersion": 1,
+    "testIds": [
+      "test_normal",
+      "test_boundary",
+      "test_invalid",
+      "test_transfer"
+    ],
+    "digest": "a4d30bf2b0a119306c29a0674dd0780501b8c5300beca25b169142fff0d8587e",
+    "starter": "g_m2_e1.py",
+    "source": "m2.py"
+  }
+]
