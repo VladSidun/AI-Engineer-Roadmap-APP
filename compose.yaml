@@ -1,0 +1,37 @@
+services:
+  db:
+    image: postgres:17.12-bookworm
+    environment:
+      POSTGRES_DB: quest
+      POSTGRES_USER: quest
+      POSTGRES_PASSWORD: ${QUEST_DB_PASSWORD:?Set QUEST_DB_PASSWORD in .env}
+    volumes:
+      - progress:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:${QUEST_DB_PORT:-5544}:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "quest", "-d", "quest"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  quest:
+    build: .
+    environment:
+      QUEST_DB_HOST: db
+      QUEST_DB_PORT: "5432"
+      QUEST_DB_PASSWORD: ${QUEST_DB_PASSWORD:?Set QUEST_DB_PASSWORD in .env}
+      QUEST_PORT: ${QUEST_PORT:-8000}
+      QUEST_STATIC: /quest/static
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${QUEST_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os, urllib.request; request = urllib.request.Request('http://127.0.0.1:8000/health', headers={'Host': '127.0.0.1:' + os.environ['QUEST_PORT']}); urllib.request.urlopen(request, timeout=3).close()"]
+      interval: 5s
+      timeout: 4s
+      retries: 20
+
+volumes:
+  progress:
