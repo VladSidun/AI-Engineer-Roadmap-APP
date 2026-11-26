@@ -1,0 +1,21 @@
+:root {
+  color-scheme: light;
+  --page: #f4f6f1;
+  --surface: #fffefa;
+  --ink: #172b2b;
+  --subtle: #475e58;
+  --line: #ced9ce;
+  --link: #155b4e;
+  --deep: #111e28;
+  --paper: #f0f6f3;
+  --mint: #8be6c9;
+  --focus: #b16d12;
+}
+
+.syntax-f97583 { color: #f97583; }
+.syntax-79b8ff { color: #79b8ff; }
+.syntax-9ecbff { color: #9ecbff; }
+.syntax-b392f0 { color: #b392f0; }
+.syntax-ffab70 { color: #ffab70; }
+.syntax-6a737d { color: #a1abb5; }
+.syntax-85e89d { color: #85e89d; }
